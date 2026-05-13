@@ -1,0 +1,116 @@
+import ExamCategory from './examCategory.model.js';
+import Course from '../course/course.model.js';
+import Test from '../test/test.model.js';
+import ApiError from '../../utils/ApiError.js';
+import ApiResponse from '../../utils/ApiResponse.js';
+import catchAsync from '../../utils/catchAsync.js';
+import redis from '../../config/redis.js';
+import { generateSlug } from '../../utils/helpers.js';
+import { buildPaginationQuery } from '../../utils/pagination.js';
+
+export const getCategories = catchAsync(async (req, res) => {
+  const cached = await redis.get('categories:all');
+  if (cached) return ApiResponse.ok(res, cached);
+
+  const categories = await ExamCategory.find({ isActive: true, parent: null })
+    .populate({ path: 'subcategories', match: { isActive: true }, select: 'name slug icon courseCount testCount' })
+    .sort('order name')
+    .lean();
+
+  const data = { categories };
+  await redis.set('categories:all', data, 1800); // 30 min
+
+  ApiResponse.ok(res, data);
+});
+
+export const getCategoryBySlug = catchAsync(async (req, res) => {
+  const category = await ExamCategory.findOne({ slug: req.params.slug, isActive: true })
+    .populate({ path: 'subcategories', match: { isActive: true } })
+    .lean();
+
+  if (!category) throw ApiError.notFound('Category not found');
+
+  const [courses, tests] = await Promise.all([
+    Course.find({ category: category._id, isPublished: true })
+      .populate('teacher', 'name avatar')
+      .select('-sections')
+      .sort('-enrollmentCount')
+      .limit(12)
+      .lean(),
+    Test.find({ category: category._id, isPublished: true })
+      .populate('teacher', 'name avatar')
+      .select('-questions')
+      .sort('-totalAttempts')
+      .limit(12)
+      .lean(),
+  ]);
+
+  ApiResponse.ok(res, { category, courses, tests });
+});
+
+export const createCategory = catchAsync(async (req, res) => {
+  const category = await ExamCategory.create({
+    ...req.body,
+    slug: generateSlug(req.body.name),
+  });
+
+  await redis.delPattern('categories:*');
+
+  ApiResponse.created(res, { category }, 'Category created');
+});
+
+export const updateCategory = catchAsync(async (req, res) => {
+  if (req.body.name) req.body.slug = generateSlug(req.body.name);
+
+  const category = await ExamCategory.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!category) throw ApiError.notFound('Category not found');
+
+  await redis.delPattern('categories:*');
+
+  ApiResponse.ok(res, { category }, 'Category updated');
+});
+
+export const deleteCategory = catchAsync(async (req, res) => {
+  const category = await ExamCategory.findById(req.params.id);
+  if (!category) throw ApiError.notFound('Category not found');
+
+  // Check for courses/tests using this category
+  const [courseCount, testCount] = await Promise.all([
+    Course.countDocuments({ category: category._id }),
+    Test.countDocuments({ category: category._id }),
+  ]);
+
+  if (courseCount > 0 || testCount > 0) {
+    throw ApiError.badRequest(`Cannot delete: ${courseCount} courses and ${testCount} tests use this category`);
+  }
+
+  await ExamCategory.findByIdAndDelete(req.params.id);
+  await redis.delPattern('categories:*');
+
+  ApiResponse.ok(res, null, 'Category deleted');
+});
+
+// Admin: get all categories with pagination
+export const adminGetCategories = catchAsync(async (req, res) => {
+  const pagination = buildPaginationQuery(req.query);
+
+  const filter = {};
+  if (req.query.search) filter.name = { $regex: req.query.search, $options: 'i' };
+  if (req.query.isActive !== undefined) filter.isActive = req.query.isActive === 'true';
+
+  const result = await ExamCategory.paginate(filter, {
+    ...pagination,
+    populate: { path: 'parent', select: 'name' },
+  });
+
+  ApiResponse.paginated(res, {
+    docs: result.docs,
+    page: result.pagination.page,
+    limit: result.pagination.limit,
+    total: result.pagination.total,
+  });
+});

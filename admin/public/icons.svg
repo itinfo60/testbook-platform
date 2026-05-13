@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="logo" viewBox="0 0 40 40">
+    <rect width="40" height="40" rx="10" fill="#4F46E5"/>
+    <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="18" font-weight="bold" font-family="Inter">T</text>
+  </symbol>
+</svg>

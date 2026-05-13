@@ -1,0 +1,20 @@
+export { default as User } from '../modules/user/user.model.js';
+export { default as Course } from '../modules/course/course.model.js';
+export { default as ExamCategory } from '../modules/exam-category/examCategory.model.js';
+export { default as Enrollment } from '../modules/enrollment/enrollment.model.js';
+export { default as Review } from '../modules/review/review.model.js';
+export { default as Test } from '../modules/test/test.model.js';
+export { default as TestAttempt } from '../modules/test/testAttempt.model.js';
+export { default as Quiz } from '../modules/quiz/quiz.model.js';
+export { default as QuizAttempt } from '../modules/quiz/quizAttempt.model.js';
+export { default as Payment } from '../modules/payment/payment.model.js';
+export { default as Coupon } from '../modules/coupon/coupon.model.js';
+export { default as Discussion } from '../modules/discussion/discussion.model.js';
+export { default as Note } from '../modules/note/note.model.js';
+export { default as Notification } from '../modules/notification/notification.model.js';
+export { default as Badge } from '../modules/badge/badge.model.js';
+export { default as UserBadge } from '../modules/badge/userBadge.model.js';
+export { default as UserActivity } from '../modules/user/userActivity.model.js';
+export { default as Wishlist } from '../modules/wishlist/wishlist.model.js';
+export { default as Blog } from '../modules/blog/blog.model.js';
+
