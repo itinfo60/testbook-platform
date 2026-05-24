@@ -491,18 +491,16 @@ const run = async () => {
 
   // ── 4. USERS ──────────────────────────────────────────────────────────────────
   console.log('👥 Seeding users...');
-  const hashedAdmin    = await bcrypt.hash('Admin@123456',   10);
-  const hashedTeacher  = await bcrypt.hash('Teacher@123456', 10);
   const hashedStudent  = await bcrypt.hash('Student@123456', 10);
 
   const admin = await User.create({
-    name: 'Super Admin', email: 'admin@testbook.com', password: hashedAdmin,
+    name: 'Super Admin', email: 'admin@testbook.com', password: 'Admin@123456',
     role: 'super_admin', isEmailVerified: true, isActive: true,
     avatar: 'https://ui-avatars.com/api/?name=Super+Admin&background=6366f1&color=fff',
   });
 
   const teacher = await User.create({
-    name: 'Rajesh Kumar', email: 'teacher@testbook.com', password: hashedTeacher,
+    name: 'Rajesh Kumar', email: 'teacher@testbook.com', password: 'Teacher@123456',
     role: 'teacher', isEmailVerified: true, isActive: true,
     avatar: 'https://ui-avatars.com/api/?name=Rajesh+Kumar&background=10b981&color=fff',
     bio: 'Senior full-stack developer with 8+ years of experience. Passionate about teaching modern web technologies.',
@@ -515,7 +513,7 @@ const run = async () => {
   });
 
   const teacher2 = await User.create({
-    name: 'Priya Sharma', email: 'teacher2@testbook.com', password: hashedTeacher,
+    name: 'Priya Sharma', email: 'teacher2@testbook.com', password: 'Teacher@123456',
     role: 'teacher', isEmailVerified: true, isActive: true,
     avatar: 'https://ui-avatars.com/api/?name=Priya+Sharma&background=f59e0b&color=fff',
     bio: 'Data Scientist at a Fortune 500 company. Expert in Python, ML, and AI.',

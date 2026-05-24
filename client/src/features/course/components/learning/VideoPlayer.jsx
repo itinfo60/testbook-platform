@@ -1,3 +1,4 @@
+import ReactPlayer from 'react-player/youtube';
 
 export default function VideoPlayer({ url, onProgress, onComplete }) {
   const handleProgress = state => {
