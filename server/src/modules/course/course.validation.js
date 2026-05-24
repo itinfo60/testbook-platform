@@ -17,13 +17,19 @@ export const courseSchemas = {
     whatYouLearn: Joi.array().items(Joi.string().trim()),
     sections: Joi.array().items(Joi.object({
       title: Joi.string().required(),
+      description: Joi.string().allow('').optional(),
       lessons: Joi.array().items(Joi.object({
         title: Joi.string().required(),
         type: Joi.string().valid('video', 'text', 'quiz').required(),
-        content: Joi.string(),
-        videoUrl: Joi.string().uri(),
+        content: Joi.string().allow('').optional(),
+        videoUrl: Joi.string().uri().allow('').optional(),
         duration: Joi.number().min(0),
         isFree: Joi.boolean().default(false),
+        resources: Joi.array().items(Joi.object({
+          title: Joi.string().allow('').optional(),
+          url: Joi.string().allow('').optional(),
+          type: Joi.string().valid('link', 'pdf', 'doc').default('link'),
+        })).optional(),
       })),
     })),
   }),

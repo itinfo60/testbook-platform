@@ -6,20 +6,10 @@ import {
   HiPlay, HiDocument, HiPencilAlt, HiLink, HiDownload,
 } from 'react-icons/hi';
 import { createCourse, updateCourse, fetchCourseById } from '@/features/course/courseSlice';
+import { examCategoryAPI } from '@/services/api';
 import { Input, Button } from '@/components/ui';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
-
-const CATEGORIES = [
-  { _id: '69d233db5fb0e25b31713a53', name: 'Banking' },
-  { _id: '69d233db5fb0e25b31713a59', name: 'Defence' },
-  { _id: '69d233db5fb0e25b31713a5a', name: 'Programming' },
-  { _id: '69d233db5fb0e25b31713a55', name: 'Railways' },
-  { _id: '69d233db5fb0e25b31713a54', name: 'SSC' },
-  { _id: '69d233db5fb0e25b31713a57', name: 'State PSC' },
-  { _id: '69d233db5fb0e25b31713a58', name: 'Teaching' },
-  { _id: '69d233db5fb0e25b31713a56', name: 'UPSC' },
-];
 
 const newLesson = () => ({
   title: '', type: 'video', videoUrl: '', content: '',
@@ -56,6 +46,13 @@ export default function TeacherCourseForm() {
 
   const [openSections, setOpenSections] = useState({});
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    examCategoryAPI.getAll().then(res => {
+      setCategories(res.data?.data || res.data || []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isEdit) dispatch(fetchCourseById(id));
