@@ -12,6 +12,10 @@ export const courseSchemas = {
     discountPrice: Joi.number().min(0).optional(),
     language: Joi.string().allow('').default('English'),
     level: Joi.string().valid('beginner', 'intermediate', 'advanced').default('beginner'),
+    thumbnail: Joi.object({
+      url: Joi.string().allow('').optional(),
+      publicId: Joi.string().allow('').optional(),
+    }).optional(),
     tags: Joi.array().items(Joi.string().trim()),
     requirements: Joi.array().items(Joi.string().trim()),
     whatYouLearn: Joi.array().items(Joi.string().trim()),
@@ -43,6 +47,10 @@ export const courseSchemas = {
     discountPrice: Joi.number().min(0).optional(),
     language: Joi.string().allow('').optional(),
     level: Joi.string().valid('beginner', 'intermediate', 'advanced'),
+    thumbnail: Joi.object({
+      url: Joi.string().allow('').optional(),
+      publicId: Joi.string().allow('').optional(),
+    }).optional(),
     tags: Joi.array().items(Joi.string().trim()),
     requirements: Joi.array().items(Joi.string().trim()),
     whatYouLearn: Joi.array().items(Joi.string().trim()),

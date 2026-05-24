@@ -13,8 +13,8 @@ export const enrollInCourse = catchAsync(async (req, res) => {
   const { courseId, paymentId } = req.body;
 
   const course = await Course.findById(courseId);
-  if (!course || !course.isPublished) {
-    throw ApiError.notFound('Course not found or not published');
+  if (!course) {
+    throw ApiError.notFound('Course not found');
   }
 
   // Check if already enrolled

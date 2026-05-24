@@ -31,9 +31,9 @@ export const createOrder = catchAsync(async (req, res) => {
 
   if (courseId) {
     item = await Course.findById(courseId);
-    if (!item || !item.isPublished) throw ApiError.notFound('Course not found');
+    if (!item) throw ApiError.notFound('Course not found');
     amount = item.effectivePrice;
-    
+
     // Check if already enrolled
     const existing = await Enrollment.findOne({
       user: req.userId,
@@ -221,7 +221,7 @@ export const dummyCheckout = catchAsync(async (req, res) => {
 
   if (courseId) {
     item = await Course.findById(courseId);
-    if (!item || !item.isPublished) throw ApiError.notFound('Course not found');
+    if (!item) throw ApiError.notFound('Course not found');
     amount = item.effectivePrice;
     
     const existing = await Enrollment.findOne({
