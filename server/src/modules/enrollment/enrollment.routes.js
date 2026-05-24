@@ -8,6 +8,8 @@ router.use(authenticate);
 
 router.post('/', enrollmentController.enrollInCourse);
 router.get('/my', enrollmentController.getMyEnrollments);
+router.get('/my-tests', enrollmentController.getMyTestEnrollments);
+router.get('/teacher/students', enrollmentController.getTeacherStudents);
 router.get('/check/:courseId', enrollmentController.checkEnrollment);
 router.get('/progress/:courseId', enrollmentController.getEnrollmentProgress);
 router.post('/progress/:courseId', enrollmentController.updateProgress);

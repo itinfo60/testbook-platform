@@ -28,9 +28,13 @@ export const startTest = createAsyncThunk('tests/start', async (id, { rejectWith
   }
 });
 
-export const submitTest = createAsyncThunk('tests/submit', async ({ id, answers }, { rejectWithValue }) => {
+export const submitTest = createAsyncThunk('tests/submit', async ({ attemptId, answers }, { rejectWithValue }) => {
   try {
-    const { data } = await testAPI.submit(id, { answers });
+    const formattedAnswers = Object.entries(answers).map(([questionId, optionIndex]) => ({
+      questionId,
+      selectedOptions: [optionIndex],
+    }));
+    const { data } = await testAPI.submit(attemptId, { answers: formattedAnswers });
     return data.data || data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'Failed to submit test');
@@ -79,7 +83,10 @@ const testSlice = createSlice({
     tests: [],
     teacherTests: [],
     currentTest: null,
+    attemptCount: 0,
+    isPurchased: false,
     attempt: null,
+    questions: [],
     result: null,
     analytics: null,
     loading: false,
@@ -109,6 +116,7 @@ const testSlice = createSlice({
       state.markedForReview = [];
       state.currentQuestionIndex = 0;
       state.attempt = null;
+      state.questions = [];
       state.result = null;
     },
     clearCurrentTest: state => {
@@ -126,13 +134,22 @@ const testSlice = createSlice({
       .addCase(fetchTestById.pending, state => { state.loading = true; })
       .addCase(fetchTestById.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentTest = action.payload;
+        state.currentTest = action.payload.test || action.payload;
+        state.attemptCount = action.payload.attemptCount ?? 0;
+        state.isPurchased = action.payload.isPurchased ?? false;
       })
       .addCase(fetchTestById.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
-      .addCase(startTest.pending, state => { state.loading = true; })
+      .addCase(startTest.pending, state => {
+        state.loading = true;
+        state.answers = {};
+        state.markedForReview = [];
+        state.currentQuestionIndex = 0;
+        state.result = null;
+      })
       .addCase(startTest.fulfilled, (state, action) => {
         state.loading = false;
         state.attempt = action.payload;
+        state.questions = action.payload.questions || [];
       })
       .addCase(startTest.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(submitTest.pending, state => { state.loading = true; })

@@ -7,20 +7,28 @@ export default function CourseCard({ course }) {
     _id,
     title,
     thumbnail,
-    instructor,
+    teacher,
     price,
-    originalPrice,
-    rating,
-    reviewCount,
-    studentsEnrolled,
-    duration,
+    discountPrice,
+    effectivePrice,
+    averageRating,
+    totalReviews,
+    totalDuration,
     level,
     category,
-    lessonsCount,
-    lessons,
+    totalLessons,
   } = course;
 
-  const totalLessons = lessonsCount || lessons?.length || 0;
+  const displayThumbnail = thumbnail?.url || thumbnail;
+  const displayPrice = effectivePrice ?? price;
+  const originalPrice = discountPrice > 0 ? price : undefined;
+
+  const formatDuration = (secs) => {
+    if (!secs) return null;
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m} min`;
+  };
 
   const levelColors = {
     beginner: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -32,8 +40,8 @@ export default function CourseCard({ course }) {
     <Link to={`/courses/${_id}`} className="card-hover overflow-hidden group">
       {/* Thumbnail */}
       <div className="relative h-44 bg-dark-100 dark:bg-dark-700 overflow-hidden">
-        {thumbnail ? (
-          <img src={thumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        {displayThumbnail ? (
+          <img src={displayThumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
             <HiBookOpen className="h-12 w-12 text-white/50" />
@@ -62,7 +70,7 @@ export default function CourseCard({ course }) {
             <HiUser className="h-3 w-3 text-primary-600 dark:text-primary-400" />
           </div>
           <span className="text-sm text-dark-500 dark:text-dark-400 truncate">
-            {instructor?.name || 'Instructor'}
+            {teacher?.name || 'Instructor'}
           </span>
         </div>
 
@@ -73,17 +81,17 @@ export default function CourseCard({ course }) {
               {totalLessons} lessons
             </span>
           )}
-          {duration && (
+          {formatDuration(totalDuration) && (
             <span className="flex items-center gap-1">
               <HiClock className="h-3.5 w-3.5" />
-              {duration}
+              {formatDuration(totalDuration)}
             </span>
           )}
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-dark-100 dark:border-dark-700">
-          <PriceTag price={price} originalPrice={originalPrice} size="sm" />
-          <RatingStars rating={rating || 0} count={reviewCount} size="sm" />
+          <PriceTag price={displayPrice} originalPrice={originalPrice} size="sm" />
+          <RatingStars rating={averageRating || 0} count={totalReviews} size="sm" />
         </div>
       </div>
     </Link>

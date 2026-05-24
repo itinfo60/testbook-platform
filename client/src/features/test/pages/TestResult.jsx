@@ -1,13 +1,16 @@
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useState } from 'react';
+import Tabs from '@/components/common/Tabs';
+import TestResultSummary from '../components/TestResultSummary';
+import QuestionReview from '../components/QuestionReview';
 
 export default function TestResult() {
   const { id } = useParams();
-  const { result, answers } = useSelector(state => state.tests);
+  const { result, answers, questions: storedQuestions } = useSelector(state => state.tests);
   const [activeTab, setActiveTab] = useState('summary');
 
-  const questions = result?.questions || result?.test?.questions || [];
+  const questions = storedQuestions.length ? storedQuestions : (result?.questions || result?.test?.questions || []);
 
   const tabs = [
     { key: 'summary', label: 'Summary' },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
-import { fetchCourses, setFilters } from '@/features/course/courseSlice';
+import { fetchCourses, setFilters, clearFilters } from '@/features/course/courseSlice';
 import CourseGrid from '@/features/course/components/CourseGrid';
 import SearchBar from '@/components/common/SearchBar';
 import FilterSidebar from '@/components/common/FilterSidebar';
@@ -11,23 +11,43 @@ export default function CourseCatalog() {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const { courses, loading, pagination, filters } = useSelector((state) => state.courses);
+  const { examCategories } = useSelector((state) => state.categories);
   const [page, setPage] = useState(1);
 
-  const searchFromUrl = searchParams.get('search') || '';
+  // Sync URL params to Redux on mount
+  useEffect(() => {
+    const search = searchParams.get('search');
+    const category = searchParams.get('category');
+    if (search || category) {
+      dispatch(setFilters({ 
+        ...(search && { search }),
+        ...(category && { category })
+      }));
+    }
+  }, [dispatch, searchParams]);
 
   useEffect(() => {
     const params = {
       page,
       limit: 12,
-      ...(filters.search || searchFromUrl ? { search: filters.search || searchFromUrl } : {}),
+      ...(filters.search ? { search: filters.search } : {}),
       ...(filters.category ? { category: filters.category } : {}),
       ...(filters.level ? { level: filters.level } : {}),
-      ...(filters.sort ? { sort: filters.sort } : { sort: '-createdAt' }),
+      ...(filters.sort ? { sort: filters.sort } : { sort: 'newest' }),
     };
     dispatch(fetchCourses(params));
-  }, [dispatch, page, filters, searchFromUrl]);
+  }, [dispatch, page, filters]);
 
   const filterConfig = [
+    {
+      key: 'category',
+      label: 'Category',
+      type: 'radio',
+      options: [
+        { value: '', label: 'All Categories' },
+        ...(examCategories?.map(cat => ({ value: cat._id, label: cat.name })) || []),
+      ],
+    },
     {
       key: 'level',
       label: 'Level',
@@ -56,13 +76,21 @@ export default function CourseCatalog() {
   const handleFilterChange = (key, value) => {
     dispatch(setFilters({ [key]: value }));
     setPage(1);
+
+    const newParams = new URLSearchParams(searchParams);
+    if (value) newParams.set(key, value);
+    else newParams.delete(key);
+    setSearchParams(newParams);
   };
 
   const handleSearch = (query) => {
     dispatch(setFilters({ search: query }));
     setPage(1);
-    if (query) setSearchParams({ search: query });
-    else setSearchParams({});
+    
+    const newParams = new URLSearchParams(searchParams);
+    if (query) newParams.set('search', query);
+    else newParams.delete('search');
+    setSearchParams(newParams);
   };
 
   return (
@@ -78,7 +106,7 @@ export default function CourseCatalog() {
       {/* Search + Mobile Filter Button — same row */}
       <div className="flex items-center gap-3 mb-6">
         <SearchBar
-          value={filters.search || searchFromUrl}
+          value={filters.search || ''}
           onSearch={handleSearch}
           placeholder="Search courses..."
           className="flex-1"
@@ -94,8 +122,9 @@ export default function CourseCatalog() {
           activeFilters={filters}
           onFilterChange={handleFilterChange}
           onClear={() => {
-            dispatch(setFilters({ category: '', level: '', search: '', sort: 'newest' }));
+            dispatch(clearFilters());
             setPage(1);
+            setSearchParams({});
           }}
         />
 

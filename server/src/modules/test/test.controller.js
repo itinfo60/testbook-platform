@@ -1,6 +1,7 @@
 import Test from './test.model.js';
 import TestAttempt from './testAttempt.model.js';
 import User from '../user/user.model.js';
+import Enrollment from '../enrollment/enrollment.model.js';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
@@ -30,8 +31,29 @@ export const getTests = catchAsync(async (req, res) => {
     select: '-questions',
   });
 
+  let docs = result.docs.map(doc => doc.toObject ? doc.toObject() : doc);
+
+  if (req.user) {
+    const enrollments = await Enrollment.find({
+      user: req.userId,
+      test: { $in: docs.map(t => t._id) },
+      status: { $in: ['active', 'completed'] }
+    }).select('test').lean();
+    
+    const purchasedTestIds = new Set(enrollments.map(e => e.test.toString()));
+    
+    docs = docs.map(test => {
+      if (test.isFree === false || test.price > 0) {
+        test.isPurchased = purchasedTestIds.has(test._id.toString());
+      } else {
+        test.isPurchased = true;
+      }
+      return test;
+    });
+  }
+
   ApiResponse.paginated(res, {
-    docs: result.docs,
+    docs,
     page: result.pagination.page,
     limit: result.pagination.limit,
     total: result.pagination.total,
@@ -51,15 +73,29 @@ export const getTestById = catchAsync(async (req, res) => {
 
   // Get user's attempt count
   let attemptCount = 0;
+  let isPurchased = false;
+  
   if (req.user) {
     attemptCount = await TestAttempt.countDocuments({
       user: req.userId,
       test: test._id,
       status: 'completed',
     });
+    
+    // Check purchase status
+    if (test.isFree === false || test.price > 0) {
+      const existing = await Enrollment.findOne({
+        user: req.userId,
+        test: test._id,
+        status: { $in: ['active', 'completed'] },
+      });
+      isPurchased = !!existing;
+    } else {
+      isPurchased = true;
+    }
   }
 
-  ApiResponse.ok(res, { test, attemptCount });
+  ApiResponse.ok(res, { test, attemptCount, isPurchased });
 });
 
 // ===== ATTEMPT =====
@@ -69,6 +105,17 @@ export const startTest = catchAsync(async (req, res) => {
 
   if (!test || !test.isPublished) {
     throw ApiError.notFound('Test not found');
+  }
+
+  if (test.isFree === false || test.price > 0) {
+    const existing = await Enrollment.findOne({
+      user: req.userId,
+      test: test._id,
+      status: { $in: ['active', 'completed'] },
+    });
+    if (!existing) {
+      throw ApiError.forbidden('Purchase required to start this test');
+    }
   }
 
   // Check max attempts
@@ -119,6 +166,7 @@ export const startTest = catchAsync(async (req, res) => {
     questions,
     duration: test.duration,
     totalMarks: test.totalMarks,
+    title: test.title,
   });
 });
 
@@ -215,14 +263,21 @@ export const submitTest = catchAsync(async (req, res) => {
     $inc: { totalTestsTaken: 1, totalPoints: attempt.isPassed ? 10 : 2 },
   });
 
+  const correctAnswers = gradedAnswers.filter((a) => a.isCorrect).length;
+  const incorrectAnswers = gradedAnswers.filter((a) => !a.isCorrect && (a.selectedOptions?.length > 0 || a.textAnswer)).length;
+  const totalQuestions = test.questions.length;
+
   ApiResponse.ok(res, {
     score: attempt.score,
+    totalScore: attempt.totalMarks,
     totalMarks: attempt.totalMarks,
     percentage: attempt.percentage,
     isPassed: attempt.isPassed,
     timeTaken: attempt.timeTaken,
-    correctAnswers: gradedAnswers.filter((a) => a.isCorrect).length,
-    totalQuestions: test.questions.length,
+    correctAnswers,
+    incorrectAnswers,
+    unanswered: totalQuestions - correctAnswers - incorrectAnswers,
+    totalQuestions,
   }, 'Test submitted successfully');
 });
 
@@ -309,11 +364,19 @@ export const getTeacherTests = catchAsync(async (req, res) => {
   const result = await Test.paginate(filter, {
     ...pagination,
     populate: { path: 'category', select: 'name' },
-    select: '-questions',
+    select: 'title description duration difficulty status isPublished questionsCount totalAttempts category createdAt questions',
+  });
+
+  // Compute questionsCount from array length for seeded docs that skipped the pre-save hook
+  const docs = result.docs.map(doc => {
+    const obj = doc.toObject ? doc.toObject() : { ...doc };
+    obj.questionsCount = obj.questionsCount || (obj.questions?.length ?? 0);
+    delete obj.questions; // don't send full questions in list
+    return obj;
   });
 
   ApiResponse.paginated(res, {
-    docs: result.docs,
+    docs,
     page: result.pagination.page,
     limit: result.pagination.limit,
     total: result.pagination.total,

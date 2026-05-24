@@ -62,6 +62,7 @@ const testSchema = new mongoose.Schema(
       index: true,
     },
 
+    questionsCount: { type: Number, default: 0 },
     maxAttempts: { type: Number, default: 0 }, // 0 = unlimited
     totalAttempts: { type: Number, default: 0 },
     averageScore: { type: Number, default: 0 },
@@ -97,6 +98,7 @@ testSchema.virtual('questionCount').get(function () {
 });
 
 testSchema.pre('save', function (next) {
+  this.questionsCount = this.questions?.length || 0;
   if (this.isModified('status')) {
     this.isPublished = this.status === 'published';
     if (this.isPublished && !this.publishedAt) this.publishedAt = new Date();

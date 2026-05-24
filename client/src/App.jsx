@@ -27,7 +27,6 @@ import CourseDetail from '@/features/course/pages/CourseDetail';
 import TestCatalog from '@/features/test/pages/TestCatalog';
 import TestDetail from '@/features/test/pages/TestDetail';
 import LeaderboardPage from '@/features/leaderboard/pages/LeaderboardPage';
-import CategoryPage from '@/features/course/pages/category/CategoryPage';
 import CertificateVerify from '@/features/auth/pages/verify/CertificateVerify';
 import UnauthorizedPage from '@/features/auth/pages/UnauthorizedPage';
 import BlogList from '@/features/blog/pages/BlogList';
@@ -54,6 +53,7 @@ import CheckoutSuccess from '@/features/enrollment/pages/checkout/CheckoutSucces
 import OrderHistory from '@/features/enrollment/pages/orders/OrderHistory';
 import Profile from '@/features/auth/pages/profile/Profile';
 import ProfileSettingsPage from '@/features/auth/pages/settings/ProfileSettingsPage';
+import NotificationsPage from '@/features/notification/pages/NotificationsPage';
 
 // Teacher Pages
 import TeacherDashboard from '@/features/teacher/pages/TeacherDashboard';
@@ -138,7 +138,7 @@ export default function App() {
         <Route path="/tests" element={<TestCatalog />} />
         <Route path="/tests/:id" element={<TestDetail />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/categories/:id" element={<CategoryPage />} />
+
         <Route path="/verify-certificate" element={<CertificateVerify />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/blog" element={<BlogList />} />
@@ -158,6 +158,7 @@ export default function App() {
         <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
         {/* Teacher Routes */}
         <Route path="/teacher" element={
@@ -175,6 +176,7 @@ export default function App() {
           <Route path="tests/:id/analytics" element={<TeacherTestAnalytics />} />
           <Route path="quizzes" element={<TeacherQuizzes />} />
           <Route path="quizzes/new" element={<TeacherQuizForm />} />
+          <Route path="quizzes/:id/edit" element={<TeacherQuizForm />} />
           <Route path="students" element={<TeacherStudents />} />
           <Route path="revenue" element={<TeacherRevenue />} />
           <Route path="discussions" element={<TeacherDiscussions />} />

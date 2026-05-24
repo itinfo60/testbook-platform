@@ -19,6 +19,15 @@ export const verifyPayment = createAsyncThunk('payments/verify', async (data, { 
   }
 });
 
+export const dummyCheckout = createAsyncThunk('payments/dummyCheckout', async (data, { rejectWithValue }) => {
+  try {
+    const { data: res } = await paymentAPI.dummyCheckout(data);
+    return res.data || res;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'Demo payment failed');
+  }
+});
+
 export const validateCoupon = createAsyncThunk('payments/validateCoupon', async (data, { rejectWithValue }) => {
   try {
     const { data: res } = await couponAPI.validate(data);
@@ -65,6 +74,9 @@ const paymentSlice = createSlice({
         state.paymentSuccess = true;
       })
       .addCase(verifyPayment.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+      .addCase(dummyCheckout.pending, state => { state.loading = true; state.error = null; })
+      .addCase(dummyCheckout.fulfilled, state => { state.loading = false; state.paymentSuccess = true; })
+      .addCase(dummyCheckout.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(validateCoupon.pending, state => { state.loading = true; })
       .addCase(validateCoupon.fulfilled, (state, action) => {
         state.loading = false;

@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { HiCheckCircle, HiArrowRight } from 'react-icons/hi';
 
 export default function CheckoutSuccess() {
   const location = useLocation();

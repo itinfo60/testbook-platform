@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 import { HiClipboardList, HiClock, HiUsers, HiArrowRight } from 'react-icons/hi';
 export default function TestCard({ test }) {
   const {
-    _id, title, description, duration, totalQuestions, questions,
-    attemptCount, category, difficulty, isFree, price
+    _id, title, description, duration, questionsCount, totalQuestions, questions,
+    totalAttempts, attemptCount, category, difficulty, isFree, price
   } = test;
 
-  const qCount = totalQuestions || questions?.length || 0;
+  const qCount = questionsCount || totalQuestions || questions?.length || 0;
 
   const difficultyColors = {
     easy: 'badge-success',
@@ -21,10 +21,12 @@ export default function TestCard({ test }) {
           <span className="badge-primary">{typeof category === 'object' ? category?.name : category || 'General'}</span>
           {difficulty && <span className={difficultyColors[difficulty] || 'badge-primary'}>{difficulty}</span>}
         </div>
-        {isFree || !price ? (
+        {isFree === true && !price ? (
           <span className="badge-success">Free</span>
-        ) : (
+        ) : price > 0 ? (
           <span className="text-sm font-semibold text-dark-900 dark:text-white">₹{price}</span>
+        ) : (
+          <span className="badge-success">Free</span>
         )}
       </div>
 
@@ -38,11 +40,11 @@ export default function TestCard({ test }) {
       <div className="flex flex-wrap items-center gap-4 text-xs text-dark-400 mb-4">
         <span className="flex items-center gap-1"><HiClipboardList className="h-3.5 w-3.5" />{qCount} Questions</span>
         <span className="flex items-center gap-1"><HiClock className="h-3.5 w-3.5" />{duration || 60} min</span>
-        <span className="flex items-center gap-1"><HiUsers className="h-3.5 w-3.5" />{attemptCount || 0} attempts</span>
+        <span className="flex items-center gap-1"><HiUsers className="h-3.5 w-3.5" />{totalAttempts || attemptCount || 0} attempts</span>
       </div>
 
       <div className="flex items-center justify-end text-sm text-primary-600 dark:text-primary-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-        Start Test <HiArrowRight className="h-3.5 w-3.5 ml-1" />
+        {(Number(price) > 0 && !test.isPurchased) ? 'Buy Test' : 'Start Test'} <HiArrowRight className="h-3.5 w-3.5 ml-1" />
       </div>
     </Link>
   );

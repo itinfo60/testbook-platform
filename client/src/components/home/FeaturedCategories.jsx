@@ -25,7 +25,7 @@ export default function FeaturedCategories() {
   const categories = examCategories.length > 0 ? examCategories : defaultCategories;
 
   return (
-    <section className="py-16 bg-dark-50 dark:bg-dark-900/50">
+    <section id="categories" className="py-16 bg-dark-50 dark:bg-dark-900/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="section-title">Explore by Category</h2>

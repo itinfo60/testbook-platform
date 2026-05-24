@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Quiz from './quiz.model.js';
 import QuizAttempt from './quizAttempt.model.js';
 import Enrollment from '../enrollment/enrollment.model.js';
@@ -112,6 +113,16 @@ export const submitQuiz = catchAsync(async (req, res) => {
 });
 
 // Teacher
+export const getTeacherQuizById = catchAsync(async (req, res) => {
+  const quiz = await Quiz.findById(req.params.id).populate('course', 'title');
+  if (!quiz) throw ApiError.notFound('Quiz not found');
+  // Allow teacher who owns it or admin
+  if (quiz.teacher.toString() !== req.userId && req.user?.role !== 'admin') {
+    throw ApiError.forbidden('Not authorized');
+  }
+  ApiResponse.ok(res, { quiz });
+});
+
 export const createQuiz = catchAsync(async (req, res) => {
   const quiz = await Quiz.create({ ...req.body, teacher: req.userId });
   ApiResponse.created(res, { quiz }, 'Quiz created');

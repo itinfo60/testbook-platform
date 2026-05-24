@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { setAnswer, toggleMarkForReview } from '@/features/test/testSlice';
+import { HiBookmark, HiArrowLeft, HiArrowRight } from 'react-icons/hi';
 
 export default function TestQuestion({ question, index, total, onNext, onPrev }) {
   const dispatch = useDispatch();

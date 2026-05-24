@@ -55,14 +55,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = _store?.getState()?.auth?.refreshToken;
-
-        if (!refreshToken) {
-          if (_store) _store.dispatch({ type: 'auth/logout' });
-          return Promise.reject(error);
-        }
-
-        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken });
+        // Use the api instance (withCredentials:true) so the httpOnly refreshToken cookie is sent.
+        // Also pass the refreshToken from Redux as a fallback in the body.
+        const storedRefreshToken = _store?.getState()?.auth?.refreshToken;
+        const { data } = await api.post('/auth/refresh-token', { refreshToken: storedRefreshToken });
 
         const newToken = data.data?.accessToken || data.accessToken || data.token;
         const newRefreshToken = data.data?.refreshToken || data.refreshToken;
@@ -70,7 +66,7 @@ api.interceptors.response.use(
         if (_store) {
           _store.dispatch({
             type: 'auth/setCredentials',
-            payload: { token: newToken, refreshToken: newRefreshToken },
+            payload: { token: newToken, ...(newRefreshToken && { refreshToken: newRefreshToken }) },
           });
         }
 
@@ -115,10 +111,14 @@ export const courseAPI = {
 };
 
 export const enrollmentAPI = {
-  enroll: data => api.post('/enrollments/enroll', data),
-  getMyEnrollments: () => api.get('/enrollments/my-enrollments'),
-  getProgress: id => api.get(`/enrollments/${id}/progress`),
-  completeLesson: (id, data) => api.put(`/enrollments/${id}/lesson-complete`, data),
+  enroll: data => api.post('/enrollments', data),
+  getMyEnrollments: () => api.get('/enrollments/my'),
+  getMyTestEnrollments: () => api.get('/enrollments/my-tests'),
+  checkEnrollment: courseId => api.get(`/enrollments/check/${courseId}`),
+  getProgress: courseId => api.get(`/enrollments/progress/${courseId}`),
+  updateProgress: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
+  completeLesson: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
+  getTeacherStudents: () => api.get('/enrollments/teacher/students'),
 };
 
 export const reviewAPI = {
@@ -134,20 +134,28 @@ export const testAPI = {
   create: data => api.post('/tests', data),
   update: (id, data) => api.put(`/tests/${id}`, data),
   start: id => api.post(`/tests/${id}/start`),
-  submit: (id, data) => api.post(`/tests/${id}/submit`, data),
+  submit: (attemptId, data) => api.post(`/tests/submit/${attemptId}`, data),
   getAnalytics: id => api.get(`/tests/${id}/analytics`),
   getTeacherTests: () => api.get('/tests/teacher/my-tests'),
+  getMyAttempts: () => api.get('/tests/my/attempts'),
 };
 
 export const quizAPI = {
   getCourseQuizzes: courseId => api.get(`/quizzes/course/${courseId}`),
   submit: (id, data) => api.post(`/quizzes/${id}/submit`, data),
   getTeacherQuizzes: () => api.get('/quizzes/teacher/my-quizzes'),
+  getById: id => api.get(`/quizzes/teacher/${id}`),
+  create: data => api.post('/quizzes', data),
+  update: (id, data) => api.put(`/quizzes/${id}`, data),
+  delete: id => api.delete(`/quizzes/${id}`),
 };
 
 export const paymentAPI = {
   createOrder: data => api.post('/payments/create-order', data),
   verify: data => api.post('/payments/verify', data),
+  dummyCheckout: data => api.post('/payments/dummy-checkout', data),
+  getMyOrders: () => api.get('/payments/my-orders'),
+  getTeacherRevenue: () => api.get('/payments/teacher/revenue'),
 };
 
 export const couponAPI = {
@@ -169,9 +177,13 @@ export const wishlistAPI = {
 export const discussionAPI = {
   getCourseDiscussions: (courseId, params) => api.get(`/discussions/course/${courseId}`, { params }),
   create: data => api.post('/discussions', data),
+  update: (id, data) => api.put(`/discussions/${id}`, data),
   reply: (id, data) => api.post(`/discussions/${id}/reply`, data),
-  like: id => api.patch(`/discussions/${id}/like`),
+  updateReply: (id, replyId, data) => api.put(`/discussions/${id}/reply/${replyId}`, data),
+  deleteReply: (id, replyId) => api.delete(`/discussions/${id}/reply/${replyId}`),
+  like: id => api.post(`/discussions/${id}/like`),
   resolve: id => api.patch(`/discussions/${id}/resolve`),
+  delete: id => api.delete(`/discussions/${id}`),
 };
 
 export const noteAPI = {

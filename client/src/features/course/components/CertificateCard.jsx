@@ -1,3 +1,4 @@
+import { HiAcademicCap, HiDownload } from 'react-icons/hi';
 
 export default function CertificateCard({ certificate }) {
   return (

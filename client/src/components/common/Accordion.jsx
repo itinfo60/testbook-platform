@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { HiChevronDown } from 'react-icons/hi';
 
 export default function Accordion({ items, allowMultiple = false, className = '' }) {
   const [openItems, setOpenItems] = useState([]);

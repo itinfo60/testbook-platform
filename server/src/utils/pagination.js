@@ -1,11 +1,13 @@
 import { PAGINATION } from '../constants/index.js';
 
 export const buildPaginationQuery = (query = {}) => {
-  const page = Math.max(1, parseInt(query.page) || PAGINATION.DEFAULT_PAGE);
-  const limit = Math.min(
-    Math.max(1, parseInt(query.limit) || PAGINATION.DEFAULT_LIMIT),
-    PAGINATION.MAX_LIMIT
-  );
+  const pageParam = parseInt(query.page);
+  const page = isNaN(pageParam) ? PAGINATION.DEFAULT_PAGE : Math.max(1, pageParam);
+
+  const limitParam = parseInt(query.limit);
+  const limit = isNaN(limitParam) 
+    ? PAGINATION.DEFAULT_LIMIT 
+    : Math.min(Math.max(1, limitParam), PAGINATION.MAX_LIMIT);
   const skip = (page - 1) * limit;
   const sort = query.sort || '-createdAt';
 
@@ -17,7 +19,11 @@ export const buildFilterQuery = (query, filterConfig = {}) => {
 
   for (const [key, config] of Object.entries(filterConfig)) {
     const value = query[key];
-    if (value === undefined || value === '') continue;
+    
+    // Skip undefined/empty for most types, but allow range types to proceed if they have min/max/from/to
+    if ((value === undefined || value === '') && !['dateRange', 'range'].includes(config.type)) {
+      continue;
+    }
 
     switch (config.type) {
       case 'search':

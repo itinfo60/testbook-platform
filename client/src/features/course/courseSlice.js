@@ -4,7 +4,7 @@ import { courseAPI } from '@/services/api';
 export const fetchCourses = createAsyncThunk('courses/fetchAll', async (params, { rejectWithValue }) => {
   try {
     const { data } = await courseAPI.getAll(params);
-    return data.data || data;
+    return data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'Failed to fetch courses');
   }
@@ -96,7 +96,7 @@ const courseSlice = createSlice({
       .addCase(fetchCourses.fulfilled, (state, action) => {
         state.loading = false;
         const payload = action.payload;
-        state.courses = payload.courses || payload;
+        state.courses = payload.data || payload.courses || payload;
         if (payload.pagination) state.pagination = payload.pagination;
         if (payload.totalPages) state.pagination = { page: payload.page, totalPages: payload.totalPages, total: payload.total };
       })
@@ -107,7 +107,7 @@ const courseSlice = createSlice({
       .addCase(fetchCourseById.pending, state => { state.loading = true; })
       .addCase(fetchCourseById.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentCourse = action.payload;
+        state.currentCourse = action.payload.course || action.payload;
       })
       .addCase(fetchCourseById.rejected, (state, action) => {
         state.loading = false;

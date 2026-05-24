@@ -1,67 +1,75 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiBookOpen, HiClipboardList, HiUsers, HiCurrencyRupee } from 'react-icons/hi';
+import { Link } from 'react-router-dom';
+import { HiBookOpen, HiClipboardList, HiUsers, HiCurrencyRupee, HiArrowRight, HiPuzzle } from 'react-icons/hi';
 import { fetchTeacherCourses } from '@/features/course/courseSlice';
 import { fetchTeacherTests } from '@/features/test/testSlice';
+import { fetchTeacherQuizzes } from '@/features/quiz/quizSlice';
+import { enrollmentAPI } from '@/services/api';
 
 export default function TeacherDashboard() {
   const dispatch = useDispatch();
   const { teacherCourses } = useSelector(state => state.courses);
   const { teacherTests } = useSelector(state => state.tests);
+  const { teacherQuizzes } = useSelector(state => state.quizzes);
+  const [uniqueStudentsCount, setUniqueStudentsCount] = useState(0);
 
   useEffect(() => {
     dispatch(fetchTeacherCourses());
     dispatch(fetchTeacherTests());
+    dispatch(fetchTeacherQuizzes());
+    
+    // Fetch unique students
+    enrollmentAPI.getTeacherStudents()
+      .then(res => {
+        const students = res.data?.data?.students || [];
+        const uniqueIds = new Set(students.map(s => s.user?._id).filter(Boolean));
+        setUniqueStudentsCount(uniqueIds.size);
+      })
+      .catch(() => setUniqueStudentsCount(0));
   }, [dispatch]);
 
+  const totalStudents = uniqueStudentsCount;
+  // Fix revenue calculation by estimating from price if exact revenue is not provided
+  const totalRevenue = teacherCourses.reduce((sum, c) => sum + (c.revenue || ((c.enrollmentCount || 0) * (c.effectivePrice || 0))), 0);
+
   const stats = [
-    { icon: HiBookOpen, label: 'Total Courses', value: teacherCourses.length, color: 'text-primary-600 bg-primary-50 dark:bg-primary-900/30' },
-    { icon: HiClipboardList, label: 'Total Tests', value: teacherTests.length, color: 'text-accent-600 bg-accent-50 dark:bg-accent-900/30' },
-    { icon: HiUsers, label: 'Total Students', value: teacherCourses.reduce((sum, c) => sum + (c.studentsEnrolled || 0), 0), color: 'text-secondary-600 bg-secondary-50 dark:bg-secondary-900/30' },
-    { icon: HiCurrencyRupee, label: 'Total Revenue', value: `₹${teacherCourses.reduce((sum, c) => sum + (c.revenue || 0), 0).toLocaleString()}`, color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30' },
+    { icon: HiBookOpen, label: 'Total Courses', value: teacherCourses.length, color: 'from-blue-500 to-indigo-600', to: '/teacher/courses' },
+    { icon: HiClipboardList, label: 'Total Tests', value: teacherTests.length, color: 'from-purple-500 to-pink-600', to: '/teacher/tests' },
+    { icon: HiPuzzle, label: 'Total Quizzes', value: teacherQuizzes?.length || 0, color: 'from-rose-500 to-pink-500', to: '/teacher/quizzes' },
+    { icon: HiUsers, label: 'Total Students', value: totalStudents, color: 'from-emerald-400 to-teal-500', to: '/teacher/students' },
+    { icon: HiCurrencyRupee, label: 'Total Revenue', value: `₹${totalRevenue.toLocaleString('en-IN')}`, color: 'from-amber-400 to-orange-500', to: '/teacher/revenue' },
   ];
 
   return (
-    <div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map(stat => (
-          <div key={stat.label} className="card p-5">
-            <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}>
-              <stat.icon className="h-5 w-5" />
-            </div>
-            <div className="text-2xl font-bold text-dark-900 dark:text-white">{stat.value}</div>
-            <div className="text-sm text-dark-500">{stat.label}</div>
-          </div>
-        ))}
-      </div>
+    <div className="animate-fade-in">
 
-      {/* Recent Courses */}
-      <div className="card p-6 mb-6">
-        <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">Recent Courses</h2>
-        {teacherCourses.length === 0 ? (
-          <p className="text-dark-500 text-center py-6">No courses created yet</p>
-        ) : (
-          <div className="space-y-3">
-            {teacherCourses.slice(0, 5).map(course => (
-              <div key={course._id} className="flex items-center gap-4 p-3 bg-dark-50 dark:bg-dark-800/50 rounded-xl">
-                <div className="h-10 w-16 rounded-lg bg-dark-200 dark:bg-dark-700 flex-shrink-0 overflow-hidden">
-                  {course.thumbnail ? (
-                    <img src={course.thumbnail} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">📘</div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-dark-900 dark:text-white truncate">{course.title}</p>
-                  <p className="text-xs text-dark-400">{course.studentsEnrolled || 0} students</p>
-                </div>
-                <span className={`badge ${course.isPublished ? 'badge-success' : 'badge-warning'}`}>
-                  {course.isPublished ? 'Published' : 'Draft'}
-                </span>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+        {stats.map((stat, idx) => (
+          <Link
+            key={stat.label}
+            to={stat.to}
+            className="relative p-6 rounded-2xl bg-white dark:bg-dark-800 border border-slate-100 dark:border-dark-700 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
+            style={{ animationDelay: `${idx * 100}ms` }}
+          >
+            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-lg text-white transform group-hover:scale-110 transition-transform duration-300`}>
+                <stat.icon className="h-6 w-6" />
               </div>
-            ))}
-          </div>
-        )}
+              <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-dark-700 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                <HiArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{stat.value}</div>
+              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">{stat.label}</div>
+            </div>
+            {/* Subtle glow effect behind card on hover */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300 pointer-events-none`}></div>
+          </Link>
+        ))}
       </div>
     </div>
   );

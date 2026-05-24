@@ -72,7 +72,9 @@ export default function Dashboard() {
             <div className="space-y-3">
               {enrollments.slice(0, 4).map(enrollment => {
                 const course = enrollment.course || {};
-                const progress = enrollment.progress || 0;
+                const progress = enrollment.progressPercentage || 0;
+                const thumbnailUrl = course.thumbnail?.url || (typeof course.thumbnail === 'string' ? course.thumbnail : null);
+                
                 return (
                   <Link
                     key={enrollment._id}
@@ -80,8 +82,8 @@ export default function Dashboard() {
                     className="card-hover flex items-center gap-4 p-4"
                   >
                     <div className="h-16 w-24 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden">
-                      {course.thumbnail ? (
-                        <img src={course.thumbnail} alt="" className="w-full h-full object-cover" />
+                      {thumbnailUrl ? (
+                        <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-2xl">📘</div>
                       )}

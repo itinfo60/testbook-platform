@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { HiClock } from 'react-icons/hi';
 
 export default function QuizTimer({ duration, onTimeUp }) {
   const [timeLeft, setTimeLeft] = useState((duration || 10) * 60);

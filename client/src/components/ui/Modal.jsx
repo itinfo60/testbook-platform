@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { HiX } from 'react-icons/hi';
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md', showClose = true }) {
   const overlayRef = useRef();

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { HiClock } from 'react-icons/hi';
 
 export default function TestTimer({ duration, onTimeUp, startTime }) {
   const [timeLeft, setTimeLeft] = useState(() => {

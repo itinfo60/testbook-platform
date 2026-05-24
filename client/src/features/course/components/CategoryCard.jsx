@@ -21,7 +21,7 @@ export default function CategoryCard({ category }) {
 
   return (
     <Link
-      to={`/categories/${category._id || category.slug}`}
+      to={`/courses?category=${category._id}`}
       className="card-hover p-6 group text-center"
     >
       <div className="text-4xl mb-3">{icon}</div>
@@ -29,7 +29,9 @@ export default function CategoryCard({ category }) {
         {category.name}
       </h3>
       {category.courseCount !== undefined && (
-        <p className="text-sm text-dark-400">{category.courseCount} courses</p>
+        <p className="text-sm text-dark-400">
+          {category.courseCount} {category.courseCount === 1 ? 'course' : 'courses'}
+        </p>
       )}
       <div className="mt-3 flex items-center justify-center gap-1 text-sm text-primary-600 dark:text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
         Explore <HiArrowRight className="h-3.5 w-3.5" />

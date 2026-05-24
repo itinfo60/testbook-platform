@@ -11,7 +11,7 @@ export default function TestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { currentTest: test, loading } = useSelector(state => state.tests);
+  const { currentTest: test, attemptCount, isPurchased, loading } = useSelector(state => state.tests);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -19,25 +19,37 @@ export default function TestDetail() {
     dispatch(clearTestState());
   }, [dispatch, id]);
 
-  const handleStart = () => {
+  const handleAction = () => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: { pathname: `/tests/${id}` } } });
       return;
     }
+
+    if (test.isFree === false && test.price > 0 && !isPurchased) {
+      navigate(`/checkout/${id}?type=test`);
+      return;
+    }
+
     navigate(`/tests/${id}/take`);
   };
 
   if (loading || !test) return <LoadingSpinner fullScreen />;
 
-  const totalQ = test.totalQuestions || test.questions?.length || 0;
+  const isPaidAndUnpurchased = !test.isFree && test.price > 0 && !isPurchased;
+
+  const totalQ = test.questionsCount || test.totalQuestions || test.questions?.length || 0;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="card p-8">
         <div className="flex flex-wrap gap-2 mb-4">
-          {test.category && <span className="badge-primary">{test.category}</span>}
+          {test.category && <span className="badge-primary">{typeof test.category === 'object' ? test.category.name : test.category}</span>}
           {test.difficulty && <span className="badge-warning capitalize">{test.difficulty}</span>}
-          {(!test.price || test.isFree) && <span className="badge-success">Free</span>}
+          {test.price > 0 ? (
+            <span className="text-sm font-semibold text-dark-900 dark:text-white">₹{test.price}</span>
+          ) : test.isFree === true ? (
+            <span className="badge-success">Free</span>
+          ) : null}
         </div>
 
         <h1 className="text-2xl md:text-3xl font-bold text-dark-900 dark:text-white mb-3">{test.title}</h1>
@@ -56,7 +68,7 @@ export default function TestDetail() {
           </div>
           <div className="card p-4 text-center bg-dark-50 dark:bg-dark-800/50">
             <HiUsers className="h-6 w-6 text-secondary-500 mx-auto mb-1" />
-            <div className="text-lg font-bold text-dark-900 dark:text-white">{test.attemptCount || 0}</div>
+            <div className="text-lg font-bold text-dark-900 dark:text-white">{attemptCount}</div>
             <div className="text-xs text-dark-400">Attempts</div>
           </div>
           <div className="card p-4 text-center bg-dark-50 dark:bg-dark-800/50">
@@ -80,8 +92,8 @@ export default function TestDetail() {
         </div>
 
         <div className="flex gap-3 justify-center">
-          <Button variant="primary" size="lg" icon={HiPlay} onClick={handleStart}>
-            Start Test
+          <Button variant="primary" size="lg" icon={isPaidAndUnpurchased ? null : HiPlay} onClick={handleAction}>
+            {isPaidAndUnpurchased ? `Buy Test - ₹${test.price}` : 'Start Test'}
           </Button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import Payment from './payment.model.js';
 import Course from '../course/course.model.js';
+import Test from '../test/test.model.js';
 import Coupon from '../coupon/coupon.model.js';
 import Enrollment from '../enrollment/enrollment.model.js';
 import User from '../user/user.model.js';
@@ -19,22 +20,40 @@ const razorpay = new Razorpay({
 });
 
 export const createOrder = catchAsync(async (req, res) => {
-  const { courseId, couponCode } = req.body;
+  const { courseId, testId, couponCode } = req.body;
 
-  const course = await Course.findById(courseId);
-  if (!course || !course.isPublished) {
-    throw ApiError.notFound('Course not found');
+  if (!courseId && !testId) {
+    throw ApiError.badRequest('Either courseId or testId is required');
   }
 
-  // Check if already enrolled
-  const existing = await Enrollment.findOne({
-    user: req.userId,
-    course: courseId,
-    status: { $in: ['active', 'completed'] },
-  });
-  if (existing) throw ApiError.conflict('Already enrolled');
+  let item = null;
+  let amount = 0;
 
-  let amount = course.effectivePrice;
+  if (courseId) {
+    item = await Course.findById(courseId);
+    if (!item || !item.isPublished) throw ApiError.notFound('Course not found');
+    amount = item.effectivePrice;
+    
+    // Check if already enrolled
+    const existing = await Enrollment.findOne({
+      user: req.userId,
+      course: courseId,
+      status: { $in: ['active', 'completed'] },
+    });
+    if (existing) throw ApiError.conflict('Already enrolled in course');
+  } else {
+    item = await Test.findById(testId);
+    if (!item || !item.isPublished) throw ApiError.notFound('Test not found');
+    amount = item.price || 0;
+    
+    // Check if already enrolled
+    const existing = await Enrollment.findOne({
+      user: req.userId,
+      test: testId,
+      status: { $in: ['active', 'completed'] },
+    });
+    if (existing) throw ApiError.conflict('Already purchased test');
+  }
   let discount = 0;
   let couponId = null;
 
@@ -61,15 +80,21 @@ export const createOrder = catchAsync(async (req, res) => {
 
   // Free enrollment
   if (amount === 0) {
-    const enrollment = await Enrollment.create({
+    const enrollmentData = {
       user: req.userId,
-      course: courseId,
       amountPaid: 0,
       couponUsed: couponId,
-    });
+    };
+    if (courseId) enrollmentData.course = courseId;
+    if (testId) enrollmentData.test = testId;
 
-    await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
-    await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
+    const enrollment = await Enrollment.create(enrollmentData);
+
+    if (courseId) {
+      await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
+      await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
+      await redis.delPattern('courses:*');
+    }
 
     if (couponId) {
       await Coupon.findByIdAndUpdate(couponId, {
@@ -77,8 +102,6 @@ export const createOrder = catchAsync(async (req, res) => {
         $push: { usedBy: { user: req.userId, usedAt: new Date() } },
       });
     }
-
-    await redis.delPattern('courses:*');
 
     return ApiResponse.created(res, { enrollment, isFree: true }, 'Enrolled for free');
   }
@@ -96,9 +119,8 @@ export const createOrder = catchAsync(async (req, res) => {
   });
 
   // Save payment record
-  const payment = await Payment.create({
+  const paymentData = {
     user: req.userId,
-    course: courseId,
     orderId: order.id,
     amount,
     currency: 'INR',
@@ -108,7 +130,11 @@ export const createOrder = catchAsync(async (req, res) => {
     discount,
     netAmount: amount,
     metadata: { razorpayOrderId: order.id },
-  });
+  };
+  if (courseId) paymentData.course = courseId;
+  if (testId) paymentData.test = testId;
+
+  const payment = await Payment.create(paymentData);
 
   ApiResponse.created(res, {
     orderId: order.id,
@@ -147,17 +173,23 @@ export const verifyPayment = catchAsync(async (req, res) => {
   if (!payment) throw ApiError.notFound('Payment not found');
 
   // Create enrollment
-  const enrollment = await Enrollment.create({
+  const enrollmentData = {
     user: req.userId,
-    course: payment.course,
     amountPaid: payment.amount,
     paymentId: payment._id,
     couponUsed: payment.coupon,
-  });
+  };
+  if (payment.course) enrollmentData.course = payment.course;
+  if (payment.test) enrollmentData.test = payment.test;
 
-  // Update course enrollment count
-  await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
-  await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
+  const enrollment = await Enrollment.create(enrollmentData);
+
+  // Update course enrollment count if applicable
+  if (payment.course) {
+    await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
+    await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
+    await redis.delPattern('courses:*');
+  }
 
   // Update coupon usage
   if (payment.coupon) {
@@ -167,14 +199,85 @@ export const verifyPayment = catchAsync(async (req, res) => {
     });
   }
 
-  await redis.delPattern('courses:*');
-
   // Send confirmation email
   const user = await User.findById(req.userId);
-  const course = await Course.findById(payment.course);
-  emailService.sendEnrollmentConfirmation(user, course).catch(() => {});
+  if (payment.course) {
+    const course = await Course.findById(payment.course);
+    emailService.sendEnrollmentConfirmation(user, course).catch(() => {});
+  }
 
   ApiResponse.ok(res, { enrollment, payment }, 'Payment verified and enrolled');
+});
+
+export const dummyCheckout = catchAsync(async (req, res) => {
+  const { courseId, testId } = req.body;
+
+  if (!courseId && !testId) {
+    throw ApiError.badRequest('Either courseId or testId is required');
+  }
+
+  let item = null;
+  let amount = 0;
+
+  if (courseId) {
+    item = await Course.findById(courseId);
+    if (!item || !item.isPublished) throw ApiError.notFound('Course not found');
+    amount = item.effectivePrice;
+    
+    const existing = await Enrollment.findOne({
+      user: req.userId,
+      course: courseId,
+      status: { $in: ['active', 'completed'] },
+    });
+    if (existing) throw ApiError.conflict('Already enrolled in this course');
+  } else {
+    item = await Test.findById(testId);
+    if (!item || !item.isPublished) throw ApiError.notFound('Test not found');
+    amount = item.price || 0;
+    
+    const existing = await Enrollment.findOne({
+      user: req.userId,
+      test: testId,
+      status: { $in: ['active', 'completed'] },
+    });
+    if (existing) throw ApiError.conflict('Already purchased test');
+  }
+
+  const paymentData = {
+    user: req.userId,
+    orderId: `DEMO_${Date.now()}_${req.userId}`,
+    amount,
+    currency: 'INR',
+    status: 'completed',
+    provider: 'demo',
+    netAmount: amount,
+    metadata: { demo: true },
+  };
+  if (courseId) paymentData.course = courseId;
+  if (testId) paymentData.test = testId;
+
+  const payment = await Payment.create(paymentData);
+
+  const enrollmentData = {
+    user: req.userId,
+    amountPaid: amount,
+    paymentId: payment._id,
+  };
+  if (courseId) enrollmentData.course = courseId;
+  if (testId) enrollmentData.test = testId;
+
+  const enrollment = await Enrollment.create(enrollmentData);
+
+  const user = await User.findById(req.userId);
+
+  if (courseId) {
+    await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
+    await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
+    await redis.delPattern('courses:*');
+    emailService.sendEnrollmentConfirmation(user, item).catch(() => {});
+  }
+
+  ApiResponse.created(res, { enrollment, payment }, 'Demo payment successful. Enrolled!');
 });
 
 export const getMyOrders = catchAsync(async (req, res) => {
@@ -192,4 +295,24 @@ export const getMyOrders = catchAsync(async (req, res) => {
     limit: result.pagination.limit,
     total: result.pagination.total,
   });
+});
+
+export const getTeacherRevenue = catchAsync(async (req, res) => {
+  // Find courses owned by this teacher
+  const courses = await Course.find({ teacher: req.userId }, '_id title thumbnail').lean();
+  const courseIds = courses.map(c => c._id);
+
+  if (courseIds.length === 0) {
+    return ApiResponse.ok(res, { payments: [], totalRevenue: 0, totalOrders: 0 });
+  }
+
+  const payments = await Payment.find({ course: { $in: courseIds }, status: 'completed' })
+    .populate('user', 'name email avatar')
+    .populate('course', 'title thumbnail')
+    .sort('-createdAt')
+    .lean();
+
+  const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  ApiResponse.ok(res, { payments, totalRevenue, totalOrders: payments.length });
 });

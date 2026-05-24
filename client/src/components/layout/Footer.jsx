@@ -8,7 +8,7 @@ export default function Footer() {
       { label: 'Courses', path: '/courses' },
       { label: 'Test Series', path: '/tests' },
       { label: 'Leaderboard', path: '/leaderboard' },
-      { label: 'Categories', path: '/categories' },
+      { label: 'Categories', path: '/#categories' },
     ],
     'Company': [
       { label: 'About Us', path: '#' },
@@ -75,9 +75,15 @@ export default function Footer() {
               <ul className="space-y-2.5">
                 {links.map(link => (
                   <li key={link.label}>
-                    <Link to={link.path} className="text-sm text-dark-400 hover:text-white transition-colors">
-                      {link.label}
-                    </Link>
+                    {link.path.startsWith('/#') ? (
+                      <a href={link.path} className="text-sm text-dark-400 hover:text-white transition-colors">
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link to={link.path} className="text-sm text-dark-400 hover:text-white transition-colors">
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

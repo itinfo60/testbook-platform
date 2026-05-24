@@ -78,19 +78,21 @@ export default function HeroSection() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.6 }}
-                className="absolute top-0 left-0 z-20 bg-white dark:bg-dark-800 rounded-2xl shadow-2xl p-4"
+                className="absolute top-0 left-0 z-20"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <span className="text-xl">🎯</span>
-                  </div>
-                  <div>
-                    <div className="text-base font-bold text-dark-900 dark:text-white">
-                      95% Success Rate
+                <Link to="/courses" className="block bg-white dark:bg-dark-800 rounded-2xl shadow-2xl p-4 hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
+                      <span className="text-xl">🎯</span>
                     </div>
-                    <div className="text-xs text-dark-400">In competitive exams</div>
+                    <div>
+                      <div className="text-base font-bold text-dark-900 dark:text-white">
+                        95% Success Rate
+                      </div>
+                      <div className="text-xs text-dark-400">In competitive exams</div>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </motion.div>
 
               {/* ✅ Floating Card 2 — Smart Analytics (BOTTOM RIGHT) */}
@@ -98,19 +100,21 @@ export default function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.8 }}
-                className="absolute bottom-0 right-0 z-20 bg-white dark:bg-dark-800 rounded-2xl shadow-2xl p-4"
+                className="absolute bottom-0 right-0 z-20"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <span className="text-xl">📊</span>
-                  </div>
-                  <div>
-                    <div className="text-base font-bold text-dark-900 dark:text-white">
-                      AI Powered
+                <Link to="/courses" className="block bg-white dark:bg-dark-800 rounded-2xl shadow-2xl p-4 hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                      <span className="text-xl">📊</span>
                     </div>
-                    <div className="text-xs text-dark-400">Smart analytics & insights</div>
+                    <div>
+                      <div className="text-base font-bold text-dark-900 dark:text-white">
+                        AI Powered
+                      </div>
+                      <div className="text-xs text-dark-400">Smart analytics & insights</div>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </motion.div>
 
               {/* Main Exam List Card */}
@@ -122,7 +126,8 @@ export default function HeroSection() {
                     { name: 'UPSC Civil Services', icon: '📜' },
                     { name: 'State PSC Exams', icon: '🏢' },
                   ].map((exam) => (
-                    <div
+                    <Link
+                      to="/courses"
                       key={exam.name}
                       className="flex items-center gap-4 bg-white/10 rounded-xl p-3 hover:bg-white/20 transition-colors cursor-pointer"
                     >
@@ -131,7 +136,7 @@ export default function HeroSection() {
                       </div>
                       <span className="text-white font-medium">{exam.name}</span>
                       <HiArrowRight className="h-4 w-4 text-white/50 ml-auto" />
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>

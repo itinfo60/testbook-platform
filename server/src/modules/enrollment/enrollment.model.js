@@ -21,7 +21,11 @@ const enrollmentSchema = new mongoose.Schema(
     course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course',
-      required: true,
+      index: true,
+    },
+    test: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Test',
       index: true,
     },
     status: {
@@ -49,7 +53,18 @@ const enrollmentSchema = new mongoose.Schema(
 );
 
 // Compound index to prevent duplicate enrollments
-enrollmentSchema.index({ user: 1, course: 1 }, { unique: true });
+enrollmentSchema.index({ user: 1, course: 1 }, { unique: true, partialFilterExpression: { course: { $exists: true } } });
+enrollmentSchema.index({ user: 1, test: 1 }, { unique: true, partialFilterExpression: { test: { $exists: true } } });
+
+enrollmentSchema.pre('validate', function(next) {
+  if (!this.course && !this.test) {
+    next(new Error('Enrollment must be associated with either a course or a test.'));
+  } else if (this.course && this.test) {
+    next(new Error('Enrollment cannot be associated with both a course and a test.'));
+  } else {
+    next();
+  }
+});
 enrollmentSchema.index({ enrolledAt: -1 });
 enrollmentSchema.index({ status: 1, enrolledAt: -1 });
 

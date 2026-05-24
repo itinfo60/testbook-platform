@@ -1,4 +1,6 @@
+import { HiArrowRight } from 'react-icons/hi';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import ProgressBar from '@/components/common/ProgressBar';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -34,8 +36,8 @@ export default function MyCourses() {
             return (
               <Link key={enrollment._id} to={`/courses/${course._id}/learn`} className="card-hover overflow-hidden group">
                 <div className="h-40 bg-dark-100 dark:bg-dark-700 overflow-hidden">
-                  {course.thumbnail ? (
-                    <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  {(course.thumbnail?.url || course.thumbnail) ? (
+                    <img src={course.thumbnail?.url || course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 text-white text-4xl">📘</div>
                   )}

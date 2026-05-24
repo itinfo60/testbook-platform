@@ -10,6 +10,7 @@ router.post('/submit', authenticate, quizController.submitQuiz);
 
 // Teacher
 router.get('/teacher/my-quizzes', authenticate, authorize('teacher', 'admin'), quizController.getTeacherQuizzes);
+router.get('/teacher/:id', authenticate, authorize('teacher', 'admin'), quizController.getTeacherQuizById);
 router.post('/', authenticate, authorize('teacher', 'admin'), quizController.createQuiz);
 router.put('/:id', authenticate, authorize('teacher', 'admin'), quizController.updateQuiz);
 router.delete('/:id', authenticate, authorize('teacher', 'admin'), quizController.deleteQuiz);

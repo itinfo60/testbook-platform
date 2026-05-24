@@ -28,9 +28,9 @@ export const fetchProgress = createAsyncThunk('enrollments/progress', async (id,
   }
 });
 
-export const completeLesson = createAsyncThunk('enrollments/completeLesson', async ({ id, lessonId }, { rejectWithValue }) => {
+export const completeLesson = createAsyncThunk('enrollments/completeLesson', async ({ courseId, lessonId, sectionId }, { rejectWithValue }) => {
   try {
-    const { data } = await enrollmentAPI.completeLesson(id, { lessonId });
+    const { data } = await enrollmentAPI.completeLesson(courseId, { lessonId, sectionId, completed: true });
     return data.data || data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'Failed to update progress');
@@ -47,6 +47,17 @@ const enrollmentSlice = createSlice({
   },
   reducers: {
     clearEnrollmentError: state => { state.error = null; },
+    markLessonDone: (state, action) => {
+      if (!state.currentProgress) return;
+      const lessonId = String(action.payload);
+      const existing = state.currentProgress.progress?.find(p => String(p.lessonId || p.lesson) === lessonId);
+      if (existing) {
+        existing.completed = true;
+      } else {
+        if (!state.currentProgress.progress) state.currentProgress.progress = [];
+        state.currentProgress.progress.push({ lessonId, completed: true });
+      }
+    },
   },
   extraReducers: builder => {
     builder
@@ -62,10 +73,16 @@ const enrollmentSlice = createSlice({
         state.enrollments = Array.isArray(action.payload) ? action.payload : action.payload.enrollments || [];
       })
       .addCase(fetchMyEnrollments.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
-      .addCase(fetchProgress.fulfilled, (state, action) => { state.currentProgress = action.payload; })
-      .addCase(completeLesson.fulfilled, (state, action) => { state.currentProgress = action.payload; });
+      .addCase(fetchProgress.fulfilled, (state, action) => {
+        state.currentProgress = action.payload.enrollment || action.payload;
+      })
+      .addCase(completeLesson.fulfilled, (state, action) => {
+        if (state.currentProgress) {
+          state.currentProgress.progressPercentage = action.payload.progress ?? state.currentProgress.progressPercentage;
+        }
+      });
   },
 });
 
-export const { clearEnrollmentError } = enrollmentSlice.actions;
+export const { clearEnrollmentError, markLessonDone } = enrollmentSlice.actions;
 export default enrollmentSlice.reducer;

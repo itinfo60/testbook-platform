@@ -1,3 +1,4 @@
+import { HiCheckCircle, HiXCircle } from 'react-icons/hi';
 
 export default function QuizResults({ result }) {
   const { score, totalScore, percentage, correctAnswers, totalQuestions } = result || {};

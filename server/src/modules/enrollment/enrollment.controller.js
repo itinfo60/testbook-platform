@@ -74,13 +74,35 @@ export const enrollInCourse = catchAsync(async (req, res) => {
 export const getMyEnrollments = catchAsync(async (req, res) => {
   const pagination = buildPaginationQuery(req.query);
 
-  const filter = { user: req.userId };
+  const filter = { user: req.userId, course: { $exists: true } };
   if (req.query.status) filter.status = req.query.status;
 
   const result = await Enrollment.paginate(filter, {
     ...pagination,
     populate: [
       { path: 'course', select: 'title slug thumbnail teacher totalLessons totalDuration averageRating' },
+    ],
+    sort: '-enrolledAt',
+  });
+
+  ApiResponse.paginated(res, {
+    docs: result.docs,
+    page: result.pagination.page,
+    limit: result.pagination.limit,
+    total: result.pagination.total,
+  });
+});
+
+export const getMyTestEnrollments = catchAsync(async (req, res) => {
+  const pagination = buildPaginationQuery(req.query);
+
+  const filter = { user: req.userId, test: { $exists: true } };
+  if (req.query.status) filter.status = req.query.status;
+
+  const result = await Enrollment.paginate(filter, {
+    ...pagination,
+    populate: [
+      { path: 'test', select: 'title slug thumbnail description price isFree duration totalMarks questionsCount' },
     ],
     sort: '-enrolledAt',
   });
@@ -159,4 +181,22 @@ export const checkEnrollment = catchAsync(async (req, res) => {
     isEnrolled: !!enrollment,
     enrollment: enrollment || null,
   });
+});
+
+export const getTeacherStudents = catchAsync(async (req, res) => {
+  // Get all courses by this teacher
+  const courses = await Course.find({ teacher: req.userId }, '_id title').lean();
+  const courseIds = courses.map(c => c._id);
+
+  if (courseIds.length === 0) {
+    return ApiResponse.ok(res, { students: [], total: 0 });
+  }
+
+  const enrollments = await Enrollment.find({ course: { $in: courseIds }, status: { $in: ['active', 'completed'] } })
+    .populate('user', 'name email avatar createdAt')
+    .populate('course', 'title thumbnail')
+    .sort('-enrolledAt')
+    .lean();
+
+  ApiResponse.ok(res, { students: enrollments, total: enrollments.length });
 });

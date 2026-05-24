@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { HiShieldExclamation } from 'react-icons/hi';
 
 export default function UnauthorizedPage() {
   return (

@@ -5,7 +5,7 @@ import { authenticate, authorize, optionalAuth } from '../../middleware/auth.js'
 const router = Router();
 
 // Public
-router.get('/', testController.getTests);
+router.get('/', optionalAuth, testController.getTests);
 router.get('/:id', optionalAuth, testController.getTestById);
 
 // Student

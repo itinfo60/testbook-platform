@@ -26,7 +26,15 @@ export const authenticate = catchAsync(async (req, res, next) => {
   }
 
   // Verify token
-  const decoded = jwt.verify(token, config.jwt.secret);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwt.secret);
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      throw ApiError.unauthorized('Session expired. Please login again.');
+    }
+    throw ApiError.unauthorized('Invalid token. Please login again.');
+  }
 
   // Check cache first
   let user = await redis.get(`user_${decoded.id}`);
