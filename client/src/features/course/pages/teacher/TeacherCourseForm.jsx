@@ -253,7 +253,7 @@ export default function TeacherCourseForm() {
                 className="input-field"
               >
                 <option value="">Select category</option>
-                {CATEGORIES.map(c => (
+                {categories.map(c => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
