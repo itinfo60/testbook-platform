@@ -4,43 +4,50 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiUser, HiMail, HiLockClosed } from 'react-icons/hi';
-import { register, clearError } from '@/features/auth/authSlice';
-import toast from 'react-hot-toast';
+import { HiUser, HiMail, HiLockClosed, HiExclamationCircle } from 'react-icons/hi';
+import { register } from '@/features/auth/authSlice';
 
 export default function RegisterPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated } = useSelector(state => state.auth);
 
   const [formData, setFormData] = useState({
     name: '', email: '', password: '', confirmPassword: '', role: 'student',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState('');
 
   useEffect(() => {
     if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    if (error) { toast.error(error); dispatch(clearError()); }
-  }, [error, dispatch]);
+  const handleChange = e => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (serverError) setServerError('');
+  };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
+      setServerError('Passwords do not match');
       return;
     }
     if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      setServerError('Password must be at least 6 characters');
       return;
     }
+    setIsSubmitting(true);
+    setServerError('');
     const { confirmPassword, ...data } = formData;
-    dispatch(register(data));
-  };
-
-  const handleChange = e => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    try {
+      const result = await dispatch(register(data));
+      if (register.rejected.match(result)) {
+        setServerError(result.payload || 'Registration failed. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -80,7 +87,14 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <Button type="submit" variant="primary" className="w-full" loading={loading}>
+        {serverError && (
+          <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2.5">
+            <HiExclamationCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700 dark:text-red-400">{serverError}</p>
+          </div>
+        )}
+
+        <Button type="submit" variant="primary" className="w-full" loading={isSubmitting}>
           Create Account
         </Button>
       </form>

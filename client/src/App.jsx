@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import ScrollManager from '@/components/ScrollManager';
 import { useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
 
@@ -119,6 +120,8 @@ export default function App() {
   }
 
   return (
+    <>
+    <ScrollManager />
     <Routes>
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
@@ -194,6 +197,7 @@ export default function App() {
         <ProtectedRoute><TestResult /></ProtectedRoute>
       } />
     </Routes>
+    </>
   );
 }
 

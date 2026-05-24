@@ -57,13 +57,109 @@ const BADGES_DATA = [
   { name: 'Community Helper', slug: 'community-helper', description: 'Reply to 20 discussions',       icon: '🤝', category: 'social',       criteria: { type: 'replies_posted',    value: 20 }, points: 30,  rarity: 'rare'      },
 ];
 
+// Real YouTube educational videos mapped by topic keyword
+const VIDEO_MAP = {
+  // JavaScript
+  'javascript': 'https://www.youtube.com/watch?v=W6NZfCO5SIk',
+  'variables': 'https://www.youtube.com/watch?v=W6NZfCO5SIk',
+  'functions': 'https://www.youtube.com/watch?v=W6NZfCO5SIk',
+  'arrays': 'https://www.youtube.com/watch?v=W6NZfCO5SIk',
+  'es6': 'https://www.youtube.com/watch?v=NCwa_xi0Uuc',
+  'closures': 'https://www.youtube.com/watch?v=3a0I8ICR1Vg',
+  'promises': 'https://www.youtube.com/watch?v=DHvZLI7Db8E',
+  'async': 'https://www.youtube.com/watch?v=V_Kr9OSfDeU',
+  'event loop': 'https://www.youtube.com/watch?v=8aGhZQkoFbQ',
+  // React
+  'react': 'https://www.youtube.com/watch?v=Ke90Tje7VS0',
+  'hooks': 'https://www.youtube.com/watch?v=O6P86uwfdR0',
+  'redux': 'https://www.youtube.com/watch?v=CVpUuw9XSjY',
+  'jsx': 'https://www.youtube.com/watch?v=Ke90Tje7VS0',
+  'props': 'https://www.youtube.com/watch?v=Ke90Tje7VS0',
+  // Node / Backend
+  'node': 'https://www.youtube.com/watch?v=TlB_eWDSMt4',
+  'express': 'https://www.youtube.com/watch?v=SccSCuHhOw0',
+  'mongodb': 'https://www.youtube.com/watch?v=ExcRbA7fy_A',
+  'rest api': 'https://www.youtube.com/watch?v=fgTGADljAeg',
+  'jwt': 'https://www.youtube.com/watch?v=7Q17ubqLfaM',
+  'mongoose': 'https://www.youtube.com/watch?v=ExcRbA7fy_A',
+  // Python / Data Science
+  'python': 'https://www.youtube.com/watch?v=_uQrJ0TkZlc',
+  'numpy': 'https://www.youtube.com/watch?v=QUT1VHiLmmI',
+  'pandas': 'https://www.youtube.com/watch?v=vmEHCJofslg',
+  'matplotlib': 'https://www.youtube.com/watch?v=3Xc3CA655Y4',
+  'scikit': 'https://www.youtube.com/watch?v=0Lt9w-BxKFQ',
+  'machine learning': 'https://www.youtube.com/watch?v=GwIo3gDZCVQ',
+  // AWS / Cloud
+  'aws': 'https://www.youtube.com/watch?v=3hLmDS179YE',
+  'cloud': 'https://www.youtube.com/watch?v=3hLmDS179YE',
+  'iam': 'https://www.youtube.com/watch?v=3hLmDS179YE',
+  's3': 'https://www.youtube.com/watch?v=3hLmDS179YE',
+  'ec2': 'https://www.youtube.com/watch?v=3hLmDS179YE',
+  // MERN / Full stack
+  'mern': 'https://www.youtube.com/watch?v=7CqJlxBYj-M',
+  'fullstack': 'https://www.youtube.com/watch?v=7CqJlxBYj-M',
+  'deployment': 'https://www.youtube.com/watch?v=l134cBAJCuc',
+  // Generic fallback
+  'default': 'https://www.youtube.com/watch?v=W6NZfCO5SIk',
+};
+
+const pickVideo = (title) => {
+  const lower = title.toLowerCase();
+  for (const [key, url] of Object.entries(VIDEO_MAP)) {
+    if (lower.includes(key)) return url;
+  }
+  return VIDEO_MAP.default;
+};
+
+// Lesson resources by topic
+const RESOURCES_MAP = {
+  'javascript': [
+    { title: 'MDN JavaScript Guide', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide', type: 'link' },
+    { title: 'JavaScript Cheatsheet (PDF)', url: 'https://htmlcheatsheet.com/js/', type: 'link' },
+  ],
+  'react': [
+    { title: 'React Official Docs', url: 'https://react.dev', type: 'link' },
+    { title: 'React Hooks Reference', url: 'https://react.dev/reference/react', type: 'link' },
+  ],
+  'node': [
+    { title: 'Node.js Official Docs', url: 'https://nodejs.org/en/docs/', type: 'link' },
+    { title: 'Express.js Guide', url: 'https://expressjs.com/en/guide/routing.html', type: 'link' },
+  ],
+  'python': [
+    { title: 'Python Official Docs', url: 'https://docs.python.org/3/', type: 'link' },
+    { title: 'NumPy Documentation', url: 'https://numpy.org/doc/', type: 'link' },
+  ],
+  'aws': [
+    { title: 'AWS Free Tier Guide', url: 'https://aws.amazon.com/free/', type: 'link' },
+    { title: 'AWS Exam Guide (PDF)', url: 'https://d1.awsstatic.com/training-and-certification/docs-cloud-practitioner/AWS-Certified-Cloud-Practitioner_Exam-Guide.pdf', type: 'pdf' },
+  ],
+  'mern': [
+    { title: 'MERN Stack Guide', url: 'https://www.mongodb.com/mern-stack', type: 'link' },
+    { title: 'GitHub Repo Template', url: 'https://github.com/monovertex/mern-boilerplate', type: 'link' },
+  ],
+  'default': [
+    { title: 'Course Notes & Slides', url: 'https://drive.google.com/drive/folders/example', type: 'link' },
+  ],
+};
+
+const pickResources = (title) => {
+  const lower = title.toLowerCase();
+  for (const [key, res] of Object.entries(RESOURCES_MAP)) {
+    if (lower.includes(key)) return res;
+  }
+  return RESOURCES_MAP.default;
+};
+
 // Lesson builder
 const mkLesson = (title, type = 'video', isFree = false, dur = 600) => ({
   title, type, isFree,
-  content: type === 'text' ? `<p>Detailed notes for <strong>${title}</strong>. This lesson covers theory, examples, and practice exercises.</p>` : '',
-  videoUrl: type === 'video' ? 'https://www.youtube.com/embed/dQw4w9WgXcQ' : '',
+  content: type === 'text'
+    ? `<h2>${title}</h2><p>This lesson covers the core concepts of <strong>${title}</strong>. Review the notes below and complete the exercises before moving on.</p><h3>Key Points</h3><ul><li>Understand the fundamentals thoroughly</li><li>Practice with the provided examples</li><li>Complete the hands-on exercises</li></ul><h3>Summary</h3><p>By the end of this lesson you should be comfortable applying these concepts in real projects.</p>`
+    : '',
+  videoUrl: type === 'video' ? pickVideo(title) : '',
   duration: dur,
   order: 0,
+  resources: type === 'video' ? pickResources(title) : [],
 });
 
 // Section builder
