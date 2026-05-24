@@ -12,13 +12,32 @@ export const getCategories = catchAsync(async (req, res) => {
   const cached = await redis.get('categories:all');
   if (cached) return ApiResponse.ok(res, cached);
 
-  const categories = await ExamCategory.find({ isActive: true, parent: null })
-    .populate({ path: 'subcategories', match: { isActive: true }, select: 'name slug icon courseCount testCount' })
-    .sort('order name')
-    .lean();
+  const [categories, courseCounts, testCounts] = await Promise.all([
+    ExamCategory.find({ isActive: true, parent: null })
+      .populate({ path: 'subcategories', match: { isActive: true }, select: 'name slug icon courseCount testCount' })
+      .sort('order name')
+      .lean(),
+    Course.aggregate([
+      { $match: { isPublished: true } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]),
+    Test.aggregate([
+      { $match: { isPublished: true } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]),
+  ]);
 
-  const data = { categories };
-  await redis.set('categories:all', data, 1800); // 30 min
+  const courseCountMap = Object.fromEntries(courseCounts.map(c => [c._id.toString(), c.count]));
+  const testCountMap   = Object.fromEntries(testCounts.map(c  => [c._id.toString(), c.count]));
+
+  const enriched = categories.map(cat => ({
+    ...cat,
+    courseCount: courseCountMap[cat._id.toString()] ?? cat.courseCount ?? 0,
+    testCount:   testCountMap[cat._id.toString()]   ?? cat.testCount   ?? 0,
+  }));
+
+  const data = { categories: enriched };
+  await redis.set('categories:all', data, 1800);
 
   ApiResponse.ok(res, data);
 });

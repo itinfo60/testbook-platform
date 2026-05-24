@@ -534,6 +534,20 @@ const run = async () => {
   }
   console.log();
 
+  // ── 6b. UPDATE CATEGORY COUNTS ───────────────────────────────────────────────
+  console.log('📂 Updating category counts...');
+  for (const cat of categories) {
+    const [courseCount, testCount] = await Promise.all([
+      Course.countDocuments({ category: cat._id, isPublished: true }),
+      Test.countDocuments({ category: cat._id, isPublished: true }),
+    ]);
+    await ExamCategory.findByIdAndUpdate(cat._id, { courseCount, testCount });
+    if (courseCount > 0 || testCount > 0) {
+      console.log(`   ${cat.name}: ${courseCount} courses, ${testCount} tests`);
+    }
+  }
+  console.log();
+
   // ── 7. QUIZZES ────────────────────────────────────────────────────────────────
   console.log('🧩 Seeding quizzes...');
   const quizzes = [];
