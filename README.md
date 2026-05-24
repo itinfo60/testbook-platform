@@ -109,3 +109,4 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 ## 📝 License
 This project is proprietary and confidential. All rights reserved.
+
