@@ -57,7 +57,7 @@ export default function Checkout() {
     try {
       await dispatch(enrollInCourse({ courseId: id })).unwrap();
       toast.success('Enrolled successfully!');
-      navigate('/checkout/success', { state: { courseId: id, courseName: item.title, free: true } });
+      navigate('/checkout/success', { state: { courseId: id, itemName: item.title, free: true, isTest: false } });
     } catch (err) {
       toast.error(err || 'Enrollment failed');
     }
@@ -72,7 +72,11 @@ export default function Checkout() {
       const payload = isTest ? { testId: id } : { courseId: id };
       await dispatch(dummyCheckout(payload)).unwrap();
       toast.success(`Payment successful! Purchased ${isTest ? 'test' : 'course'}.`);
-      navigate('/checkout/success', { state: { courseId: id, courseName: item.title, isTest } });
+      navigate('/checkout/success', {
+        state: isTest
+          ? { testId: id, itemName: item.title, isTest: true }
+          : { courseId: id, itemName: item.title, isTest: false },
+      });
     } catch (err) {
       toast.error(err || 'Payment failed');
     }
