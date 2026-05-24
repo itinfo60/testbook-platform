@@ -50,7 +50,7 @@ export default function TeacherCourseForm() {
 
   useEffect(() => {
     examCategoryAPI.getAll().then(res => {
-      setCategories(res.data?.data || res.data || []);
+      setCategories(res.data?.data?.categories || []);
     }).catch(() => {});
   }, []);
 
