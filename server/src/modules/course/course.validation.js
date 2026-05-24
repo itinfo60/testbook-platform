@@ -4,8 +4,8 @@ const objectId = Joi.string().regex(/^[0-9a-fA-F]{24}$/);
 
 export const courseSchemas = {
   create: Joi.object({
-    title: Joi.string().trim().min(5).max(200).required(),
-    description: Joi.string().trim().min(20).max(5000).required(),
+    title: Joi.string().trim().min(3).max(200).required(),
+    description: Joi.string().trim().min(10).max(5000).required(),
     shortDescription: Joi.string().trim().max(300).allow('').optional(),
     category: objectId.required(),
     price: Joi.number().min(0).max(100000).default(0),
@@ -35,8 +35,8 @@ export const courseSchemas = {
   }),
 
   update: Joi.object({
-    title: Joi.string().trim().min(5).max(200),
-    description: Joi.string().trim().min(20).max(5000),
+    title: Joi.string().trim().min(3).max(200),
+    description: Joi.string().trim().min(10).max(5000),
     shortDescription: Joi.string().trim().max(300).allow('').optional(),
     category: objectId,
     price: Joi.number().min(0).max(100000),

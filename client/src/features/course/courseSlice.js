@@ -33,7 +33,9 @@ export const createCourse = createAsyncThunk('courses/create', async (courseData
     const { data } = await courseAPI.create(courseData);
     return data.data || data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Failed to create course');
+    const res = err.response?.data;
+    const detail = res?.errors?.map(e => e.message).join(', ') || res?.message || 'Failed to create course';
+    return rejectWithValue(detail);
   }
 });
 
@@ -42,7 +44,9 @@ export const updateCourse = createAsyncThunk('courses/update', async ({ id, ...c
     const { data } = await courseAPI.update(id, courseData);
     return data.data || data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Failed to update course');
+    const res = err.response?.data;
+    const detail = res?.errors?.map(e => e.message).join(', ') || res?.message || 'Failed to update course';
+    return rejectWithValue(detail);
   }
 });
 
