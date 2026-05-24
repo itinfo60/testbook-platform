@@ -124,7 +124,7 @@ export default function Navbar() {
           </form>
 
           {/* Right Side */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <DarkModeToggle />
 
             {isAuthenticated ? (
@@ -192,7 +192,7 @@ export default function Navbar() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <Link to="/login" className="btn-ghost text-sm">Sign In</Link>
                 <Link to="/register" className="btn-primary text-sm">Get Started</Link>
               </div>

@@ -144,7 +144,7 @@ export default function TeacherTestForm() {
             <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Description</label>
             <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="input-field min-h-[80px] resize-none" />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input label="Duration (min)" type="number" min="1" value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })} />
             <div>
               <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Category</label>
@@ -174,22 +174,22 @@ export default function TeacherTestForm() {
           <div className="space-y-4">
             {formData.questions.map((q, qi) => (
               <div key={qi} className="p-4 bg-dark-50 dark:bg-dark-800/50 rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-medium text-dark-500">Question {qi + 1}</span>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-1.5">
                       <label className="text-xs text-dark-400">Marks</label>
-                      <input type="number" min="0" step="0.5" value={q.marks} onChange={e => updateQuestion(qi, 'marks', e.target.value)} className="input-field text-xs w-16 py-1" />
+                      <input type="number" min="0" step="0.5" value={q.marks} onChange={e => updateQuestion(qi, 'marks', e.target.value)} className="input-field text-xs w-14 py-1" />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <label className="text-xs text-dark-400">-ve</label>
-                      <input type="number" min="0" step="0.25" value={q.negativeMark} onChange={e => updateQuestion(qi, 'negativeMark', e.target.value)} className="input-field text-xs w-16 py-1" />
+                      <input type="number" min="0" step="0.25" value={q.negativeMark} onChange={e => updateQuestion(qi, 'negativeMark', e.target.value)} className="input-field text-xs w-14 py-1" />
                     </div>
                     <button type="button" onClick={() => removeQuestion(qi)} className="text-red-500"><HiTrash className="h-4 w-4" /></button>
                   </div>
                 </div>
                 <textarea placeholder="Question text" value={q.question} onChange={e => updateQuestion(qi, 'question', e.target.value)} className="input-field min-h-[60px] resize-none text-sm" />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {q.options.map((opt, oi) => (
                     <div key={oi} className="flex items-center gap-2">
                       <input type="radio" name={`correct-${qi}`} checked={q.correctAnswer === oi} onChange={() => updateQuestion(qi, 'correctAnswer', oi)} className="text-primary-600 flex-shrink-0" />

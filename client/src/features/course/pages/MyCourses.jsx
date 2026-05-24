@@ -21,14 +21,14 @@ export default function MyCourses() {
       <h1 className="section-title mb-8">My Courses</h1>
 
       {enrollments.length === 0 ? (
-        <div className="card p-12 text-center">
+        <div className="card p-8 sm:p-12 text-center">
           <div className="text-5xl mb-4">📚</div>
           <h2 className="text-xl font-semibold text-dark-900 dark:text-white mb-2">No courses yet</h2>
-          <p className="text-dark-500 mb-6">Enroll in a course to start learning</p>
+          <p className="text-dark-500 mb-6 text-sm sm:text-base">Enroll in a course to start learning</p>
           <Link to="/courses" className="btn-primary">Browse Courses</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {enrollments.map(enrollment => {
             const course = enrollment.course || {};
             const progress = enrollment.progress || 0;

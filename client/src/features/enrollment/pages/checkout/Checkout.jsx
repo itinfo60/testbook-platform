@@ -79,13 +79,13 @@ export default function Checkout() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="section-title mb-8">Checkout</h1>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <h1 className="section-title mb-6 sm:mb-8">Checkout</h1>
 
       {/* Course card */}
-      <div className="card p-6 mb-6">
-        <div className="flex gap-4">
-          <div className="h-20 w-28 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden">
+      <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex gap-3 sm:gap-4">
+          <div className="h-16 w-22 sm:h-20 sm:w-28 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden" style={{minWidth:'5.5rem'}}>
             {(item.thumbnail?.url || item.thumbnail) ? (
               <img src={item.thumbnail?.url || item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
             ) : (
@@ -107,7 +107,7 @@ export default function Checkout() {
 
       {/* Coupon — only for paid courses/tests */}
       {!isFree && !isTest && (
-        <div className="card p-6 mb-6">
+        <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
           <h3 className="font-semibold text-dark-900 dark:text-white mb-3">Have a coupon?</h3>
           <div className="flex gap-2">
             <Input
@@ -135,7 +135,7 @@ export default function Checkout() {
       )}
 
       {/* Order Summary */}
-      <div className="card p-6 mb-6">
+      <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
         <h3 className="font-semibold text-dark-900 dark:text-white mb-4">Order Summary</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
@@ -163,7 +163,7 @@ export default function Checkout() {
 
       {/* Demo payment confirmation — only for paid courses */}
       {!isFree && finalPrice > 0 && (
-        <div className="card p-6 mb-6 border-2 border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10">
+        <div className="card p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10">
           <div className="flex items-center gap-2 mb-3">
             <HiBeaker className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
             <h3 className="font-semibold text-amber-800 dark:text-amber-300">Demo / Test Mode</h3>

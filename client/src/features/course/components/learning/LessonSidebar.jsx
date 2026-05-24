@@ -19,9 +19,9 @@ export default function LessonSidebar({ sections = [], currentLessonId, complete
   const toggle = (i) => setCollapsed(p => ({ ...p, [i]: !p[i] }));
 
   return (
-    <div className="card overflow-hidden sticky top-20">
+    <div className="card overflow-hidden lg:sticky lg:top-20">
       <div className="p-4 border-b border-dark-100 dark:border-dark-700 bg-dark-50 dark:bg-dark-800/50">
-        <h3 className="font-semibold text-dark-900 dark:text-white">Course Content</h3>
+        <h3 className="font-semibold text-dark-900 dark:text-white text-sm sm:text-base">Course Content</h3>
         <p className="text-xs text-dark-400 mt-0.5">
           {totalCompleted}/{totalLessons} lessons completed
         </p>
@@ -35,7 +35,7 @@ export default function LessonSidebar({ sections = [], currentLessonId, complete
         )}
       </div>
 
-      <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
+      <div className="lg:max-h-[calc(100vh-260px)] overflow-y-auto">
         {sections.map((section, si) => {
           const isOpen = !collapsed[si];
           const sectionCompleted = section.lessons.filter(l => completedLessonIds.includes(l._id)).length;

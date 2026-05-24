@@ -213,7 +213,7 @@ export default function TeacherCourseForm() {
   const totalLessons = form.sections.reduce((s, sec) => s + sec.lessons.length, 0);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl w-full">
       <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-6">
         {isEdit ? 'Edit Course' : 'Create New Course'}
       </h2>
@@ -247,7 +247,7 @@ export default function TeacherCourseForm() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Category *</label>
               <select
@@ -271,12 +271,12 @@ export default function TeacherCourseForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Price (₹)" type="number" min="0" value={form.price} onChange={e => setField('price', e.target.value)} />
             <Input label="Discount Price (₹)" type="number" min="0" value={form.discountPrice} onChange={e => setField('discountPrice', e.target.value)} placeholder="0 = no discount" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Language" value={form.language} onChange={e => setField('language', e.target.value)} />
             <Input label="Thumbnail URL" value={form.thumbnailUrl} onChange={e => setField('thumbnailUrl', e.target.value)} placeholder="https://..." />
           </div>
@@ -484,7 +484,7 @@ function LessonEditor({ lesson, lessonIndex, onUpdate, onRemove, onAddResource, 
         className="input-field text-sm w-full"
       />
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <select value={lesson.type} onChange={e => onUpdate('type', e.target.value)} className="input-field text-sm">
           <option value="video">Video</option>
           <option value="text">Text</option>
@@ -551,31 +551,33 @@ function LessonEditor({ lesson, lessonIndex, onUpdate, onRemove, onAddResource, 
         {showResources && (
           <div className="mt-2 space-y-2 pl-1">
             {(lesson.resources || []).map((res, ri) => (
-              <div key={ri} className="flex gap-2 items-center">
+              <div key={ri} className="flex flex-col sm:flex-row gap-2">
                 <input
                   value={res.title}
                   onChange={e => onUpdateResource(ri, 'title', e.target.value)}
                   placeholder="Title"
-                  className="input-field text-xs flex-1"
+                  className="input-field text-xs sm:flex-1"
                 />
                 <input
                   value={res.url}
                   onChange={e => onUpdateResource(ri, 'url', e.target.value)}
                   placeholder="URL"
-                  className="input-field text-xs flex-[2]"
+                  className="input-field text-xs sm:flex-[2]"
                 />
-                <select
-                  value={res.type}
-                  onChange={e => onUpdateResource(ri, 'type', e.target.value)}
-                  className="input-field text-xs w-20"
-                >
-                  <option value="link">Link</option>
-                  <option value="pdf">PDF</option>
-                  <option value="doc">Doc</option>
-                </select>
-                <button type="button" onClick={() => onRemoveResource(ri)} className="p-1 text-red-400 hover:text-red-600 flex-shrink-0">
-                  <HiTrash className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex gap-2">
+                  <select
+                    value={res.type}
+                    onChange={e => onUpdateResource(ri, 'type', e.target.value)}
+                    className="input-field text-xs flex-1 sm:w-20 sm:flex-none"
+                  >
+                    <option value="link">Link</option>
+                    <option value="pdf">PDF</option>
+                    <option value="doc">Doc</option>
+                  </select>
+                  <button type="button" onClick={() => onRemoveResource(ri)} className="p-1 text-red-400 hover:text-red-600 flex-shrink-0">
+                    <HiTrash className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
             <button

@@ -91,29 +91,29 @@ export default function CourseDetail() {
     <div>
       {/* Hero Section */}
       <div className="bg-dark-900 dark:bg-dark-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="grid lg:grid-cols-3 gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
             <div className="lg:col-span-2">
               <div className="flex flex-wrap gap-2 mb-3">
                 {course.category && <span className="badge-primary">{typeof course.category === 'string' ? course.category : course.category.name}</span>}
                 {course.level && <span className="badge-warning capitalize">{course.level}</span>}
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{course.title}</h1>
-              <p className="text-dark-300 mb-4 line-clamp-3">{course.description}</p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 leading-tight">{course.title}</h1>
+              <p className="text-dark-300 mb-4 text-sm sm:text-base line-clamp-3">{course.description}</p>
 
-              <div className="flex flex-wrap items-center gap-4 mb-4">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4">
                 <RatingStars rating={course.averageRating || 0} count={course.totalReviews} size="md" />
-                <span className="text-dark-400 flex items-center gap-1"><HiUsers className="h-4 w-4" />{course.enrollmentCount || 0} students</span>
-                <span className="text-dark-400 flex items-center gap-1"><HiGlobe className="h-4 w-4" />{course.language || 'English'}</span>
+                <span className="text-dark-400 flex items-center gap-1 text-sm"><HiUsers className="h-4 w-4" />{course.enrollmentCount || 0} students</span>
+                <span className="text-dark-400 flex items-center gap-1 text-sm"><HiGlobe className="h-4 w-4" />{course.language || 'English'}</span>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                   {course.teacher?.name?.charAt(0) || 'T'}
                 </div>
                 <div>
-                  <p className="text-white font-medium">{course.teacher?.name || 'Instructor'}</p>
-                  <p className="text-dark-400 text-sm">Expert Teacher</p>
+                  <p className="text-white font-medium text-sm sm:text-base">{course.teacher?.name || 'Instructor'}</p>
+                  <p className="text-dark-400 text-xs sm:text-sm">Expert Teacher</p>
                 </div>
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function CourseDetail() {
       </div>
 
       {/* Content Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:pb-8 pb-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 lg:pb-8">
         <div className="lg:pr-[380px]">
           <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-8" />
 

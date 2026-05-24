@@ -39,14 +39,14 @@ export default function TestimonialSection() {
   const prev = () => setCurrent((current - 1 + testimonials.length) % testimonials.length);
 
   return (
-    <section className="py-16">
+    <section className="py-12 sm:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 sm:mb-10">
           <h2 className="section-title">What Our Students Say</h2>
           <p className="section-subtitle">Success stories from our community</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {testimonials.map((t, i) => (
             <div key={i} className="card p-6">
               <RatingStars rating={t.rating} size="sm" showValue={false} />

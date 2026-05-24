@@ -15,9 +15,9 @@ export default function PopularCourses() {
   }, [dispatch]);
 
   return (
-    <section className="py-16">
+    <section className="py-12 sm:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-8 sm:mb-10">
           <div>
             <h2 className="section-title">Popular Courses</h2>
             <p className="section-subtitle">Top-rated courses loved by students</p>
@@ -33,7 +33,7 @@ export default function PopularCourses() {
           ) : featured.length > 0 ? (
             featured.slice(0, 6).map(course => <CourseCard key={course._id} course={course} />)
           ) : (
-            <div className="col-span-3 text-center py-12 text-dark-400">
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-12 text-dark-400">
               No courses available yet. Check back soon!
             </div>
           )}

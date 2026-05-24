@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="card p-8 animate-fade-in">
+    <div className="card p-6 sm:p-8 animate-fade-in">
       <Link to="/login" className="inline-flex items-center gap-1 text-sm text-dark-500 hover:text-dark-700 dark:hover:text-dark-300 mb-6">
         <HiArrowLeft className="h-4 w-4" /> Back to login
       </Link>

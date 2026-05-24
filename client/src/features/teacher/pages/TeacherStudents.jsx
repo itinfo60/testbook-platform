@@ -43,12 +43,12 @@ export default function TeacherStudents() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-dark-700">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8 pb-4 border-b border-slate-100 dark:border-dark-700">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My Students</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My Students</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage and track your enrolled students</p>
         </div>
-        <div className="px-4 py-2 rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400 font-semibold text-sm shadow-sm">
+        <div className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400 font-semibold text-xs sm:text-sm shadow-sm whitespace-nowrap">
           {groupedStudents.length} student{groupedStudents.length !== 1 ? 's' : ''} ({students.length} enrollments)
         </div>
       </div>

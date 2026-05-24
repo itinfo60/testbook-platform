@@ -38,6 +38,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
+// Trust Railway's (and any other) reverse proxy so rate limiter sees real client IPs
+app.set('trust proxy', 1);
+
 // ===== SECURITY MIDDLEWARE =====
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

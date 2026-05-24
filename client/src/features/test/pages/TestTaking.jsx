@@ -194,29 +194,31 @@ export default function TestTaking() {
   return (
     <div className="test-fullscreen min-h-screen bg-white dark:bg-dark-900 select-none">
       {/* Header */}
-      <div className="sticky top-0 z-10 glass border-b border-dark-100 dark:border-dark-800 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-dark-900 dark:text-white truncate flex-1">
+      <div className="sticky top-0 z-10 glass border-b border-dark-100 dark:border-dark-800 px-3 sm:px-4 py-2.5 sm:py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
+          <h2 className="font-semibold text-dark-900 dark:text-white truncate flex-1 text-sm sm:text-base">
             {testTitle}
           </h2>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <TestTimer duration={duration} onTimeUp={handleTimeUp} startTime={startTime} />
             <button
               onClick={() => setShowNav(!showNav)}
-              className="lg:hidden btn-secondary text-sm py-1.5 px-3 flex items-center gap-1"
+              className="lg:hidden btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1"
             >
-              <HiMenu className="h-4 w-4" />
-              {currentQuestionIndex + 1}/{questions.length}
+              <HiMenu className="h-3.5 w-3.5" />
+              <span className="hidden xs:inline">{currentQuestionIndex + 1}/{questions.length}</span>
+              <span className="xs:hidden">{currentQuestionIndex + 1}</span>
             </button>
             <Button variant="primary" size="sm" onClick={() => setShowSubmitModal(true)}>
-              Submit Test
+              <span className="hidden sm:inline">Submit Test</span>
+              <span className="sm:hidden">Submit</span>
             </Button>
             <button
               onClick={() => setShowCloseModal(true)}
               title="Close Test"
-              className="p-2 rounded-lg text-dark-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg text-dark-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
-              <HiX className="h-5 w-5" />
+              <HiX className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
@@ -224,7 +226,7 @@ export default function TestTaking() {
 
       {/* Content */}
       <div className="flex max-w-7xl mx-auto">
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0">
           {currentQuestion && (
             <TestQuestion
               question={currentQuestion}
@@ -237,7 +239,7 @@ export default function TestTaking() {
         </div>
 
         {/* Desktop Navigator */}
-        <div className="hidden lg:block w-64 p-6 pl-0">
+        <div className="hidden lg:block w-64 p-6 pl-0 flex-shrink-0">
           <div className="sticky top-24">
             <TestNavigator questions={questions} onSubmit={() => setShowSubmitModal(true)} />
           </div>

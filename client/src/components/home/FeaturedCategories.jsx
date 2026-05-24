@@ -25,13 +25,13 @@ export default function FeaturedCategories() {
   const categories = examCategories.length > 0 ? examCategories : defaultCategories;
 
   return (
-    <section id="categories" className="py-16 bg-dark-50 dark:bg-dark-900/50">
+    <section id="categories" className="py-12 sm:py-16 bg-dark-50 dark:bg-dark-900/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 sm:mb-10">
           <h2 className="section-title">Explore by Category</h2>
           <p className="section-subtitle">Choose from top exam categories and start preparing today</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {categories.slice(0, 8).map(cat => (
             <CategoryCard key={cat._id} category={cat} />
           ))}

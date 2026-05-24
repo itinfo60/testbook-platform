@@ -39,14 +39,14 @@ const TrendingTests = () => {
 
   return (
     <section className="py-12 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4">
-        <h2 className="text-2xl font-bold mb-6">🔥 Trending Tests</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-xl sm:text-2xl font-bold mb-6">🔥 Trending Tests</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {tests.map((test) => (
             <Link
               key={test._id}
               to={`/tests/${test._id}`}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition"
             >
               <div className="flex justify-between items-start mb-3">
                 <span className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-700 rounded">

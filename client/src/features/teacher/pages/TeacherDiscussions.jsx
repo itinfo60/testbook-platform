@@ -178,9 +178,9 @@ function DiscussionItem({ disc, onDelete, onUpdate, courseId, currentUserId }) {
   };
 
   return (
-    <div className={`card p-4 ${isResolved ? 'opacity-75' : ''}`}>
+    <div className={`card p-3 sm:p-4 ${isResolved ? 'opacity-75' : ''}`}>
       {/* Header */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <Avatar user={disc.user} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -257,7 +257,7 @@ function DiscussionItem({ disc, onDelete, onUpdate, courseId, currentUserId }) {
       </div>
 
       {/* Stats + expand */}
-      <div className="flex items-center gap-4 mt-3 ml-11">
+      <div className="flex items-center gap-4 mt-3 ml-0 sm:ml-11">
         <span className="flex items-center gap-1 text-xs text-dark-400">
           <HiThumbUp className="h-3.5 w-3.5" /> {disc.likes?.length || 0}
         </span>
@@ -273,7 +273,7 @@ function DiscussionItem({ disc, onDelete, onUpdate, courseId, currentUserId }) {
 
       {/* Replies + reply box */}
       {expanded && (
-        <div className="mt-3 ml-11 space-y-3">
+        <div className="mt-3 ml-0 sm:ml-11 space-y-3">
           {replies.map(reply => (
             <ReplyItem
               key={reply._id}
@@ -349,9 +349,9 @@ export default function TeacherDiscussions() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h2 className="text-lg font-semibold text-dark-900 dark:text-white">Course Discussions</h2>
-        <span className="text-sm text-dark-400">{discussions.length} discussion{discussions.length !== 1 ? 's' : ''}</span>
+        <span className="text-sm text-dark-400 whitespace-nowrap">{discussions.length} discussion{discussions.length !== 1 ? 's' : ''}</span>
       </div>
 
       {courses.length === 0 ? (
@@ -366,7 +366,7 @@ export default function TeacherDiscussions() {
             <select
               value={selectedCourse}
               onChange={e => setSelectedCourse(e.target.value)}
-              className="input-field"
+              className="input-field w-full"
             >
               {courses.map(c => (
                 <option key={c._id} value={c._id}>{c.title}</option>

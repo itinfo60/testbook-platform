@@ -24,21 +24,21 @@ export default function BlogList() {
   const allTags = ['Education', 'Tech', 'Career', 'Tips', 'Tests', 'Learning'];
 
   return (
-    <div className="min-h-screen bg-dark-25 dark:bg-dark-950 py-12">
+    <div className="min-h-screen bg-dark-25 dark:bg-dark-950 py-8 sm:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-dark-900 dark:text-white mb-6 font-display">
+        <div className="text-center mb-10 sm:mb-16">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-dark-900 dark:text-white mb-4 sm:mb-6 font-display">
             Insights & <span className="text-primary-600">Resources</span>
           </h1>
-          <p className="text-dark-600 dark:text-dark-400 max-w-2xl mx-auto text-lg">
+          <p className="text-dark-600 dark:text-dark-400 max-w-2xl mx-auto text-base sm:text-lg">
             Stay updated with the latest trends in education, exam preparation tips, and platform updates from our community of educators.
           </p>
         </div>
 
         {/* Filters & Search */}
-        <div className="flex flex-col md:flex-row gap-6 mb-12 items-center justify-between bg-white dark:bg-dark-800 p-6 rounded-3xl shadow-sm border border-dark-100 dark:border-dark-700">
+        <div className="flex flex-col md:flex-row gap-4 sm:gap-6 mb-8 sm:mb-12 items-center justify-between bg-white dark:bg-dark-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-dark-100 dark:border-dark-700">
           <div className="relative w-full md:max-w-md">
             <HiSearch className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-dark-400" />
             <input

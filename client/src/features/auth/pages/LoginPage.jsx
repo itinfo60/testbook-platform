@@ -51,7 +51,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="card p-8 animate-fade-in">
+    <div className="card p-6 sm:p-8 animate-fade-in">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Welcome Back</h1>
         <p className="text-dark-500 mt-1">Sign in to continue learning</p>
@@ -79,12 +79,12 @@ export default function LoginPage() {
           required
         />
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="h-4 w-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500" />
             <span className="text-sm text-dark-500">Remember me</span>
           </label>
-          <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">
+          <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium whitespace-nowrap">
             Forgot Password?
           </Link>
         </div>
@@ -97,7 +97,7 @@ export default function LoginPage() {
       {/* Quick Login Buttons */}
       <div className="mt-4 pt-4 border-t border-dark-100 dark:border-dark-700">
         <p className="text-xs text-dark-400 text-center mb-3">Quick login (Demo)</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => quickLogin('student@testbook.com', 'Student@123456')}

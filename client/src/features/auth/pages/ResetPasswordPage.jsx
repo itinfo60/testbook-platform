@@ -26,7 +26,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="card p-8 animate-fade-in">
+    <div className="card p-6 sm:p-8 animate-fade-in">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Reset Password</h1>
         <p className="text-dark-500 mt-1">Enter your new password</p>

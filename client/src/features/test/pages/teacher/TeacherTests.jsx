@@ -18,13 +18,13 @@ export default function TeacherTests() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-dark-700">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8 pb-4 border-b border-slate-100 dark:border-dark-700">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My Tests</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My Tests</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Create and manage your assessments</p>
         </div>
-        <Link to="/teacher/tests/new" className="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 bg-primary-600 font-pj rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/30 hover:-translate-y-0.5">
-          <HiPlus className="mr-2 h-4 w-4" /> Create Test
+        <Link to="/teacher/tests/new" className="group relative inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-semibold text-white transition-all duration-200 bg-primary-600 font-pj rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/30 hover:-translate-y-0.5 whitespace-nowrap">
+          <HiPlus className="mr-1.5 h-4 w-4" /> Create Test
         </Link>
       </div>
 

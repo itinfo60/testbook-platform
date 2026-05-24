@@ -47,7 +47,7 @@ export default function QuizPage() {
         {currentQuiz.duration && <QuizTimer duration={currentQuiz.duration} onTimeUp={handleTimeUp} />}
       </div>
 
-      <div className="card p-6 mb-6">
+      <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
         <QuizQuestion
           question={question}
           index={currentIndex}

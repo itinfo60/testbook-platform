@@ -39,7 +39,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map(stat => (
           <Link key={stat.label} to={stat.link} className="card-hover p-5">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}>
@@ -79,9 +79,9 @@ export default function Dashboard() {
                   <Link
                     key={enrollment._id}
                     to={`/courses/${course._id}/learn`}
-                    className="card-hover flex items-center gap-4 p-4"
+                    className="card-hover flex items-center gap-3 sm:gap-4 p-3 sm:p-4"
                   >
-                    <div className="h-16 w-24 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden">
+                    <div className="h-14 w-20 sm:h-16 sm:w-24 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden">
                       {thumbnailUrl ? (
                         <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
                       ) : (

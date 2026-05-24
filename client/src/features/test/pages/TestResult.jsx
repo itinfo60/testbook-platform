@@ -18,8 +18,8 @@ export default function TestResult() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-8" />
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-6 sm:mb-8" />
 
       {activeTab === 'summary' && <TestResultSummary result={result} />}
 

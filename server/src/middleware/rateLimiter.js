@@ -6,6 +6,7 @@ export const globalLimiter = rateLimit({
   max: config.rateLimit.max,
   standardHeaders: true,
   legacyHeaders: false,
+  // skip: () => true, // uncomment to disable globally during debugging
   message: {
     success: false,
     statusCode: 429,

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiArrowLeft, HiTrash, HiDownload } from 'react-icons/hi';
+import { HiArrowLeft, HiTrash, HiDownload, HiMenu, HiX } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 import { fetchCourseById } from '@/features/course/courseSlice';
@@ -27,6 +27,7 @@ export default function CourseLearning() {
   const [activeTab, setActiveTab] = useState('content');
   const [noteText, setNoteText] = useState('');
   const [discussionText, setDiscussionText] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
@@ -52,6 +53,7 @@ export default function CourseLearning() {
     setCurrentLesson(lesson);
     setCurrentSection(section);
     setActiveTab('content');
+    setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -131,8 +133,8 @@ export default function CourseLearning() {
   return (
     <div className="min-h-screen bg-dark-50 dark:bg-dark-950">
       {/* Top bar */}
-      <div className="sticky top-0 z-20 bg-white dark:bg-dark-900 border-b border-dark-100 dark:border-dark-800 px-4 py-3 flex items-center gap-4">
-        <Link to="/my-courses" className="flex items-center gap-2 text-dark-500 hover:text-dark-900 dark:hover:text-white text-sm transition-colors">
+      <div className="sticky top-0 z-20 bg-white dark:bg-dark-900 border-b border-dark-100 dark:border-dark-800 px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
+        <Link to="/my-courses" className="flex items-center gap-2 text-dark-500 hover:text-dark-900 dark:hover:text-white text-sm transition-colors flex-shrink-0">
           <HiArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">My Courses</span>
         </Link>
@@ -142,14 +144,49 @@ export default function CourseLearning() {
             <p className="text-xs text-dark-400 truncate">{currentSection?.title} · {currentLesson.title}</p>
           )}
         </div>
-        <div className="flex-shrink-0 text-xs text-dark-400 hidden sm:block">
-          {totalCompleted}/{totalLessons} completed
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="text-xs text-dark-400 hidden sm:block">
+            {totalCompleted}/{totalLessons} completed
+          </div>
+          {/* Mobile sidebar toggle */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dark-200 dark:border-dark-700 text-xs text-dark-600 dark:text-dark-300 bg-white dark:bg-dark-800"
+          >
+            <HiMenu className="h-4 w-4" />
+            <span>Contents</span>
+          </button>
         </div>
       </div>
 
+      {/* Mobile Sidebar Drawer */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[90vw] bg-white dark:bg-dark-900 overflow-y-auto shadow-xl flex flex-col">
+            <div className="flex items-center justify-between p-3 border-b border-dark-100 dark:border-dark-700 flex-shrink-0">
+              <span className="font-semibold text-dark-900 dark:text-white text-sm">Course Contents</span>
+              <button onClick={() => setSidebarOpen(false)} className="p-1 rounded-lg text-dark-400 hover:text-dark-700 dark:hover:text-white">
+                <HiX className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <LessonSidebar
+                sections={sections}
+                currentLessonId={currentLesson?._id}
+                completedLessonIds={completedLessonIds}
+                onSelectLesson={handleLessonSelect}
+                totalCompleted={totalCompleted}
+                totalLessons={totalLessons}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row">
         {/* Main content */}
-        <div className="flex-1 p-4 lg:p-6 min-w-0">
+        <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0">
           <LessonContent
             lesson={currentLesson}
             sectionTitle={currentSection?.title}
@@ -159,7 +196,7 @@ export default function CourseLearning() {
 
           {/* Next lesson button */}
           {currentLesson && (
-            <div className="mt-6 flex justify-end">
+            <div className="mt-4 sm:mt-6 flex justify-end">
               <button onClick={goToNext} className="btn-primary text-sm px-5">
                 Next Lesson →
               </button>
@@ -167,12 +204,12 @@ export default function CourseLearning() {
           )}
 
           {/* Tabs below */}
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-4" />
 
             {activeTab === 'content' && currentLesson && (
-              <div className="card p-6">
-                <h3 className="font-semibold text-dark-900 dark:text-white mb-1">{currentLesson.title}</h3>
+              <div className="card p-4 sm:p-6">
+                <h3 className="font-semibold text-dark-900 dark:text-white mb-1 text-sm sm:text-base">{currentLesson.title}</h3>
                 {currentSection && <p className="text-xs text-primary-500 mb-3">{currentSection.title}</p>}
                 <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed">
                   {currentLesson.content || 'No additional description for this lesson.'}
@@ -201,7 +238,7 @@ export default function CourseLearning() {
                   notes.map(note => (
                     <div key={note._id} className="card p-4">
                       <div className="flex justify-between items-start gap-3">
-                        <p className="text-dark-700 dark:text-dark-300 text-sm flex-1 leading-relaxed">{note.content}</p>
+                        <p className="text-dark-700 dark:text-dark-300 text-sm flex-1 leading-relaxed break-words">{note.content}</p>
                         <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={() => handleDownloadNote(note)}
@@ -257,13 +294,13 @@ export default function CourseLearning() {
                             <span className="text-sm font-medium text-dark-900 dark:text-white">{d.user?.name || 'User'}</span>
                             <span className="text-xs text-dark-400">{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}</span>
                           </div>
-                          <p className="text-sm text-dark-600 dark:text-dark-400 mt-1">{d.content}</p>
+                          <p className="text-sm text-dark-600 dark:text-dark-400 mt-1 break-words">{d.content}</p>
                           {d.replies?.length > 0 && (
-                            <div className="mt-3 pl-4 border-l-2 border-dark-100 dark:border-dark-700 space-y-2">
+                            <div className="mt-3 pl-3 sm:pl-4 border-l-2 border-dark-100 dark:border-dark-700 space-y-2">
                               {d.replies.map((r, ri) => (
                                 <div key={ri} className="text-sm">
                                   <span className="font-medium text-dark-700 dark:text-dark-300">{r.user?.name || 'User'}: </span>
-                                  <span className="text-dark-500">{r.content}</span>
+                                  <span className="text-dark-500 break-words">{r.content}</span>
                                 </div>
                               ))}
                             </div>
@@ -278,8 +315,8 @@ export default function CourseLearning() {
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 p-4 lg:p-6 lg:pl-0">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0 p-4 lg:p-6 lg:pl-0">
           <LessonSidebar
             sections={sections}
             currentLessonId={currentLesson?._id}

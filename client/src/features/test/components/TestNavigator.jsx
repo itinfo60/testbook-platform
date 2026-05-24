@@ -31,15 +31,15 @@ export default function TestNavigator({ questions, onSubmit }) {
   const total = questions.length;
 
   return (
-    <div className="card p-4">
-      <h4 className="font-semibold text-dark-900 dark:text-white mb-3">Question Navigator</h4>
+    <div className="card p-3 sm:p-4">
+      <h4 className="font-semibold text-dark-900 dark:text-white mb-3 text-sm sm:text-base">Question Navigator</h4>
 
-      <div className="grid grid-cols-5 gap-2 mb-4">
+      <div className="grid grid-cols-6 sm:grid-cols-5 gap-1.5 sm:gap-2 mb-4">
         {questions.map((q, i) => (
           <button
             key={i}
             onClick={() => dispatch(setCurrentQuestion(i))}
-            className={`h-9 w-full rounded-lg text-sm font-medium transition-all ${statusColors[getStatus(q, i)]}`}
+            className={`h-8 sm:h-9 w-full rounded-lg text-xs sm:text-sm font-medium transition-all ${statusColors[getStatus(q, i)]}`}
           >
             {i + 1}
           </button>
@@ -47,17 +47,17 @@ export default function TestNavigator({ questions, onSubmit }) {
       </div>
 
       {/* Legend */}
-      <div className="space-y-2 text-xs border-t border-dark-100 dark:border-dark-700 pt-3">
+      <div className="space-y-1.5 sm:space-y-2 text-xs border-t border-dark-100 dark:border-dark-700 pt-3">
         <div className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded bg-secondary-500" />
+          <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded bg-secondary-500 flex-shrink-0" />
           <span className="text-dark-500">Answered ({answeredCount})</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded bg-dark-100 dark:bg-dark-700" />
+          <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded bg-dark-100 dark:bg-dark-700 flex-shrink-0" />
           <span className="text-dark-500">Unanswered ({total - answeredCount})</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded bg-amber-500" />
+          <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded bg-amber-500 flex-shrink-0" />
           <span className="text-dark-500">Marked ({markedCount})</span>
         </div>
       </div>
@@ -65,7 +65,7 @@ export default function TestNavigator({ questions, onSubmit }) {
       {/* Submit Button */}
       <button
         onClick={onSubmit}
-        className="btn-success w-full mt-4"
+        className="btn-success w-full mt-4 text-sm"
       >
         Submit Test
       </button>

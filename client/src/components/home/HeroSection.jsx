@@ -11,8 +11,8 @@ export default function HeroSection() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-secondary-400 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-28">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left Content */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -24,7 +24,7 @@ export default function HeroSection() {
               <span className="text-sm text-white/90 font-medium">Trusted by 10L+ Students</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white leading-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white leading-tight mb-4 sm:mb-6">
               Crack Your Exam
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary-300 to-accent-300">
@@ -32,7 +32,7 @@ export default function HeroSection() {
               </span>
             </h1>
 
-            <p className="text-lg text-white/80 mb-8 max-w-lg">
+            <p className="text-base sm:text-lg text-white/80 mb-6 sm:mb-8 max-w-lg">
               India's most comprehensive learning platform with live classes, test series, and personalized study plans for all competitive exams.
             </p>
 
@@ -48,16 +48,16 @@ export default function HeroSection() {
             </div>
 
             {/* Stats Row */}
-            <div className="flex gap-8 mt-10 pt-8 border-t border-white/10">
+            <div className="flex flex-wrap gap-x-6 gap-y-4 mt-10 pt-8 border-t border-white/10">
               {[
                 { value: '10L+', label: 'Students' },
                 { value: '500+', label: 'Courses' },
                 { value: '50K+', label: 'Tests' },
                 { value: '4.8', label: 'Rating' },
               ].map(stat => (
-                <div key={stat.label}>
-                  <div className="text-2xl font-bold text-white">{stat.value}</div>
-                  <div className="text-sm text-white/60">{stat.label}</div>
+                <div key={stat.label} className="min-w-[60px]">
+                  <div className="text-xl sm:text-2xl font-bold text-white">{stat.value}</div>
+                  <div className="text-xs sm:text-sm text-white/60">{stat.label}</div>
                 </div>
               ))}
             </div>

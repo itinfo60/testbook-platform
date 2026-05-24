@@ -9,19 +9,19 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="card p-8">
-        <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
-          <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-3xl font-bold">
+      <div className="card p-5 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-8">
+          <div className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-3xl font-bold">
             {user.name?.charAt(0)?.toUpperCase()}
           </div>
-          <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{user.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
+          <div className="text-center sm:text-left flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-dark-900 dark:text-white truncate">{user.name}</h1>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-1">
               <span className="badge-primary capitalize">{user.role}</span>
               {user.isVerified && <span className="badge-success flex items-center gap-1"><HiBadgeCheck className="h-3 w-3" /> Verified</span>}
             </div>
           </div>
-          <Link to="/settings" className="sm:ml-auto btn-outline text-sm">Edit Profile</Link>
+          <Link to="/settings" className="btn-outline text-sm sm:ml-auto">Edit Profile</Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

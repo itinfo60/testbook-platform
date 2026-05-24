@@ -139,7 +139,7 @@ export default function TeacherQuizForm() {
             onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
             required
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Course</label>
               <select
@@ -202,7 +202,7 @@ export default function TeacherQuizForm() {
                   onChange={e => updateQuestion(qi, 'question', e.target.value)}
                   className="input-field min-h-[60px] resize-none text-sm"
                 />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {q.options.map((opt, oi) => (
                     <div key={oi} className="flex items-center gap-2">
                       <input

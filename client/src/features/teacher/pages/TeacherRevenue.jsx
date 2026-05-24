@@ -48,14 +48,14 @@ export default function TeacherRevenue() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-dark-700">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8 pb-4 border-b border-slate-100 dark:border-dark-700">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Revenue Analytics</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Revenue Analytics</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track your course sales and performance</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
         {stats.map((stat, idx) => (
           <div 
             key={stat.label} 
@@ -100,15 +100,15 @@ export default function TeacherRevenue() {
               return (
                 <div key={courseId} className="border border-slate-100 dark:border-dark-700 rounded-2xl overflow-hidden transition-all duration-300">
                   <div 
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-900/50 transition-colors"
+                    className="p-4 sm:p-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-900/50 transition-colors"
                     onClick={() => setExpandedCourseId(isExpanded ? null : courseId)}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white shadow-md">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white shadow-md">
                         📘
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
                           {group.course?.title || 'Unknown Course'}
                         </h4>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -116,10 +116,10 @@ export default function TeacherRevenue() {
                         </p>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-6">
+
+                    <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0 ml-auto">
                       <div className="text-right">
-                        <p className="font-extrabold text-lg text-emerald-600 dark:text-emerald-400">
+                        <p className="font-extrabold text-base sm:text-lg text-emerald-600 dark:text-emerald-400">
                           ₹{group.totalRevenue.toLocaleString('en-IN')}
                         </p>
                         <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mt-0.5">Earned</p>

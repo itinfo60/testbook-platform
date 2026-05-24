@@ -18,7 +18,7 @@ export default function TeacherTestAnalytics() {
   return (
     <div>
       <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-6">Test Analytics</h2>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Total Attempts', value: analytics?.totalAttempts || 0 },
           { label: 'Avg Score', value: `${analytics?.averageScore || 0}%` },

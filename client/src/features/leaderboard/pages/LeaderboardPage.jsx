@@ -58,26 +58,26 @@ export default function LeaderboardPage() {
           {entries.map((entry, i) => (
             <div
               key={entry._id || i}
-              className={`flex items-center gap-4 px-6 py-4 border-b border-dark-50 dark:border-dark-800 last:border-0 ${
+              className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 border-b border-dark-50 dark:border-dark-800 last:border-0 ${
                 i < 3 ? 'bg-amber-50/50 dark:bg-amber-900/5' : ''
               }`}
             >
-              <div className="w-10 text-center">
+              <div className="w-8 sm:w-10 text-center flex-shrink-0">
                 {i < 3 ? (
-                  <span className="text-2xl">{medals[i]}</span>
+                  <span className="text-xl sm:text-2xl">{medals[i]}</span>
                 ) : (
-                  <span className="text-lg font-bold text-dark-400">{i + 1}</span>
+                  <span className="text-base sm:text-lg font-bold text-dark-400">{i + 1}</span>
                 )}
               </div>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-semibold">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-semibold text-sm">
                 {entry.user?.name?.charAt(0) || entry.name?.charAt(0) || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-dark-900 dark:text-white truncate">{entry.user?.name || entry.name}</p>
+                <p className="font-medium text-dark-900 dark:text-white truncate text-sm sm:text-base">{entry.user?.name || entry.name}</p>
                 <p className="text-xs text-dark-400">{entry.testsCompleted || 0} tests completed</p>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-dark-900 dark:text-white">{entry.points || entry.score || 0}</p>
+              <div className="text-right flex-shrink-0">
+                <p className="font-bold text-dark-900 dark:text-white text-sm sm:text-base">{entry.points || entry.score || 0}</p>
                 <p className="text-xs text-dark-400">points</p>
               </div>
             </div>
