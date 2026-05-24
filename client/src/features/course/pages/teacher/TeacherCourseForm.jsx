@@ -278,7 +278,7 @@ export default function TeacherCourseForm() {
             <Input label="Thumbnail URL" value={form.thumbnailUrl} onChange={e => setField('thumbnailUrl', e.target.value)} placeholder="https://..." />
           </div>
 
-          {form.thumbnailUrl && (
+          {form.thumbnailUrl && /^https?:\/\//.test(form.thumbnailUrl) && (
             <img src={form.thumbnailUrl} alt="Thumbnail preview" className="h-32 w-full object-cover rounded-xl" onError={e => e.target.style.display='none'} />
           )}
         </div>
