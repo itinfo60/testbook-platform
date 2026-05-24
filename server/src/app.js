@@ -144,21 +144,27 @@ app.get(`${API_PREFIX}`, (req, res) => {
   });
 });
 
-// ===== ROOT ROUTE =====
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: '🚀 TestBook API Server v2.0.0',
-    status: 'running',
-    environment: config.env,
-    endpoints: {
-      api: '/api/v1',
-      health: '/health',
-      docs: '/api/v1',
-    },
-    timestamp: new Date().toISOString(),
+// ===== SERVE FRONTEND IN PRODUCTION =====
+if (config.env === 'production') {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
+  // Any non-API route serves the React app
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path === '/health') return next();
+    res.sendFile(path.join(clientDist, 'index.html'));
   });
-});
+} else {
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      success: true,
+      message: '🚀 TestBook API Server v2.0.0',
+      status: 'running',
+      environment: config.env,
+      endpoints: { api: '/api/v1', health: '/health' },
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
 
 // ===== ERROR HANDLING =====
 app.use(notFoundHandler);
