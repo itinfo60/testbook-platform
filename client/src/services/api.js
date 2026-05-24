@@ -40,8 +40,19 @@ api.interceptors.response.use(
   response => response,
   async error => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || '';
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only attempt token refresh when:
+    // 1. Response is 401
+    // 2. Not already retried
+    // 3. Not a refresh-token or login/register request (those 401s are credential errors, not expired sessions)
+    // 4. We actually have a token in the store (otherwise there's nothing to refresh)
+    const hasToken = !!_store?.getState()?.auth?.token;
+    const isAuthEndpoint = requestUrl.includes('/auth/refresh-token') ||
+                           requestUrl.includes('/auth/login') ||
+                           requestUrl.includes('/auth/register');
+
+    if (error.response?.status === 401 && !originalRequest._retry && hasToken && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -55,10 +66,14 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Use the api instance (withCredentials:true) so the httpOnly refreshToken cookie is sent.
-        // Also pass the refreshToken from Redux as a fallback in the body.
+        // Use raw axios (not the `api` instance) so this call bypasses this interceptor
+        // and cannot deadlock via re-entry.
         const storedRefreshToken = _store?.getState()?.auth?.refreshToken;
-        const { data } = await api.post('/auth/refresh-token', { refreshToken: storedRefreshToken });
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh-token`,
+          { refreshToken: storedRefreshToken },
+          { withCredentials: true }
+        );
 
         const newToken = data.data?.accessToken || data.accessToken || data.token;
         const newRefreshToken = data.data?.refreshToken || data.refreshToken;
