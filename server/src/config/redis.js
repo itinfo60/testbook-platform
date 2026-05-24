@@ -10,20 +10,24 @@ class RedisClient {
 
   async connect() {
     try {
-      this.client = createClient({
-        socket: {
-          host: config.redis.host,
-          port: config.redis.port,
-          reconnectStrategy: (retries) => {
-            if (retries > 10) {
-              logger.warn('Redis: Max retries reached, running without cache');
-              return false;
-            }
-            return Math.min(retries * 200, 3000);
-          },
-        },
-        password: config.redis.password || undefined,
-      });
+      const redisOptions = config.redis.url 
+        ? { url: config.redis.url }
+        : {
+            socket: {
+              host: config.redis.host,
+              port: config.redis.port,
+              reconnectStrategy: (retries) => {
+                if (retries > 10) {
+                  logger.warn('Redis: Max retries reached, running without cache');
+                  return false;
+                }
+                return Math.min(retries * 200, 3000);
+              },
+            },
+            password: config.redis.password || undefined,
+          };
+
+      this.client = createClient(redisOptions);
 
       this.client.on('connect', () => {
         this.isConnected = true;
