@@ -1,14 +1,28 @@
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Button } from '@/components/ui';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiPlus, HiEye, HiPencil } from 'react-icons/hi';
-import { fetchTeacherCourses } from '@/features/course/courseSlice';
+import { HiPlus, HiEye, HiPencil, HiUpload } from 'react-icons/hi';
+import { fetchTeacherCourses, publishCourse } from '@/features/course/courseSlice';
+import toast from 'react-hot-toast';
 
 export default function TeacherCourses() {
   const dispatch = useDispatch();
   const { teacherCourses, loading } = useSelector(state => state.courses);
+  const [publishing, setPublishing] = useState({});
+
+  const handlePublish = async (courseId) => {
+    setPublishing(p => ({ ...p, [courseId]: true }));
+    try {
+      await dispatch(publishCourse(courseId)).unwrap();
+      toast.success('Course published!');
+    } catch (err) {
+      toast.error(err || 'Failed to publish');
+    } finally {
+      setPublishing(p => ({ ...p, [courseId]: false }));
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchTeacherCourses());
@@ -70,20 +84,33 @@ export default function TeacherCourses() {
 
                 {/* Quick actions overlay */}
                 <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
-                  <Link 
-                    to={`/courses/${course._id}`} 
+                  <Link
+                    to={`/courses/${course._id}`}
                     className="h-10 w-10 rounded-full bg-white text-slate-800 hover:bg-primary-500 hover:text-white flex items-center justify-center transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"
                     title="View Course Page"
                   >
                     <HiEye className="h-5 w-5" />
                   </Link>
-                  <Link 
-                    to={`/teacher/courses/${course._id}/edit`} 
+                  <Link
+                    to={`/teacher/courses/${course._id}/edit`}
                     className="h-10 w-10 rounded-full bg-white text-slate-800 hover:bg-primary-500 hover:text-white flex items-center justify-center transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-150"
                     title="Edit Course"
                   >
                     <HiPencil className="h-5 w-5" />
                   </Link>
+                  {!course.isPublished && (
+                    <button
+                      onClick={() => handlePublish(course._id)}
+                      disabled={publishing[course._id]}
+                      className="h-10 w-10 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-200"
+                      title="Publish Course"
+                    >
+                      {publishing[course._id]
+                        ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        : <HiUpload className="h-5 w-5" />
+                      }
+                    </button>
+                  )}
                 </div>
               </div>
               

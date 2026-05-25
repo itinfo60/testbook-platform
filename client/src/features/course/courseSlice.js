@@ -50,6 +50,15 @@ export const updateCourse = createAsyncThunk('courses/update', async ({ id, ...c
   }
 });
 
+export const publishCourse = createAsyncThunk('courses/publish', async (id, { rejectWithValue }) => {
+  try {
+    const { data } = await courseAPI.publish(id);
+    return data.data?.course || data.data || data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'Failed to publish course');
+  }
+});
+
 export const deleteCourse = createAsyncThunk('courses/delete', async (id, { rejectWithValue }) => {
   try {
     await courseAPI.delete(id);
@@ -139,6 +148,10 @@ const courseSlice = createSlice({
       })
       .addCase(deleteCourse.fulfilled, (state, action) => {
         state.teacherCourses = state.teacherCourses.filter(c => c._id !== action.payload);
+      })
+      .addCase(publishCourse.fulfilled, (state, action) => {
+        const idx = state.teacherCourses.findIndex(c => c._id === action.payload._id);
+        if (idx >= 0) state.teacherCourses[idx] = { ...state.teacherCourses[idx], ...action.payload };
       });
   },
 });
