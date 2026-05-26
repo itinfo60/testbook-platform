@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '@/api';
+import { institutesAPI } from '@/api';
 import { Search, Users, ShieldCheck, BookOpen, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -24,6 +25,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [instituteMap, setInstituteMap] = useState({});
   const LIMIT = 20;
 
   const fetch = useCallback(async () => {
@@ -41,6 +43,20 @@ export default function UsersPage() {
       setLoading(false);
     }
   }, [search, roleFilter, page]);
+
+  useEffect(() => {
+    institutesAPI
+      .getAll({ limit: 200 })
+      .then((res) => {
+        const list = res.data?.data?.institutes || res.data?.data || [];
+        const map = {};
+        list.forEach((i) => {
+          map[i._id] = i.name;
+        });
+        setInstituteMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -144,7 +160,9 @@ export default function UsersPage() {
                           {u.role}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-gray-500 text-xs">{u.tenantId || '--'}</td>
+                      <td className="px-5 py-3 text-gray-500 text-xs">
+                        {u.tenantId ? instituteMap[u.tenantId] || u.tenantId.slice(-6) : 'Platform'}
+                      </td>
                       <td className="px-5 py-3 text-gray-500 text-xs">
                         {new Date(u.createdAt).toLocaleDateString()}
                       </td>

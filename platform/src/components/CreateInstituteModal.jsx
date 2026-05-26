@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { institutesAPI, subscriptionPlansAPI } from '@/api';
-import { useEffect } from 'react';
+import api from '@/api';
 import toast from 'react-hot-toast';
-import { X } from 'lucide-react';
+import { X, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 export default function CreateInstituteModal({ onClose, onCreated }) {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [subdomainStatus, setSubdomainStatus] = useState(null); // null | 'checking' | 'available' | 'taken'
+  const checkTimeout = useRef(null);
+
   const [form, setForm] = useState({
     name: '',
     subdomain: '',
@@ -28,8 +31,29 @@ export default function CreateInstituteModal({ onClose, onCreated }) {
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
+  const handleSubdomainChange = (raw) => {
+    const val = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    set('subdomain', val);
+    setSubdomainStatus(null);
+    clearTimeout(checkTimeout.current);
+    if (val.length < 3) return;
+    setSubdomainStatus('checking');
+    checkTimeout.current = setTimeout(async () => {
+      try {
+        await api.get(`/institutes/check-subdomain/${val}`);
+        setSubdomainStatus('available');
+      } catch {
+        setSubdomainStatus('taken');
+      }
+    }, 600);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (subdomainStatus === 'taken') {
+      toast.error('Subdomain is already taken');
+      return;
+    }
     setLoading(true);
     try {
       await institutesAPI.create(form);
@@ -67,15 +91,36 @@ export default function CreateInstituteModal({ onClose, onCreated }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Subdomain *</label>
-              <input
-                required
-                className="input"
-                placeholder="sharma"
-                value={form.subdomain}
-                onChange={(e) =>
-                  set('subdomain', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-                }
-              />
+              <div className="relative">
+                <input
+                  required
+                  className={`input pr-8 ${
+                    subdomainStatus === 'taken'
+                      ? 'border-red-700 focus:ring-red-700'
+                      : subdomainStatus === 'available'
+                        ? 'border-green-700 focus:ring-green-700'
+                        : ''
+                  }`}
+                  placeholder="sharma"
+                  value={form.subdomain}
+                  onChange={(e) => handleSubdomainChange(e.target.value)}
+                />
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  {subdomainStatus === 'checking' && (
+                    <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
+                  )}
+                  {subdomainStatus === 'available' && (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  )}
+                  {subdomainStatus === 'taken' && <XCircle className="h-4 w-4 text-red-500" />}
+                </div>
+              </div>
+              {subdomainStatus === 'available' && (
+                <p className="text-green-500 text-xs mt-1">Available</p>
+              )}
+              {subdomainStatus === 'taken' && (
+                <p className="text-red-500 text-xs mt-1">Already taken</p>
+              )}
             </div>
           </div>
 
@@ -140,7 +185,7 @@ export default function CreateInstituteModal({ onClose, onCreated }) {
                   <option value="">Select plan</option>
                   {plans.map((p) => (
                     <option key={p._id} value={p._id}>
-                      {p.name}
+                      {p.name} {p.price ? `— ₹${p.price}/${p.billingCycle || 'mo'}` : ''}
                     </option>
                   ))}
                 </select>
@@ -189,7 +234,11 @@ export default function CreateInstituteModal({ onClose, onCreated }) {
             <button type="button" onClick={onClose} className="btn-ghost flex-1">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="btn-primary flex-1">
+            <button
+              type="submit"
+              disabled={loading || subdomainStatus === 'taken' || subdomainStatus === 'checking'}
+              className="btn-primary flex-1"
+            >
               {loading ? 'Creating...' : 'Create Institute'}
             </button>
           </div>
