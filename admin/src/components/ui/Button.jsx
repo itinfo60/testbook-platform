@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/utils';
 
 const variants = {
@@ -5,7 +6,8 @@ const variants = {
   secondary: 'btn-secondary',
   danger: 'btn-danger',
   success: 'btn-success',
-  ghost: 'inline-flex items-center justify-center px-4 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+  ghost:
+    'inline-flex items-center justify-center px-4 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
 };
 
 const sizes = {

@@ -1,7 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCourses, deleteCourse, togglePublish, toggleFeatured } from '@/features/course/courseSlice';
+import { BookOpen, Eye, EyeOff, Info, Star, StarOff, Trash2 } from 'lucide-react';
+import {
+  fetchCourses,
+  deleteCourse,
+  togglePublish,
+  toggleFeatured,
+} from '@/features/course/courseSlice';
 import useDebounce from '@/hooks/useDebounce';
+import DataTable from '@/components/DataTable';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Modal from '@/components/Modal';
+import { truncate, formatDate, formatCurrency, getStatusColor } from '@/utils';
 
 export default function CourseList() {
   const dispatch = useDispatch();
@@ -17,20 +27,27 @@ export default function CourseList() {
   const debouncedSearch = useDebounce(search);
 
   const load = useCallback(() => {
-    dispatch(fetchCourses({
-      page,
-      limit: 10,
-      search: debouncedSearch || undefined,
-      status: statusFilter || undefined,
-      sort: `${sortOrder === 'desc' ? '-' : ''}${sortField}`,
-    }));
+    dispatch(
+      fetchCourses({
+        page,
+        limit: 10,
+        search: debouncedSearch || undefined,
+        status: statusFilter || undefined,
+        sort: `${sortOrder === 'desc' ? '-' : ''}${sortField}`,
+      })
+    );
   }, [dispatch, page, debouncedSearch, statusFilter, sortField, sortOrder]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortOrder('asc'); }
+    else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
   };
 
   const handleDelete = async () => {
@@ -59,7 +76,11 @@ export default function CourseList() {
       render: (_, row) => (
         <div className="flex items-center gap-3">
           {row.thumbnail?.url || row.thumbnail ? (
-            <img src={row.thumbnail?.url || row.thumbnail} alt="" className="w-12 h-8 rounded object-cover" />
+            <img
+              src={row.thumbnail?.url || row.thumbnail}
+              alt=""
+              className="w-12 h-8 rounded object-cover"
+            />
           ) : (
             <div className="w-12 h-8 rounded bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
               <BookOpen className="w-4 h-4 text-primary-600" />
@@ -67,7 +88,9 @@ export default function CourseList() {
           )}
           <div>
             <p className="font-medium text-gray-900 dark:text-white">{truncate(row.title, 40)}</p>
-            <p className="text-xs text-gray-500">by {row.teacher?.name || row.instructor?.name || 'Unknown Teacher'}</p>
+            <p className="text-xs text-gray-500">
+              by {row.teacher?.name || row.instructor?.name || 'Unknown Teacher'}
+            </p>
           </div>
         </div>
       ),
@@ -107,7 +130,9 @@ export default function CourseList() {
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
             <span>{rating.toFixed(1)}</span>
           </div>
-        ) : <span className="text-gray-400">-</span>;
+        ) : (
+          <span className="text-gray-400">-</span>
+        );
       },
     },
     {
@@ -119,11 +144,12 @@ export default function CourseList() {
     {
       key: 'isFeatured',
       label: 'Featured',
-      render: (val) => val ? (
-        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-      ) : (
-        <span className="text-gray-300">-</span>
-      ),
+      render: (val) =>
+        val ? (
+          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+        ) : (
+          <span className="text-gray-300">-</span>
+        ),
     },
     {
       key: 'createdAt',
@@ -140,7 +166,9 @@ export default function CourseList() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Courses</h2>
           <p className="mt-1 text-gray-500 dark:text-gray-400">
             Manage courses created by teachers
-            {pagination && <span className="ml-2 text-primary-600">({pagination.total || 0} total)</span>}
+            {pagination && (
+              <span className="ml-2 text-primary-600">({pagination.total || 0} total)</span>
+            )}
           </p>
         </div>
       </div>
@@ -149,7 +177,10 @@ export default function CourseList() {
       <div className="flex flex-wrap gap-3">
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
           className="input-field w-40 py-2"
         >
           <option value="">All Status</option>
@@ -166,7 +197,10 @@ export default function CourseList() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search courses..."
         sortField={sortField}
         sortOrder={sortOrder}
@@ -189,10 +223,11 @@ export default function CourseList() {
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               title={row.status === 'published' ? 'Unpublish' : 'Publish'}
             >
-              {row.status === 'published'
-                ? <Eye className="w-4 h-4 text-emerald-600" />
-                : <EyeOff className="w-4 h-4 text-gray-400" />
-              }
+              {row.status === 'published' ? (
+                <Eye className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <EyeOff className="w-4 h-4 text-gray-400" />
+              )}
             </button>
             {/* Toggle Featured */}
             <button
@@ -200,10 +235,11 @@ export default function CourseList() {
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               title={row.isFeatured ? 'Unfeature' : 'Feature'}
             >
-              {row.isFeatured
-                ? <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                : <StarOff className="w-4 h-4 text-gray-400" />
-              }
+              {row.isFeatured ? (
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              ) : (
+                <StarOff className="w-4 h-4 text-gray-400" />
+              )}
             </button>
             {/* Delete */}
             <button
@@ -238,7 +274,7 @@ export default function CourseList() {
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-start gap-4">
-              {(viewCourse.thumbnail?.url || viewCourse.thumbnail) ? (
+              {viewCourse.thumbnail?.url || viewCourse.thumbnail ? (
                 <img
                   src={viewCourse.thumbnail?.url || viewCourse.thumbnail}
                   alt=""
@@ -250,16 +286,18 @@ export default function CourseList() {
                 </div>
               )}
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{viewCourse.title}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {viewCourse.title}
+                </h3>
                 <p className="text-sm text-gray-500 mt-1">
                   by {viewCourse.teacher?.name || viewCourse.instructor?.name || 'Unknown'}
                 </p>
                 <div className="flex items-center gap-3 mt-2">
-                  <span className={getStatusColor(viewCourse.status)}>{viewCourse.status || 'draft'}</span>
+                  <span className={getStatusColor(viewCourse.status)}>
+                    {viewCourse.status || 'draft'}
+                  </span>
                   <span className="badge-info capitalize">{viewCourse.level || 'N/A'}</span>
-                  {viewCourse.isFeatured && (
-                    <span className="badge-warning">⭐ Featured</span>
-                  )}
+                  {viewCourse.isFeatured && <span className="badge-warning">⭐ Featured</span>}
                 </div>
               </div>
             </div>
@@ -325,21 +363,40 @@ export default function CourseList() {
             {/* Quick Actions */}
             <div className="flex gap-2 pt-3 border-t dark:border-gray-700">
               <button
-                onClick={() => { handleTogglePublish(viewCourse._id); setViewCourse(null); }}
-                className={viewCourse.status === 'published' ? 'btn-secondary gap-2' : 'btn-success gap-2'}
+                onClick={() => {
+                  handleTogglePublish(viewCourse._id);
+                  setViewCourse(null);
+                }}
+                className={
+                  viewCourse.status === 'published' ? 'btn-secondary gap-2' : 'btn-success gap-2'
+                }
               >
-                {viewCourse.status === 'published' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {viewCourse.status === 'published' ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
                 {viewCourse.status === 'published' ? 'Unpublish' : 'Publish'}
               </button>
               <button
-                onClick={() => { handleToggleFeatured(viewCourse._id); setViewCourse(null); }}
+                onClick={() => {
+                  handleToggleFeatured(viewCourse._id);
+                  setViewCourse(null);
+                }}
                 className="btn-secondary gap-2"
               >
-                {viewCourse.isFeatured ? <StarOff className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+                {viewCourse.isFeatured ? (
+                  <StarOff className="w-4 h-4" />
+                ) : (
+                  <Star className="w-4 h-4" />
+                )}
                 {viewCourse.isFeatured ? 'Unfeature' : 'Feature'}
               </button>
               <button
-                onClick={() => { setDeleteTarget(viewCourse._id); setViewCourse(null); }}
+                onClick={() => {
+                  setDeleteTarget(viewCourse._id);
+                  setViewCourse(null);
+                }}
                 className="btn-danger gap-2"
               >
                 <Trash2 className="w-4 h-4" /> Delete

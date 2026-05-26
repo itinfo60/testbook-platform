@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 
 // Course oversight is now handled in the main CourseList page
 export default function CourseOversight() {

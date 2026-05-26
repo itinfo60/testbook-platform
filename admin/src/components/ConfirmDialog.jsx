@@ -1,5 +1,16 @@
+import { AlertTriangle } from 'lucide-react';
+import Modal from '@/components/Modal';
 
-export default function ConfirmDialog({ isOpen, onClose, onConfirm, title = 'Confirm Action', message = 'Are you sure?', confirmText = 'Confirm', variant = 'danger', loading }) {
+export default function ConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = 'Confirm Action',
+  message = 'Are you sure?',
+  confirmText = 'Confirm',
+  variant = 'danger',
+  loading,
+}) {
   const btnClass = variant === 'danger' ? 'btn-danger' : 'btn-primary';
   return (
     <Modal
@@ -9,7 +20,9 @@ export default function ConfirmDialog({ isOpen, onClose, onConfirm, title = 'Con
       size="sm"
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </button>
           <button className={btnClass} onClick={onConfirm} disabled={loading}>
             {loading ? 'Processing...' : confirmText}
           </button>

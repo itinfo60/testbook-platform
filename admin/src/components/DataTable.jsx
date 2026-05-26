@@ -1,4 +1,6 @@
+import { Search, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import LoadingSpinner from '@/components/loadingSpinner';
+import Pagination from '@/components/Pagination';
 import { useState } from 'react';
 import { cn } from '@/utils';
 
@@ -34,7 +36,11 @@ export default function DataTable({
 
   const SortIcon = ({ field }) => {
     if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />;
-    return sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary-600" /> : <ArrowDown className="w-3.5 h-3.5 text-primary-600" />;
+    return sortOrder === 'asc' ? (
+      <ArrowUp className="w-3.5 h-3.5 text-primary-600" />
+    ) : (
+      <ArrowDown className="w-3.5 h-3.5 text-primary-600" />
+    );
   };
 
   const allSelected = data.length > 0 && selectedRows.length === data.length;
@@ -44,7 +50,9 @@ export default function DataTable({
       {(title || searchable || headerActions) && (
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>}
+            {title && (
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+            )}
             <div className="flex items-center gap-3 flex-1 sm:justify-end">
               {searchable && onSearch && (
                 <div className="relative flex-1 sm:max-w-xs">
@@ -57,7 +65,10 @@ export default function DataTable({
                     className="input-field pl-9 pr-8 py-2"
                   />
                   {localSearch && (
-                    <button onClick={() => handleSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
+                    <button
+                      onClick={() => handleSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
                       <X className="w-3.5 h-3.5 text-gray-400" />
                     </button>
                   )}
@@ -88,7 +99,8 @@ export default function DataTable({
                   key={col.key}
                   className={cn(
                     'px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
-                    col.sortable && 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200',
+                    col.sortable &&
+                      'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200',
                     col.className
                   )}
                   style={{ width: col.width }}
@@ -100,28 +112,43 @@ export default function DataTable({
                   </div>
                 </th>
               ))}
-              {actions && <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>}
+              {actions && (
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)} className="px-4 py-16">
+                <td
+                  colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)}
+                  className="px-4 py-16"
+                >
                   <LoadingSpinner size="md" />
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)} className="px-4 py-16 text-center">
+                <td
+                  colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)}
+                  className="px-4 py-16 text-center"
+                >
                   <div className="flex flex-col items-center gap-3">
-                    {EmptyIcon && <EmptyIcon className="w-12 h-12 text-gray-300 dark:text-gray-600" />}
+                    {EmptyIcon && (
+                      <EmptyIcon className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                    )}
                     <p className="text-gray-500 dark:text-gray-400">{emptyMessage}</p>
                   </div>
                 </td>
               </tr>
             ) : (
               data.map((row, idx) => (
-                <tr key={row._id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                <tr
+                  key={row._id || idx}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
+                >
                   {selectable && (
                     <td className="px-4 py-3">
                       <input
@@ -133,8 +160,14 @@ export default function DataTable({
                     </td>
                   )}
                   {columns.map((col) => (
-                    <td key={col.key} className={cn('px-4 py-3 text-sm text-gray-700 dark:text-gray-300', col.cellClass)}>
-                      {col.render ? col.render(row[col.key], row) : row[col.key] ?? '-'}
+                    <td
+                      key={col.key}
+                      className={cn(
+                        'px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
+                        col.cellClass
+                      )}
+                    >
+                      {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '-')}
                     </td>
                   ))}
                   {actions && <td className="px-4 py-3 text-right">{actions(row)}</td>}

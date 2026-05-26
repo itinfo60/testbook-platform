@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/utils';
 
 export default function Pagination({ page = 1, totalPages = 1, onPageChange, total, limit }) {
@@ -12,8 +13,9 @@ export default function Pagination({ page = 1, totalPages = 1, onPageChange, tot
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        Showing <span className="font-medium">{Math.min((page - 1) * (limit || 10) + 1, total || 0)}</span> to{' '}
-        <span className="font-medium">{Math.min(page * (limit || 10), total || 0)}</span> of{' '}
+        Showing{' '}
+        <span className="font-medium">{Math.min((page - 1) * (limit || 10) + 1, total || 0)}</span>{' '}
+        to <span className="font-medium">{Math.min(page * (limit || 10), total || 0)}</span> of{' '}
         <span className="font-medium">{total || 0}</span> results
       </div>
       <nav className="flex items-center gap-1">
@@ -26,7 +28,12 @@ export default function Pagination({ page = 1, totalPages = 1, onPageChange, tot
         </button>
         {pages[0] > 1 && (
           <>
-            <button onClick={() => onPageChange(1)} className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">1</button>
+            <button
+              onClick={() => onPageChange(1)}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              1
+            </button>
             {pages[0] > 2 && <span className="px-1 text-gray-400">...</span>}
           </>
         )}
@@ -44,12 +51,19 @@ export default function Pagination({ page = 1, totalPages = 1, onPageChange, tot
         ))}
         {pages[pages.length - 1] < totalPages && (
           <>
-            {pages[pages.length - 1] < totalPages - 1 && <span className="px-1 text-gray-400">...</span>}
-            <button onClick={() => onPageChange(totalPages)} className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{totalPages}</button>
+            {pages[pages.length - 1] < totalPages - 1 && (
+              <span className="px-1 text-gray-400">...</span>
+            )}
+            <button
+              onClick={() => onPageChange(totalPages)}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {totalPages}
+            </button>
           </>
         )}
         <button
-          onClick={()=> onPageChange(page + 1)}
+          onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >

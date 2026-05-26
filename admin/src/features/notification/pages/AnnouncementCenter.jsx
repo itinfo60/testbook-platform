@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Bell, Megaphone, Send, Users } from 'lucide-react';
 import { notificationsAPI } from '@/services/api';
 import toast from 'react-hot-toast';
 
@@ -35,17 +36,35 @@ export default function AnnouncementCenter() {
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
   const typeOptions = [
-    { value: 'info', label: 'Info', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    { value: 'success', label: 'Success', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-    { value: 'warning', label: 'Warning', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-    { value: 'error', label: 'Urgent', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+    {
+      value: 'info',
+      label: 'Info',
+      color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    },
+    {
+      value: 'success',
+      label: 'Success',
+      color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    },
+    {
+      value: 'warning',
+      label: 'Warning',
+      color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    },
+    {
+      value: 'error',
+      label: 'Urgent',
+      color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Announcement Center</h2>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Send announcements to users across the platform</p>
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
+          Send announcements to users across the platform
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -57,13 +76,17 @@ export default function AnnouncementCenter() {
                 <Megaphone className="w-5 h-5 text-primary-600 dark:text-primary-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">New Announcement</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  New Announcement
+                </h3>
                 <p className="text-sm text-gray-500">Compose and send a notification to users</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Title *
+              </label>
               <input
                 type="text"
                 value={form.title}
@@ -75,7 +98,9 @@ export default function AnnouncementCenter() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Message *
+              </label>
               <textarea
                 value={form.message}
                 onChange={handleChange('message')}
@@ -88,8 +113,14 @@ export default function AnnouncementCenter() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Audience</label>
-                <select value={form.targetRole} onChange={handleChange('targetRole')} className="input-field">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Target Audience
+                </label>
+                <select
+                  value={form.targetRole}
+                  onChange={handleChange('targetRole')}
+                  className="input-field"
+                >
                   <option value="all">All Users</option>
                   <option value="student">Students Only</option>
                   <option value="teacher">Teachers Only</option>
@@ -97,16 +128,26 @@ export default function AnnouncementCenter() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type
+                </label>
                 <select value={form.type} onChange={handleChange('type')} className="input-field">
                   {typeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
-                <select value={form.priority} onChange={handleChange('priority')} className="input-field">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={form.priority}
+                  onChange={handleChange('priority')}
+                  className="input-field"
+                >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
                   <option value="high">High</option>
@@ -117,16 +158,23 @@ export default function AnnouncementCenter() {
             {/* Type Preview */}
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Preview</p>
-              <div className={`p-3 rounded-lg ${typeOptions.find((t) => t.value === form.type)?.color || ''}`}>
+              <div
+                className={`p-3 rounded-lg ${typeOptions.find((t) => t.value === form.type)?.color || ''}`}
+              >
                 <p className="font-semibold text-sm">{form.title || 'Announcement Title'}</p>
-                <p className="text-sm mt-1 opacity-80">{form.message || 'Your message will appear here...'}</p>
+                <p className="text-sm mt-1 opacity-80">
+                  {form.message || 'Your message will appear here...'}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 <Users className="w-4 h-4 inline mr-1" />
-                Sending to: <span className="font-medium capitalize">{form.targetRole === 'all' ? 'All Users' : `${form.targetRole}s`}</span>
+                Sending to:{' '}
+                <span className="font-medium capitalize">
+                  {form.targetRole === 'all' ? 'All Users' : `${form.targetRole}s`}
+                </span>
               </p>
               <button type="submit" disabled={sending} className="btn-primary gap-2">
                 <Send className="w-4 h-4" />
@@ -145,21 +193,30 @@ export default function AnnouncementCenter() {
             {sent.length === 0 ? (
               <div className="text-center py-8">
                 <Megaphone className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No announcements sent yet in this session</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  No announcements sent yet in this session
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {sent.map((item) => (
-                  <div key={item.id} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div
+                    key={item.id}
+                    className="p-3 rounded-lg border border-gray-200 dark:border-gray-700"
+                  >
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`badge ${typeOptions.find((t) => t.value === item.type)?.color || 'badge-info'}`}>
+                      <span
+                        className={`badge ${typeOptions.find((t) => t.value === item.type)?.color || 'badge-info'}`}
+                      >
                         {item.type}
                       </span>
                       <span className="text-xs text-gray-500">
                         {new Date(item.sentAt).toLocaleTimeString()}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{item.title}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {item.title}
+                    </p>
                     <p className="text-xs text-gray-500 mt-0.5">To: {item.targetRole}</p>
                   </div>
                 ))}
@@ -175,19 +232,25 @@ export default function AnnouncementCenter() {
                 <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-xs text-blue-600">1</span>
                 </div>
-                <p>Use <strong>Info</strong> type for general updates and news.</p>
+                <p>
+                  Use <strong>Info</strong> type for general updates and news.
+                </p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-xs text-amber-600">2</span>
                 </div>
-                <p>Use <strong>Warning</strong> for maintenance or schedule changes.</p>
+                <p>
+                  Use <strong>Warning</strong> for maintenance or schedule changes.
+                </p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-xs text-red-600">3</span>
                 </div>
-                <p>Use <strong>Urgent</strong> sparingly for critical announcements.</p>
+                <p>
+                  Use <strong>Urgent</strong> sparingly for critical announcements.
+                </p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">

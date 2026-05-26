@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Eye, Trash2, FileText } from 'lucide-react';
 import { fetchTests, deleteTest } from '@/features/test/testSlice';
 import useDebounce from '@/hooks/useDebounce';
+import DataTable from '@/components/DataTable';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { truncate, formatDate, getStatusColor } from '@/utils';
 
 export default function TestOversight() {
   const dispatch = useDispatch();
@@ -14,18 +18,28 @@ export default function TestOversight() {
   const debouncedSearch = useDebounce(search);
 
   const load = useCallback(() => {
-    dispatch(fetchTests({ page, limit: 10, search: debouncedSearch, sort: sortField, order: sortOrder }));
+    dispatch(
+      fetchTests({ page, limit: 10, search: debouncedSearch, sort: sortField, order: sortOrder })
+    );
   }, [dispatch, page, debouncedSearch, sortField, sortOrder]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortOrder('asc'); }
+    else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
   };
 
   const handleDelete = async () => {
-    if (deleteTarget) { await dispatch(deleteTest(deleteTarget)); setDeleteTarget(null); }
+    if (deleteTarget) {
+      await dispatch(deleteTest(deleteTarget));
+      setDeleteTarget(null);
+    }
   };
 
   const columns = [
@@ -36,7 +50,9 @@ export default function TestOversight() {
       render: (_, row) => (
         <div>
           <p className="font-medium text-gray-900 dark:text-white">{truncate(row.title, 45)}</p>
-          <p className="text-xs text-gray-500">{row.teacher?.name || row.createdBy?.name || 'N/A'}</p>
+          <p className="text-xs text-gray-500">
+            {row.teacher?.name || row.createdBy?.name || 'N/A'}
+          </p>
         </div>
       ),
     },
@@ -54,7 +70,7 @@ export default function TestOversight() {
       key: 'duration',
       label: 'Duration',
       sortable: true,
-      render: (val) => val ? `${val} min` : 'N/A',
+      render: (val) => (val ? `${val} min` : 'N/A'),
     },
     {
       key: 'totalAttempts',
@@ -80,7 +96,9 @@ export default function TestOversight() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Test Oversight</h2>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Monitor all tests across the platform</p>
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
+          Monitor all tests across the platform
+        </p>
       </div>
 
       <DataTable
@@ -91,7 +109,10 @@ export default function TestOversight() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search tests..."
         sortField={sortField}
         sortOrder={sortOrder}
@@ -100,10 +121,17 @@ export default function TestOversight() {
         emptyIcon={FileText}
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="View">
+            <button
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="View"
+            >
               <Eye className="w-4 h-4 text-blue-600" />
             </button>
-            <button onClick={() => setDeleteTarget(row._id)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Delete">
+            <button
+              onClick={() => setDeleteTarget(row._id)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Delete"
+            >
               <Trash2 className="w-4 h-4 text-red-600" />
             </button>
           </div>
