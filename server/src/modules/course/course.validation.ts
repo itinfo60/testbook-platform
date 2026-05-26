@@ -1,0 +1,97 @@
+import { z } from 'zod';
+
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+const objectId = z.string().regex(objectIdRegex, { message: 'Invalid ObjectId' });
+
+const resourceSchema = z.object({
+  title: z.string().trim().optional(),
+  url: z.string().trim().optional(),
+  type: z.enum(['link', 'pdf', 'doc']).default('link'),
+});
+
+const lessonSchema = z.object({
+  title: z.string().trim().min(1, 'Lesson title is required'),
+  type: z.enum(['video', 'text', 'quiz']),
+  content: z.string().trim().default(''),
+  videoUrl: z.string().url().or(z.string().max(0)).optional(),
+  duration: z.number().min(0).default(0),
+  isFree: z.boolean().default(false),
+  dripDays: z.number().int().min(0).default(0),
+  resources: z.array(resourceSchema).default([]),
+});
+
+const sectionSchema = z.object({
+  title: z.string().trim().min(1, 'Section title is required'),
+  description: z.string().trim().default(''),
+  lessons: z.array(lessonSchema).default([]),
+});
+
+export const createCourseSchema = z.object({
+  title: z.string().trim().min(3, 'Title must be at least 3 characters').max(200),
+  description: z.string().trim().min(10, 'Description must be at least 10 characters').max(5000),
+  shortDescription: z.string().trim().max(300).default(''),
+  category: objectId,
+  price: z.number().min(0).max(100000).default(0),
+  discountPrice: z.number().min(0).optional().default(0),
+  language: z.string().default('English'),
+  level: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
+  thumbnail: z
+    .object({
+      url: z.string().url().or(z.string().max(0)).default(''),
+      publicId: z.string().default(''),
+    })
+    .default({ url: '', publicId: '' }),
+  tags: z.array(z.string().trim()).default([]),
+  requirements: z.array(z.string().trim()).default([]),
+  whatYouLearn: z.array(z.string().trim()).default([]),
+  sections: z.array(sectionSchema).default([]),
+});
+
+export const updateCourseSchema = z.object({
+  title: z.string().trim().min(3).max(200).optional(),
+  description: z.string().trim().min(10).max(5000).optional(),
+  shortDescription: z.string().trim().max(300).optional(),
+  category: objectId.optional(),
+  price: z.number().min(0).max(100000).optional(),
+  discountPrice: z.number().min(0).optional(),
+  language: z.string().optional(),
+  level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  thumbnail: z
+    .object({
+      url: z.string().url().or(z.string().max(0)).optional(),
+      publicId: z.string().optional(),
+    })
+    .optional(),
+  tags: z.array(z.string().trim()).optional(),
+  requirements: z.array(z.string().trim()).optional(),
+  whatYouLearn: z.array(z.string().trim()).optional(),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+  isFeatured: z.boolean().optional(),
+  sections: z.array(sectionSchema).optional(),
+});
+
+export const courseQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(12),
+  search: z.string().trim().max(100).optional(),
+  category: objectId.optional(),
+  level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  priceMin: z.coerce.number().min(0).optional(),
+  priceMax: z.coerce.number().min(0).optional(),
+  sort: z
+    .enum(['newest', 'oldest', 'price_low', 'price_high', 'rating', 'popular'])
+    .default('newest'),
+  isFeatured: z.preprocess((val) => {
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return val;
+  }, z.boolean().optional()),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+});
+
+export type CreateCourseInput = z.infer<typeof createCourseSchema>;
+export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
+export type CourseQueryInput = z.infer<typeof courseQuerySchema>;
+export type SectionInput = z.infer<typeof sectionSchema>;
+export type LessonInput = z.infer<typeof lessonSchema>;
+export type ResourceInput = z.infer<typeof resourceSchema>;

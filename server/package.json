@@ -5,15 +5,16 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development nodemon src/server.js",
+    "dev": "NODE_ENV=development nodemon --import tsx src/server.js",
     "start": "NODE_ENV=production node src/server.js",
     "start:cluster": "NODE_ENV=production node src/cluster.js",
-    "seed": "node scripts/seed.js",
+    "seed": "node --import tsx scripts/seed.ts",
     "seed:admin": "node scripts/seedAdmin.js",
     "test": "NODE_ENV=test vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "seed:old": "node scripts/seedAll.js"
   },
   "dependencies": {
     "@bull-board/api": "^7.1.5",
@@ -59,10 +60,19 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.9.1",
+    "@types/supertest": "^7.2.0",
     "eslint": "^8.54.0",
     "mongodb-memory-server": "^11.1.0",
     "nodemon": "^3.0.1",
     "supertest": "^7.2.2",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.7"
   }
 }

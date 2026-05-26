@@ -17,7 +17,11 @@ import config from './config/index.js';
 import logger from './utils/logger.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { notFoundHandler, errorConverter, errorHandler } from './middleware/errorHandler.js';
-import { tenantIdentification, requireTenant } from './middleware/tenant.middleware.js';
+import {
+  tenantIdentification,
+  requireTenant,
+  optionalTenant,
+} from './middleware/tenant.middleware.js';
 import passport from './config/passport.js';
 import {
   transactionalEmailQueue,
@@ -38,6 +42,7 @@ import reviewRoutes from './modules/review/review.routes.js';
 import testRoutes from './modules/test/test.routes.js';
 import quizRoutes from './modules/quiz/quiz.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import userRoutes from './modules/user/user.routes.js';
 import categoryRoutes from './modules/exam-category/examCategory.routes.js';
 import paymentRoutes from './modules/payment/payment.routes.js';
 import couponRoutes from './modules/coupon/coupon.routes.js';
@@ -124,7 +129,14 @@ app.use(
 
 app.use(
   cors({
-    origin: [config.clientUrl, config.adminUrl, 'http://localhost:5173', 'http://localhost:5174'],
+    origin: [
+      config.clientUrl,
+      config.adminUrl,
+      process.env.PLATFORM_URL || 'http://localhost:5175',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:8080',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -187,22 +199,26 @@ app.get('/health', (req, res) => {
 const API_PREFIX = '/api/v1';
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
-app.use(`${API_PREFIX}/courses`, requireTenant, courseRoutes);
+// Public browse routes — work with or without a tenant (catalog view, landing pages)
+app.use(`${API_PREFIX}/courses`, optionalTenant, courseRoutes);
+app.use(`${API_PREFIX}/categories`, optionalTenant, categoryRoutes);
+app.use(`${API_PREFIX}/tests`, optionalTenant, testRoutes); // public test listing
+app.use(`${API_PREFIX}/reviews`, optionalTenant, reviewRoutes); // public review listing
+app.use(`${API_PREFIX}/blogs`, optionalTenant, blogRoutes); // public blog listing
+app.use(`${API_PREFIX}/badges`, optionalTenant, badgeRoutes); // public badge catalog
+app.use(`${API_PREFIX}/leaderboard`, optionalTenant, leaderboardRoutes);
+
+// Private routes — require a resolved tenant
 app.use(`${API_PREFIX}/enrollments`, requireTenant, enrollmentRoutes);
-app.use(`${API_PREFIX}/reviews`, requireTenant, reviewRoutes);
-app.use(`${API_PREFIX}/tests`, requireTenant, testRoutes);
 app.use(`${API_PREFIX}/quizzes`, requireTenant, quizRoutes);
+app.use(`${API_PREFIX}/admin/users`, userRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
-app.use(`${API_PREFIX}/categories`, requireTenant, categoryRoutes);
 app.use(`${API_PREFIX}/payments`, requireTenant, paymentRoutes);
 app.use(`${API_PREFIX}/coupons`, requireTenant, couponRoutes);
 app.use(`${API_PREFIX}/notifications`, requireTenant, notificationRoutes);
 app.use(`${API_PREFIX}/wishlist`, requireTenant, wishlistRoutes);
 app.use(`${API_PREFIX}/discussions`, requireTenant, discussionRoutes);
 app.use(`${API_PREFIX}/notes`, requireTenant, noteRoutes);
-app.use(`${API_PREFIX}/badges`, requireTenant, badgeRoutes);
-app.use(`${API_PREFIX}/leaderboard`, requireTenant, leaderboardRoutes);
-app.use(`${API_PREFIX}/blogs`, requireTenant, blogRoutes);
 app.use(`${API_PREFIX}/institutes`, instituteRoutes);
 app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/ai`, requireTenant, aiRoutes);

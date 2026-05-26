@@ -127,6 +127,16 @@ export const requireTenant = (req, res, next) => {
 };
 
 /**
+ * Middleware that identifies a tenant when present but does NOT block the
+ * request when no tenant is resolved. Use this for public browse/catalog routes
+ * that work both globally and within a tenant context.
+ */
+export const optionalTenant = (req, _res, next) => {
+  // tenantIdentification already ran — just pass through regardless of result
+  next();
+};
+
+/**
  * Middleware to enforce student registration limit.
  */
 export const checkStudentLimit = catchAsync(async (req, res, next) => {

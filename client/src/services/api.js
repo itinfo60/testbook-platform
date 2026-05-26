@@ -51,10 +51,22 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     const subdomain = getSubdomain();
     if (subdomain) {
+      // Running on a real subdomain (e.g. demo.localhost or abc.platform.com)
       config.headers['X-Tenant-Subdomain'] = subdomain;
+    } else {
+      // Dev fallback: use explicit env vars so plain localhost:5173 works
+      const devTenantId = import.meta.env.VITE_TENANT_ID;
+      const devTenantSubdomain = import.meta.env.VITE_TENANT_SUBDOMAIN;
+      if (devTenantId) {
+        config.headers['X-Tenant-Id'] = devTenantId;
+      } else if (devTenantSubdomain) {
+        config.headers['X-Tenant-Subdomain'] = devTenantSubdomain;
+      }
     }
+
     return config;
   },
   (error) => Promise.reject(error)

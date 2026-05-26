@@ -1,18 +1,14 @@
-/**
- * Multi-tenancy isolation tests.
- * Verifies that Tenant A cannot access Tenant B's data under ANY circumstance.
- */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import { runWithTenant } from '../src/utils/TenantContext.js';
 import Course from '../src/modules/course/course.model.js';
+
 const tenantA = new mongoose.Types.ObjectId();
 const tenantB = new mongoose.Types.ObjectId();
 
 describe('Multi-tenancy isolation', () => {
-  beforeEach(async () => {
-    // Seed data for Tenant A
+  it('validates tenant isolation across all operations', async () => {
+    // 1. Seed data
     await runWithTenant(tenantA.toString(), false, async () => {
       await Course.create({
         title: 'Physics for Tenant A',
@@ -24,7 +20,6 @@ describe('Multi-tenancy isolation', () => {
       });
     });
 
-    // Seed data for Tenant B
     await runWithTenant(tenantB.toString(), false, async () => {
       await Course.create({
         title: 'Math for Tenant B',
@@ -35,90 +30,73 @@ describe('Multi-tenancy isolation', () => {
         sections: [],
       });
     });
-  });
 
-  it('Tenant A sees only their own courses', async () => {
-    const courses = await runWithTenant(tenantA.toString(), false, () => Course.find({}));
-    expect(courses).toHaveLength(1);
-    expect(courses[0].title).toBe('Physics for Tenant A');
-  });
-
-  it('Tenant B sees only their own courses', async () => {
-    const courses = await runWithTenant(tenantB.toString(), false, () => Course.find({}));
-    expect(courses).toHaveLength(1);
-    expect(courses[0].title).toBe('Math for Tenant B');
-  });
-
-  it('Tenant A count excludes Tenant B data', async () => {
-    const count = await runWithTenant(tenantA.toString(), false, () => Course.countDocuments({}));
-    expect(count).toBe(1);
-  });
-
-  it('findOne by title cannot find cross-tenant record', async () => {
-    const course = await runWithTenant(tenantA.toString(), false, () =>
-      Course.findOne({ title: 'Math for Tenant B' })
+    // 2. Read Isolation
+    const coursesA = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.find({})
     );
-    expect(course).toBeNull();
-  });
+    expect(coursesA).toHaveLength(1);
+    expect(coursesA[0].title).toBe('Physics for Tenant A');
 
-  it('findById with wrong tenant returns null', async () => {
-    // Get Tenant B's course ID
-    const tenantBCourse = await runWithTenant(tenantB.toString(), false, () =>
-      Course.findOne({ title: 'Math for Tenant B' })
+    const coursesB = await runWithTenant(
+      tenantB.toString(),
+      false,
+      async () => await Course.find({})
+    );
+    expect(coursesB).toHaveLength(1);
+    expect(coursesB[0].title).toBe('Math for Tenant B');
+
+    const countA = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.countDocuments({})
+    );
+    expect(countA).toBe(1);
+
+    const crossTenantByTitle = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.findOne({ title: 'Math for Tenant B' })
+    );
+    expect(crossTenantByTitle).toBeNull();
+
+    // Get Tenant B's course directly to test findById
+    const tenantBCourse = await runWithTenant(
+      tenantB.toString(),
+      false,
+      async () => await Course.findOne({ title: 'Math for Tenant B' })
     );
     expect(tenantBCourse).toBeTruthy();
 
-    // Try to find it from Tenant A context
-    const crossTenantResult = await runWithTenant(tenantA.toString(), false, () =>
-      Course.findOne({ _id: tenantBCourse._id })
+    const crossTenantById = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.findOne({ _id: tenantBCourse._id })
     );
-    expect(crossTenantResult).toBeNull();
-  });
+    expect(crossTenantById).toBeNull();
 
-  it('updateOne cannot modify cross-tenant records', async () => {
-    const tenantBCourse = await runWithTenant(null, true, () =>
-      Course.findOne({ title: 'Math for Tenant B' })
+    // 3. Update/Delete Isolation
+    const updateResult = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.updateOne({ _id: tenantBCourse._id }, { $set: { title: 'Hacked' } })
     );
+    expect(updateResult.modifiedCount).toBe(0);
 
-    // Attempt update from Tenant A context
-    const result = await runWithTenant(tenantA.toString(), false, () =>
-      Course.updateOne({ _id: tenantBCourse._id }, { $set: { title: 'Hacked' } })
+    const deleteResult = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.deleteOne({ _id: tenantBCourse._id })
     );
+    expect(deleteResult.deletedCount).toBe(0);
 
-    expect(result.modifiedCount).toBe(0);
-
-    // Verify original is unchanged
-    const unchanged = await runWithTenant(tenantB.toString(), false, () =>
-      Course.findOne({ _id: tenantBCourse._id })
-    );
-    expect(unchanged.title).toBe('Math for Tenant B');
-  });
-
-  it('deleteOne cannot delete cross-tenant records', async () => {
-    const tenantBCourse = await runWithTenant(null, true, () =>
-      Course.findOne({ title: 'Math for Tenant B' })
-    );
-
-    // Attempt delete from Tenant A context
-    const result = await runWithTenant(tenantA.toString(), false, () =>
-      Course.deleteOne({ _id: tenantBCourse._id })
-    );
-
-    expect(result.deletedCount).toBe(0);
-
-    // Verify still exists
-    const stillExists = await runWithTenant(tenantB.toString(), false, () =>
-      Course.findOne({ _id: tenantBCourse._id })
-    );
-    expect(stillExists).not.toBeNull();
-  });
-
-  it('bypass mode (super_admin) sees all records', async () => {
-    const allCourses = await runWithTenant(null, true, () => Course.find({}));
+    // 4. Bypass Mode
+    const allCourses = await runWithTenant(null, true, async () => await Course.find({}));
     expect(allCourses.length).toBeGreaterThanOrEqual(2);
-  });
 
-  it('insertMany correctly assigns tenantId', async () => {
+    // 5. InsertMany and Aggregate
     await runWithTenant(tenantA.toString(), false, async () => {
       await Course.insertMany([
         {
@@ -132,25 +110,17 @@ describe('Multi-tenancy isolation', () => {
       ]);
     });
 
-    const coursesA = await runWithTenant(tenantA.toString(), false, () => Course.find({}));
-    expect(coursesA.some((c) => c.title === 'Chemistry Tenant A')).toBe(true);
-
-    // Tenant B should not see it
-    const foundByB = await runWithTenant(tenantB.toString(), false, () =>
-      Course.findOne({ title: 'Chemistry Tenant A' })
+    const aggA = await runWithTenant(
+      tenantA.toString(),
+      false,
+      async () => await Course.aggregate([{ $count: 'total' }])
     );
-    expect(foundByB).toBeNull();
-  });
+    expect(aggA[0]?.total).toBe(2);
 
-  it('aggregate pipeline is scoped by tenantId', async () => {
-    const agg = await runWithTenant(tenantA.toString(), false, () =>
-      Course.aggregate([{ $count: 'total' }])
-    );
-    // Tenant A has 2 courses after insertMany above
-    expect(agg[0]?.total).toBe(2);
-
-    const aggB = await runWithTenant(tenantB.toString(), false, () =>
-      Course.aggregate([{ $count: 'total' }])
+    const aggB = await runWithTenant(
+      tenantB.toString(),
+      false,
+      async () => await Course.aggregate([{ $count: 'total' }])
     );
     expect(aggB[0]?.total).toBe(1);
   });

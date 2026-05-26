@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import config from '../config/index.js';
+import logger from '../utils/logger.js';
 
 const connection = {
   host: config.redis.host,
@@ -9,10 +10,10 @@ const connection = {
 };
 
 const defaultJobOptions = {
-  attempts: 3,
-  backoff: { type: 'exponential', delay: 2000 },
+  attempts: 2, // Down from 3 — auth errors shouldn't burn 3 rounds
+  backoff: { type: 'exponential', delay: 3000 },
   removeOnComplete: { count: 100 },
-  removeOnFail: { count: 500 },
+  removeOnFail: { count: 50 }, // Keep only last 50 failed jobs for inspection
 };
 
 export const transactionalEmailQueue = new Queue('transactional_email', {
@@ -30,22 +31,50 @@ export const analyticsQueue = new Queue('analytics', {
   defaultJobOptions: { attempts: 1, removeOnComplete: { count: 200 } },
 });
 
-// Schedule daily dunning checks
+// ── Scheduled dunning checks ────────────────────────────────────────────────
 dunningQueue.add(
   'check_expiring',
   { type: 'check_expiring' },
-  {
-    repeat: { pattern: '0 8 * * *' }, // every day at 8 AM
-    jobId: 'dunning_expiring',
-  }
+  { repeat: { pattern: '0 8 * * *' }, jobId: 'dunning_expiring' }
 );
 dunningQueue.add(
   'check_expired',
   { type: 'check_expired' },
-  {
-    repeat: { pattern: '0 9 * * *' }, // every day at 9 AM
-    jobId: 'dunning_expired',
-  }
+  { repeat: { pattern: '0 9 * * *' }, jobId: 'dunning_expired' }
 );
 
 export const queueConnection = connection;
+
+// ── Dev utility: drain all stale failed jobs from every queue ────────────────
+export async function drainFailedJobs() {
+  if (config.env === 'production') return;
+
+  const queues = [
+    transactionalEmailQueue,
+    bulkEmailQueue,
+    notificationQueue,
+    certificateQueue,
+    dripQueue,
+    reminderQueue,
+    dunningQueue,
+    analyticsQueue,
+  ];
+
+  let totalCleaned = 0;
+  for (const q of queues) {
+    try {
+      const counts = await q.getJobCounts('failed', 'delayed');
+      if (counts.failed > 0) {
+        await q.clean(0, counts.failed, 'failed');
+        logger.info(`[Queue] 🧹 Cleaned ${counts.failed} failed jobs from queue: ${q.name}`);
+        totalCleaned += counts.failed;
+      }
+    } catch (err) {
+      logger.warn(`[Queue] Could not clean queue ${q.name}: ${err.message}`);
+    }
+  }
+
+  if (totalCleaned > 0) {
+    logger.info(`[Queue] ✅ Total zombie jobs drained: ${totalCleaned}`);
+  }
+}

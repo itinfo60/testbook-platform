@@ -4,16 +4,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: ['./tests/setup.js'],
-    include: ['tests/**/*.test.js'],
+    include: ['tests/**/*.test.{js,ts}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'src/server.js',
-        'src/cluster.js',
-        'src/config/**',
-        'tests/**',
-      ]
-    }
-  }
+      exclude: ['src/server.js', 'src/cluster.js', 'src/config/**', 'tests/**'],
+    },
+  },
 });

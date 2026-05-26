@@ -2,13 +2,56 @@ import nodemailer from 'nodemailer';
 import config from '../config/index.js';
 import logger from './logger.js';
 
+// ─── Permanent SMTP failure codes that should NOT be retried ─────────────────
+const PERMANENT_SMTP_CODES = new Set([535, 534, 530, 521, 503, 550, 551, 553, 554]);
+
+function isPlaceholderCreds() {
+  const { user, pass } = config.email.smtp.auth || {};
+  return (
+    !user ||
+    !pass ||
+    user === 'your-email@gmail.com' ||
+    pass === 'your-app-password' ||
+    user.includes('your-') ||
+    pass.includes('your-')
+  );
+}
+
 class EmailService {
   constructor() {
     this.transporter = null;
-    this._init();
+    this.usingEthereal = false;
+    // _init is async; we defer until first send
+    this._initPromise = this._init();
   }
 
-  _init() {
+  async _init() {
+    const isDev = config.env !== 'production';
+
+    if (isDev && isPlaceholderCreds()) {
+      // Auto-create an Ethereal catch-all account (no real emails sent)
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        this.transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: { user: testAccount.user, pass: testAccount.pass },
+        });
+        this.usingEthereal = true;
+        logger.info(
+          `[Email] ⚠ SMTP credentials not set — using Ethereal catch-all for development. Emails are captured at https://ethereal.email (user: ${testAccount.user})`
+        );
+      } catch (etherealErr) {
+        logger.warn(
+          `[Email] Could not create Ethereal account: ${etherealErr.message}. Emails will be logged only.`
+        );
+        this.transporter = null;
+      }
+      return;
+    }
+
+    // Production / real credentials
     this.transporter = nodemailer.createTransport({
       host: config.email.smtp.host,
       port: config.email.smtp.port,
@@ -17,7 +60,23 @@ class EmailService {
     });
   }
 
+  /**
+   * Core send method.
+   * In dev-ethereal mode: logs the preview URL instead of sending a real email.
+   * Throws `PermanentEmailError` for auth/config failures — BullMQ worker
+   * catches this and marks the job as failed without retrying.
+   */
   async send({ to, subject, html, text }) {
+    // Await lazy init (safe to await multiple times — Promise caches result)
+    await this._initPromise;
+
+    if (!this.transporter) {
+      logger.warn(
+        `[Email] No transporter available — skipping email to ${to} (subject: ${subject})`
+      );
+      return;
+    }
+
     try {
       const info = await this.transporter.sendMail({
         from: config.email.from,
@@ -26,11 +85,32 @@ class EmailService {
         html,
         text,
       });
-      logger.info(`Email sent to ${to}: ${info.messageId}`);
+
+      if (this.usingEthereal) {
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        logger.info(`[Email] 📧 Ethereal captured: ${to} — Preview: ${previewUrl}`);
+      } else {
+        logger.info(`[Email] ✅ Sent to ${to}: ${info.messageId}`);
+      }
+
       return info;
     } catch (error) {
-      logger.error(`Email send failed to ${to}:`, error.message);
-      throw error;
+      // Extract SMTP response code if available
+      const responseCode = error?.responseCode ?? error?.code ?? null;
+      const isPermanent = PERMANENT_SMTP_CODES.has(responseCode);
+
+      if (isPermanent) {
+        // Mark as permanent so BullMQ does not retry
+        const permanent = new PermanentEmailError(error.message);
+        permanent.originalError = error;
+        logger.error(
+          `[Email] ❌ Permanent SMTP failure (code ${responseCode}) for ${to}: ${error.message}`
+        );
+        throw permanent;
+      }
+
+      logger.error(`[Email] ⚠ Transient failure for ${to}: ${error.message}`);
+      throw error; // Will be retried by BullMQ
     }
   }
 
@@ -109,6 +189,18 @@ class EmailService {
         </div>
       `,
     });
+  }
+}
+
+/**
+ * Permanent failures (auth, bad credentials, invalid recipient domain).
+ * BullMQ treats any job that throws `UnrecoverableError` as permanently failed
+ * without consuming retry budget.
+ */
+export class PermanentEmailError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'PermanentEmailError';
   }
 }
 

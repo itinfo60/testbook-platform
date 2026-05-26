@@ -10,12 +10,7 @@ router.use(authenticate, authorize('admin', 'super_admin'));
 // Dashboard
 router.get('/dashboard', adminController.getDashboardStats);
 
-// Users
-router.get('/users', adminController.getUsers);
-router.get('/users/:id', adminController.getUserById);
-router.post('/users', adminController.createUser);
-router.put('/users/:id', adminController.updateUser);
-router.delete('/users/:id', adminController.deleteUser);
+// Users (Handled in modules/user/user.routes.ts)
 
 // Courses
 router.get('/courses', adminController.adminGetCourses);

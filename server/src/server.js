@@ -15,6 +15,7 @@ import certificateWorker from './workers/certificate.worker.js';
 import dripWorker from './workers/drip.worker.js';
 import { reminderWorker } from './workers/reminder.worker.js';
 import dunningWorker from './workers/dunning.worker.js';
+import { drainFailedJobs } from './queues/index.js';
 
 const server = http.createServer(app);
 
@@ -66,6 +67,9 @@ const startServer = async () => {
 
     // Start BullMQ workers (log startup, workers are self-managing)
     logger.info(`BullMQ workers started: email, notification, certificate, drip, reminder`);
+
+    // Drain stale zombie jobs from Redis on startup (dev only)
+    await drainFailedJobs();
 
     // Start server
     server.listen(config.port, () => {

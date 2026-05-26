@@ -21,26 +21,53 @@ const format = winston.format.combine(
   })
 );
 
+const transports = [];
+const exceptionHandlers = [];
+const rejectionHandlers = [];
+
+if (process.env.NODE_ENV === 'test') {
+  transports.push(
+    new winston.transports.Console({
+      silent: true,
+    })
+  );
+} else {
+  transports.push(
+    new winston.transports.File({
+      filename: path.join(logsDir, 'error.log'),
+      level: 'error',
+      maxsize: 5242880,
+      maxFiles: 5,
+    }),
+    new winston.transports.File({
+      filename: path.join(logsDir, 'combined.log'),
+      maxsize: 5242880,
+      maxFiles: 5,
+    })
+  );
+  exceptionHandlers.push(
+    new winston.transports.File({ filename: path.join(logsDir, 'exceptions.log') })
+  );
+  rejectionHandlers.push(
+    new winston.transports.File({ filename: path.join(logsDir, 'rejections.log') })
+  );
+
+  if (process.env.NODE_ENV !== 'production') {
+    transports.push(
+      new winston.transports.Console({
+        format: winston.format.combine(winston.format.colorize({ all: true }), format),
+      })
+    );
+  }
+}
+
 const logger = winston.createLogger({
   levels,
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format,
-  transports: [
-    new winston.transports.File({ filename: path.join(logsDir, 'error.log'), level: 'error', maxsize: 5242880, maxFiles: 5 }),
-    new winston.transports.File({ filename: path.join(logsDir, 'combined.log'), maxsize: 5242880, maxFiles: 5 }),
-  ],
-  exceptionHandlers: [
-    new winston.transports.File({ filename: path.join(logsDir, 'exceptions.log') }),
-  ],
-  rejectionHandlers: [
-    new winston.transports.File({ filename: path.join(logsDir, 'rejections.log') }),
-  ],
+  transports,
+  ...(exceptionHandlers.length && { exceptionHandlers }),
+  ...(rejectionHandlers.length && { rejectionHandlers }),
 });
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(winston.format.colorize({ all: true }), format),
-  }));
-}
 
 export default logger;

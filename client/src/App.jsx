@@ -85,10 +85,6 @@ const LiveClassRoom = lazy(() => import('@/features/liveclass/pages/LiveClassRoo
 // Institute
 const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingSettings'));
 
-// Super Admin
-const SuperAdminDashboard = lazy(() => import('@/features/superadmin/pages/SuperAdminDashboard'));
-const InstituteOnboarding = lazy(() => import('@/features/superadmin/pages/InstituteOnboarding'));
-
 // Test taking
 const TestTaking = lazy(() => import('@/features/test/pages/TestTaking'));
 const TestResult = lazy(() => import('@/features/test/pages/TestResult'));
@@ -375,24 +371,6 @@ export default function App() {
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
           </Route>
-
-          {/* Super Admin */}
-          <Route
-            path="/super-admin"
-            element={
-              <ProtectedRoute roles={['super_admin']}>
-                <SuperAdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/super-admin/onboard"
-            element={
-              <ProtectedRoute roles={['super_admin']}>
-                <InstituteOnboarding />
-              </ProtectedRoute>
-            }
-          />
 
           {/* Institute Branding */}
           <Route

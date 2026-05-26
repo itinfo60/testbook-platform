@@ -12,6 +12,7 @@ vi.mock('../../src/modules/institute/institute.model.js', () => ({
   default: {
     findById: vi.fn(),
     findOne: vi.fn(),
+    findByIdAndUpdate: vi.fn().mockReturnValue({ catch: vi.fn() }),
   },
 }));
 
