@@ -46,6 +46,9 @@ export const getProfile = createAsyncThunk('auth/getProfile', async (_, { reject
       return rejectWithValue({ message: 'Access denied' });
     }
 
+    const tenantId = user?.tenantId || data?.tenantId;
+    if (tenantId) localStorage.setItem('adminTenantId', tenantId);
+
     return user;
   } catch (err) {
     console.error('getProfile FAILED:', err.response?.status, err.response?.data || err.message);
