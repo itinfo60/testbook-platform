@@ -55,47 +55,16 @@ const testBodySchema = z.object({
   ),
 });
 
-export const createTestSchema = z.object({
-  body: testBodySchema.refine((data) => data.passingMarks <= data.totalMarks, {
-    message: 'Passing marks cannot exceed total marks',
-    path: ['passingMarks'],
-  }),
-});
+export const createTestSchema = testBodySchema.refine(
+  (data) => data.passingMarks <= data.totalMarks,
+  { message: 'Passing marks cannot exceed total marks', path: ['passingMarks'] }
+);
 
-export const updateTestSchema = z.object({
-  body: testBodySchema.partial(),
-});
+export const updateTestSchema = testBodySchema.partial();
 
 export const autoSaveSchema = z.object({
-  body: z.object({
-    answers: z
-      .array(
-        z.object({
-          questionId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-            message: 'Invalid question ID format',
-          }),
-          selectedOptions: z.array(z.number()).optional(),
-          textAnswer: z.string().optional(),
-          timeTaken: z.number().default(0),
-        })
-      )
-      .default([]),
-    palette: z
-      .array(
-        z.object({
-          questionId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-            message: 'Invalid question ID format',
-          }),
-          status: z.enum(['visited', 'skipped', 'flagged', 'answered']),
-        })
-      )
-      .optional(),
-  }),
-});
-
-export const submitTestSchema = z.object({
-  body: z.object({
-    answers: z.array(
+  answers: z
+    .array(
       z.object({
         questionId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
           message: 'Invalid question ID format',
@@ -104,16 +73,37 @@ export const submitTestSchema = z.object({
         textAnswer: z.string().optional(),
         timeTaken: z.number().default(0),
       })
-    ),
-  }),
+    )
+    .default([]),
+  palette: z
+    .array(
+      z.object({
+        questionId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+          message: 'Invalid question ID format',
+        }),
+        status: z.enum(['visited', 'skipped', 'flagged', 'answered']),
+      })
+    )
+    .optional(),
+});
+
+export const submitTestSchema = z.object({
+  answers: z.array(
+    z.object({
+      questionId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+        message: 'Invalid question ID format',
+      }),
+      selectedOptions: z.array(z.number()).optional(),
+      textAnswer: z.string().optional(),
+      timeTaken: z.number().default(0),
+    })
+  ),
 });
 
 export const gradeSubjectiveSchema = z.object({
-  body: z.object({
-    questionId: z
-      .string()
-      .refine((val) => /^[0-9a-fA-F]{24}$/.test(val), { message: 'Invalid question ID format' }),
-    marksObtained: z.number().min(0),
-    feedback: z.string().optional(),
-  }),
+  questionId: z
+    .string()
+    .refine((val) => /^[0-9a-fA-F]{24}$/.test(val), { message: 'Invalid question ID format' }),
+  marksObtained: z.number().min(0),
+  feedback: z.string().optional(),
 });

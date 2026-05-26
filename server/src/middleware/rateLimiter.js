@@ -31,10 +31,11 @@ export const globalLimiter = rateLimit(
   )
 );
 
+const authMax = config.env === 'development' ? 200 : 10;
 export const authLimiter = rateLimit(
   limiterOptions(
     15 * 60 * 1000,
-    10,
+    authMax,
     'Too many login attempts. Please try again after 15 minutes.',
     'auth'
   )

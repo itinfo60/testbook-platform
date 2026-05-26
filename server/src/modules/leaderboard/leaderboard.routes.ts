@@ -7,6 +7,6 @@ import { getLeaderboardSchema } from './leaderboard.validation.js';
 const router = Router();
 const controller = new LeaderboardController();
 
-router.get('/', optionalAuth, validate(getLeaderboardSchema), controller.getLeaderboard);
+router.get('/', optionalAuth, validate(getLeaderboardSchema, 'query'), controller.getLeaderboard);
 
 export default router;
