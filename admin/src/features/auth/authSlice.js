@@ -9,7 +9,7 @@ const isAdminRole = (role) => ADMIN_ROLES.includes((role || '').toLowerCase().tr
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
     const res = await authAPI.login(credentials);
-    
+
     const data = res.data.data || res.data;
     const user = data.user || data;
     const accessToken = data.accessToken || data.token || res.data.token;
@@ -21,7 +21,8 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
 
     if (accessToken) localStorage.setItem('adminToken', accessToken);
     if (refreshToken) localStorage.setItem('adminRefreshToken', refreshToken);
-    
+    if (user?.tenantId) localStorage.setItem('adminTenantId', user.tenantId);
+
     // If tokens come via cookies (no token in body), mark as cookie-auth
     if (!accessToken) localStorage.setItem('adminToken', 'cookie-auth');
 
@@ -34,7 +35,7 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
 export const getProfile = createAsyncThunk('auth/getProfile', async (_, { rejectWithValue }) => {
   try {
     const res = await authAPI.getProfile();
-    
+
     const data = res.data.data || res.data;
     const user = data.user || data;
 
@@ -48,22 +49,26 @@ export const getProfile = createAsyncThunk('auth/getProfile', async (_, { reject
     return user;
   } catch (err) {
     console.error('getProfile FAILED:', err.response?.status, err.response?.data || err.message);
-    
+
     // DON'T clear tokens on network errors — only on 401/403
     if (err.response?.status === 401 || err.response?.status === 403) {
       localStorage.removeItem('adminToken');
       localStorage.removeItem('adminRefreshToken');
     }
-    
+
     return rejectWithValue(err.response?.data || { message: err.message });
   }
 });
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  try { await authAPI.logout(); } catch (e) { /* ignore */ }
-  finally {
+  try {
+    await authAPI.logout();
+  } catch (e) {
+    /* ignore */
+  } finally {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminRefreshToken');
+    localStorage.removeItem('adminTenantId');
   }
 });
 
@@ -79,11 +84,16 @@ const authSlice = createSlice({
     initialized: !hasToken,
   },
   reducers: {
-    clearError: (state) => { state.error = null; },
+    clearError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(login.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;
@@ -98,7 +108,9 @@ const authSlice = createSlice({
         state.error = action.payload?.message || 'Login failed';
         toast.error(state.error);
       })
-      .addCase(getProfile.pending, (state) => { state.loading = true; })
+      .addCase(getProfile.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;

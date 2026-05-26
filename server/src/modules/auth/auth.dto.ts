@@ -69,6 +69,7 @@ export interface AuthResponseDto {
     name: string;
     email: string;
     role: string;
+    tenantId?: string | null;
     avatar?: { url: string };
     mfaEnabled: boolean;
   };

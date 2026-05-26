@@ -50,6 +50,9 @@ api.interceptors.request.use(
     const subdomain = getSubdomain();
     if (subdomain) {
       config.headers['X-Tenant-Subdomain'] = subdomain;
+    } else {
+      const tenantId = localStorage.getItem('adminTenantId');
+      if (tenantId) config.headers['X-Tenant-Id'] = tenantId;
     }
     return config;
   },
