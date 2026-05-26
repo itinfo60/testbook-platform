@@ -8,11 +8,9 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5000,
-  
+
   mongoose: {
-    url: process.env.NODE_ENV === 'test' 
-      ? process.env.MONGODB_URI_TEST 
-      : process.env.MONGODB_URI,
+    url: process.env.NODE_ENV === 'test' ? process.env.MONGODB_URI_TEST : process.env.MONGODB_URI,
     options: {
       maxPoolSize: 50,
       minPoolSize: 10,
@@ -65,6 +63,18 @@ const config = {
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID,
     keySecret: process.env.RAZORPAY_KEY_SECRET,
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+  },
+
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', // Twilio sandbox
+  },
+
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
 
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -86,13 +96,21 @@ const config = {
   },
 };
 
-// Validate required env vars in production
+// Validate required env vars (always, not just production)
+const required = ['JWT_SECRET', 'MONGODB_URI'];
 if (config.env === 'production') {
-  const required = ['JWT_SECRET', 'MONGODB_URI', 'SMTP_USER'];
-  const missing = required.filter((key) => !process.env[key]);
-  if (missing.length) {
-    throw new Error(`Missing required env vars: ${missing.join(', ')}`);
-  }
+  required.push('SMTP_USER', 'REDIS_URL');
+}
+const missing = required.filter((key) => !process.env[key]);
+if (missing.length) {
+  throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+}
+
+// Enforce minimum JWT secret length
+if (config.jwt.secret && config.jwt.secret.length < 32) {
+  throw new Error(
+    'JWT_SECRET must be at least 32 characters for security. Generate with: openssl rand -hex 32'
+  );
 }
 
 export default config;

@@ -24,13 +24,24 @@ const exitFullscreen = () => {
 };
 
 const isInFullscreen = () =>
-  !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+  !!(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement
+  );
 
 export default function TestTaking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { attempt, questions: storedQuestions, answers, currentQuestionIndex, loading, result } = useSelector(state => state.tests);
+  const {
+    attempt,
+    questions: storedQuestions,
+    answers,
+    currentQuestionIndex,
+    loading,
+    result,
+  } = useSelector((state) => state.tests);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
@@ -70,7 +81,7 @@ export default function TestTaking() {
   // Disable right-click
   useEffect(() => {
     if (!isTestActive) return;
-    const handler = e => e.preventDefault();
+    const handler = (e) => e.preventDefault();
     document.addEventListener('contextmenu', handler);
     return () => document.removeEventListener('contextmenu', handler);
   }, [isTestActive]);
@@ -78,7 +89,7 @@ export default function TestTaking() {
   // Block devtools keyboard shortcuts and Escape
   useEffect(() => {
     if (!isTestActive) return;
-    const handler = e => {
+    const handler = (e) => {
       // Devtools / inspect shortcuts
       if (
         e.key === 'F12' ||
@@ -103,7 +114,8 @@ export default function TestTaking() {
   // Block tab switch / window blur warning
   useEffect(() => {
     if (!isTestActive) return;
-    const handler = () => toast('Please focus on the test window!', { icon: '⚠️', id: 'focus-warn' });
+    const handler = () =>
+      toast('Please focus on the test window!', { icon: '⚠️', id: 'focus-warn' });
     window.addEventListener('blur', handler);
     return () => window.removeEventListener('blur', handler);
   }, [isTestActive]);
@@ -111,7 +123,10 @@ export default function TestTaking() {
   // Prevent page refresh / close
   useEffect(() => {
     if (!isTestActive) return;
-    const handler = e => { e.preventDefault(); e.returnValue = ''; };
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [isTestActive]);
@@ -128,6 +143,31 @@ export default function TestTaking() {
     return () => window.removeEventListener('popstate', handler);
   }, [isTestActive]);
 
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (!attempt || !isTestActive) return;
+    const interval = setInterval(async () => {
+      try {
+        const payload = Object.entries(answers).map(([questionId, selectedOptions]) => ({
+          questionId,
+          selectedOptions: Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions],
+        }));
+        if (payload.length === 0) return;
+        await fetch(`/api/v1/tests/auto-save/${attempt._id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
+          },
+          body: JSON.stringify({ answers: payload }),
+        });
+      } catch {
+        // Silent — auto-save failures should never interrupt the test
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [attempt, isTestActive, answers]);
+
   // Navigate to result once submitted
   useEffect(() => {
     if (result) {
@@ -137,7 +177,7 @@ export default function TestTaking() {
     }
   }, [result, navigate, id]);
 
-  const questions = storedQuestions.length ? storedQuestions : (attempt?.questions || []);
+  const questions = storedQuestions.length ? storedQuestions : attempt?.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
   const duration = attempt?.duration || 60;
   const attemptId = attempt?.attempt?._id;
@@ -206,7 +246,9 @@ export default function TestTaking() {
               className="lg:hidden btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1"
             >
               <HiMenu className="h-3.5 w-3.5" />
-              <span className="hidden xs:inline">{currentQuestionIndex + 1}/{questions.length}</span>
+              <span className="hidden xs:inline">
+                {currentQuestionIndex + 1}/{questions.length}
+              </span>
               <span className="xs:hidden">{currentQuestionIndex + 1}</span>
             </button>
             <Button variant="primary" size="sm" onClick={() => setShowSubmitModal(true)}>
@@ -251,58 +293,94 @@ export default function TestTaking() {
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowNav(false)} />
           <div className="absolute right-0 top-0 bottom-0 w-72 bg-white dark:bg-dark-900 p-4 overflow-y-auto">
-            <TestNavigator questions={questions} onSubmit={() => { setShowNav(false); setShowSubmitModal(true); }} />
+            <TestNavigator
+              questions={questions}
+              onSubmit={() => {
+                setShowNav(false);
+                setShowSubmitModal(true);
+              }}
+            />
           </div>
         </div>
       )}
 
       {/* Close Test Confirmation */}
-      <Modal isOpen={showCloseModal} onClose={() => setShowCloseModal(false)} title="Close Test?" size="sm">
+      <Modal
+        isOpen={showCloseModal}
+        onClose={() => setShowCloseModal(false)}
+        title="Close Test?"
+        size="sm"
+      >
         <div className="text-center py-4">
           <div className="text-4xl mb-3">🚪</div>
           <p className="text-dark-600 dark:text-dark-400 mb-2 font-medium">
             Are you sure you want to close the test?
           </p>
           <p className="text-sm text-dark-400 mb-6">
-            Your progress will be lost and the attempt will remain open. Submit the test to save your answers.
+            Your progress will be lost and the attempt will remain open. Submit the test to save
+            your answers.
           </p>
           <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={() => setShowCloseModal(false)}>Keep Taking Test</Button>
-            <Button variant="danger" onClick={handleCloseTest}>Close Test</Button>
+            <Button variant="secondary" onClick={() => setShowCloseModal(false)}>
+              Keep Taking Test
+            </Button>
+            <Button variant="danger" onClick={handleCloseTest}>
+              Close Test
+            </Button>
           </div>
         </div>
       </Modal>
 
       {/* Back Button / Navigation Guard */}
-      <Modal isOpen={showExitModal} onClose={() => setShowExitModal(false)} title="Leave Test?" size="sm">
+      <Modal
+        isOpen={showExitModal}
+        onClose={() => setShowExitModal(false)}
+        title="Leave Test?"
+        size="sm"
+      >
         <div className="text-center py-4">
           <div className="text-4xl mb-3">⚠️</div>
           <p className="text-dark-600 dark:text-dark-400 mb-2 font-medium">
             Your test is still in progress!
           </p>
           <p className="text-sm text-dark-400 mb-6">
-            Leaving will not submit your answers. Use "Submit Test" to complete, or "Close Test" to exit.
+            Leaving will not submit your answers. Use "Submit Test" to complete, or "Close Test" to
+            exit.
           </p>
           <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={() => setShowExitModal(false)}>Stay & Continue</Button>
-            <Button variant="danger" onClick={handleCloseTest}>Leave Anyway</Button>
+            <Button variant="secondary" onClick={() => setShowExitModal(false)}>
+              Stay & Continue
+            </Button>
+            <Button variant="danger" onClick={handleCloseTest}>
+              Leave Anyway
+            </Button>
           </div>
         </div>
       </Modal>
 
       {/* Submit Confirmation */}
-      <Modal isOpen={showSubmitModal} onClose={() => setShowSubmitModal(false)} title="Submit Test?" size="sm">
+      <Modal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        title="Submit Test?"
+        size="sm"
+      >
         <div className="text-center py-4">
           <div className="text-4xl mb-3">📋</div>
           <p className="text-dark-600 dark:text-dark-400 mb-2">
-            You have answered <strong>{Object.keys(answers).length}</strong> out of <strong>{questions.length}</strong> questions.
+            You have answered <strong>{Object.keys(answers).length}</strong> out of{' '}
+            <strong>{questions.length}</strong> questions.
           </p>
           <p className="text-sm text-dark-400 mb-6">
             {questions.length - Object.keys(answers).length} questions are unanswered.
           </p>
           <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>Review Again</Button>
-            <Button variant="primary" onClick={handleSubmit} loading={loading}>Submit Test</Button>
+            <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
+              Review Again
+            </Button>
+            <Button variant="primary" onClick={handleSubmit} loading={loading}>
+              Submit Test
+            </Button>
           </div>
         </div>
       </Modal>

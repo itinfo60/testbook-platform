@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const progressSchema = new mongoose.Schema({
   lessonId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -53,10 +54,16 @@ const enrollmentSchema = new mongoose.Schema(
 );
 
 // Compound index to prevent duplicate enrollments
-enrollmentSchema.index({ user: 1, course: 1 }, { unique: true, partialFilterExpression: { course: { $exists: true } } });
-enrollmentSchema.index({ user: 1, test: 1 }, { unique: true, partialFilterExpression: { test: { $exists: true } } });
+enrollmentSchema.index(
+  { user: 1, course: 1 },
+  { unique: true, partialFilterExpression: { course: { $exists: true } } }
+);
+enrollmentSchema.index(
+  { user: 1, test: 1 },
+  { unique: true, partialFilterExpression: { test: { $exists: true } } }
+);
 
-enrollmentSchema.pre('validate', function(next) {
+enrollmentSchema.pre('validate', function (next) {
   if (!this.course && !this.test) {
     next(new Error('Enrollment must be associated with either a course or a test.'));
   } else if (this.course && this.test) {
@@ -71,7 +78,9 @@ enrollmentSchema.index({ status: 1, enrolledAt: -1 });
 // Method to update progress
 enrollmentSchema.methods.updateLessonProgress = function (sectionId, lessonId, data = {}) {
   const existing = this.progress.find(
-    (p) => p.lessonId.toString() === lessonId.toString() && p.sectionId.toString() === sectionId.toString()
+    (p) =>
+      p.lessonId.toString() === lessonId.toString() &&
+      p.sectionId.toString() === sectionId.toString()
   );
 
   if (existing) {
@@ -104,6 +113,7 @@ enrollmentSchema.methods.recalculateProgress = function (totalLessons) {
 };
 
 enrollmentSchema.plugin(paginatePlugin);
+enrollmentSchema.plugin(tenantPlugin);
 
 const Enrollment = mongoose.model('Enrollment', enrollmentSchema);
 export default Enrollment;

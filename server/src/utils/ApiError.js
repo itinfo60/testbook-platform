@@ -37,6 +37,18 @@ class ApiError extends Error {
     return new ApiError(429, message);
   }
 
+  static tooManyRequests(message = 'Too many requests') {
+    return new ApiError(429, message);
+  }
+
+  static unprocessable(message = 'Unprocessable entity', errors = []) {
+    return new ApiError(422, message, errors);
+  }
+
+  static serviceUnavailable(message = 'Service unavailable') {
+    return new ApiError(503, message);
+  }
+
   static internal(message = 'Internal server error') {
     return new ApiError(500, message);
   }

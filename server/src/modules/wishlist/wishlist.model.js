@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const wishlistSchema = new mongoose.Schema(
   {
@@ -12,6 +13,7 @@ const wishlistSchema = new mongoose.Schema(
 wishlistSchema.index({ user: 1, course: 1 }, { unique: true });
 
 wishlistSchema.plugin(paginatePlugin);
+wishlistSchema.plugin(tenantPlugin);
 
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
 export default Wishlist;

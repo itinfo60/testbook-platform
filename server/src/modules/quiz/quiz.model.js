@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const quizOptionSchema = new mongoose.Schema({
   text: { type: String, required: true },
@@ -33,6 +34,7 @@ quizSchema.virtual('questionCount').get(function () {
 });
 
 quizSchema.plugin(paginatePlugin);
+quizSchema.plugin(tenantPlugin);
 
 const Quiz = mongoose.model('Quiz', quizSchema);
 export default Quiz;

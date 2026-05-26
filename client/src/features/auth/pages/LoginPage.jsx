@@ -1,59 +1,56 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { HiMail, HiLockClosed, HiExclamationCircle } from 'react-icons/hi';
 import { login } from '@/features/auth/authSlice';
-import { Input, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
+
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+  mfaToken: z.string().optional(),
+});
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated } = useSelector((state) => state.auth);
   const from = location.state?.from?.pathname || '/dashboard';
-
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [requiresMfa, setRequiresMfa] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+  } = useForm({ resolver: zodResolver(loginSchema) });
 
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true });
   }, [isAuthenticated, navigate, from]);
 
-  const handleChange = e => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (serverError) setServerError('');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      setServerError('Please fill in all fields');
-      return;
-    }
-    setIsSubmitting(true);
+  const onSubmit = async (data) => {
     setServerError('');
-    try {
-      const result = await dispatch(login(formData));
-      if (login.rejected.match(result)) {
-        setServerError(result.payload || 'Invalid email or password');
-      }
-    } finally {
-      setIsSubmitting(false);
+    const result = await dispatch(login(data));
+    if (login.rejected.match(result)) {
+      setServerError(result.payload || 'Invalid email or password');
+    } else if (result.payload?.requiresMfa) {
+      setRequiresMfa(true);
     }
   };
 
   const quickLogin = async (email, password) => {
-    setFormData({ email, password });
+    setValue('email', email);
+    setValue('password', password);
     setServerError('');
-    setIsSubmitting(true);
-    try {
-      const result = await dispatch(login({ email, password }));
-      if (login.rejected.match(result)) {
-        setServerError(result.payload || 'Login failed');
-      }
-    } finally {
-      setIsSubmitting(false);
+    const result = await dispatch(login({ email, password }));
+    if (login.rejected.match(result)) {
+      setServerError(result.payload || 'Login failed');
     }
   };
 
@@ -64,27 +61,54 @@ export default function LoginPage() {
         <p className="text-dark-500 mt-1">Sign in to continue learning</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Email"
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="Enter your email"
-          icon={HiMail}
-          required
-        />
-        <Input
-          label="Password"
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="Enter your password"
-          icon={HiLockClosed}
-          required
-        />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+            Email
+          </label>
+          <div className="relative">
+            <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
+            <input
+              {...register('email')}
+              type="email"
+              placeholder="Enter your email"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-dark-800 border border-dark-300 dark:border-dark-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white"
+            />
+          </div>
+          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+            Password
+          </label>
+          <div className="relative">
+            <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
+            <input
+              {...register('password')}
+              type="password"
+              placeholder="Enter your password"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-dark-800 border border-dark-300 dark:border-dark-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white"
+            />
+          </div>
+          {errors.password && (
+            <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
+          )}
+        </div>
+
+        {requiresMfa && (
+          <div>
+            <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+              MFA Token
+            </label>
+            <input
+              {...register('mfaToken')}
+              placeholder="6-digit code from authenticator app"
+              maxLength={6}
+              className="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-primary-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white tracking-widest"
+            />
+          </div>
+        )}
 
         {serverError && (
           <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2.5">
@@ -95,10 +119,16 @@ export default function LoginPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="h-4 w-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500" />
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+            />
             <span className="text-sm text-dark-500">Remember me</span>
           </label>
-          <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium whitespace-nowrap">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium whitespace-nowrap"
+          >
             Forgot Password?
           </Link>
         </div>
@@ -137,7 +167,12 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-dark-500 mt-6">
         Don't have an account?{' '}
-        <Link to="/register" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">Sign up</Link>
+        <Link
+          to="/register"
+          className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
+        >
+          Sign up
+        </Link>
       </p>
     </div>
   );

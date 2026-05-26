@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ScrollManager from '@/components/ScrollManager';
 import { useDispatch } from 'react-redux';
@@ -9,70 +9,98 @@ import { useAuth } from '@/hooks/useAuth';
 import { getProfile } from '@/features/auth/authSlice';
 import { addNotification } from '@/features/notification/notificationSlice';
 
-// Components
+// Components (always loaded — small)
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-
-// Layouts
-import AuthLayout from '@/layouts/AuthLayout';
-import MainLayout from '@/layouts/MainLayout';
-import TeacherLayout from '@/features/teacher/pages/TeacherLayout';
-
-// Route Guards
 import ProtectedRoute from '@/components/ProtectedRoute';
 import GuestRoute from '@/components/GuestRoute';
 
-// Public Pages
-import HomePage from '@/features/home/pages/HomePage';
-import CourseCatalog from '@/features/course/pages/CourseCatalog';
-import CourseDetail from '@/features/course/pages/CourseDetail';
-import TestCatalog from '@/features/test/pages/TestCatalog';
-import TestDetail from '@/features/test/pages/TestDetail';
-import LeaderboardPage from '@/features/leaderboard/pages/LeaderboardPage';
-import CertificateVerify from '@/features/auth/pages/verify/CertificateVerify';
-import UnauthorizedPage from '@/features/auth/pages/UnauthorizedPage';
-import BlogList from '@/features/blog/pages/BlogList';
-import BlogDetail from '@/features/blog/pages/BlogDetail';
+// Layouts (always loaded — structural)
+import AuthLayout from '@/layouts/AuthLayout';
+import MainLayout from '@/layouts/MainLayout';
 
+// ===== LAZY LOADED PAGES =====
+// Auth
+const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'));
+const AuthCallbackPage = lazy(() => import('@/features/auth/pages/AuthCallbackPage'));
 
-// Auth Pages
-import LoginPage from '@/features/auth/pages/LoginPage';
-import RegisterPage from '@/features/auth/pages/RegisterPage';
-import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
-import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
-import AuthCallbackPage from '@/features/auth/pages/AuthCallbackPage';
+// Public
+const HomePage = lazy(() => import('@/features/home/pages/HomePage'));
+const CourseCatalog = lazy(() => import('@/features/course/pages/CourseCatalog'));
+const CourseDetail = lazy(() => import('@/features/course/pages/CourseDetail'));
+const TestCatalog = lazy(() => import('@/features/test/pages/TestCatalog'));
+const TestDetail = lazy(() => import('@/features/test/pages/TestDetail'));
+const LeaderboardPage = lazy(() => import('@/features/leaderboard/pages/LeaderboardPage'));
+const CertificateVerify = lazy(() => import('@/features/auth/pages/verify/CertificateVerify'));
+const UnauthorizedPage = lazy(() => import('@/features/auth/pages/UnauthorizedPage'));
+const BlogList = lazy(() => import('@/features/blog/pages/BlogList'));
+const BlogDetail = lazy(() => import('@/features/blog/pages/BlogDetail'));
+const PricingPage = lazy(() => import('@/features/subscription/pages/PricingPage'));
+const NotFoundPage = lazy(() => import('@/features/home/pages/NotFoundPage'));
 
-// Student Protected Pages
-import DashboardPage from '@/features/dashboard/pages/DashboardPage';
-import MyCourses from '@/features/course/pages/MyCourses';
-import CourseLearning from '@/features/course/pages/CourseLearning';
-import MyTestAttempts from '@/features/test/pages/MyTestAttempts';
-import QuizPage from '@/features/quiz/pages/QuizPage';
-import AchievementsPage from '@/features/achievement/pages/AchievementsPage';
-import Wishlist from '@/features/wishlist/pages/Wishlist';
-import Checkout from '@/features/enrollment/pages/checkout/Checkout';
-import CheckoutSuccess from '@/features/enrollment/pages/checkout/CheckoutSuccess';
-import OrderHistory from '@/features/enrollment/pages/orders/OrderHistory';
-import Profile from '@/features/auth/pages/profile/Profile';
-import ProfileSettingsPage from '@/features/auth/pages/settings/ProfileSettingsPage';
-import NotificationsPage from '@/features/notification/pages/NotificationsPage';
+// Student Protected
+const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
+const MyCourses = lazy(() => import('@/features/course/pages/MyCourses'));
+const CourseLearning = lazy(() => import('@/features/course/pages/CourseLearning'));
+const MyTestAttempts = lazy(() => import('@/features/test/pages/MyTestAttempts'));
+const QuizPage = lazy(() => import('@/features/quiz/pages/QuizPage'));
+const AchievementsPage = lazy(() => import('@/features/achievement/pages/AchievementsPage'));
+const Wishlist = lazy(() => import('@/features/wishlist/pages/Wishlist'));
+const Checkout = lazy(() => import('@/features/enrollment/pages/checkout/Checkout'));
+const CheckoutSuccess = lazy(() => import('@/features/enrollment/pages/checkout/CheckoutSuccess'));
+const OrderHistory = lazy(() => import('@/features/enrollment/pages/orders/OrderHistory'));
+const Profile = lazy(() => import('@/features/auth/pages/profile/Profile'));
+const ProfileSettingsPage = lazy(
+  () => import('@/features/auth/pages/settings/ProfileSettingsPage')
+);
+const NotificationsPage = lazy(() => import('@/features/notification/pages/NotificationsPage'));
 
-// Teacher Pages
-import TeacherDashboard from '@/features/teacher/pages/TeacherDashboard';
-import TeacherCourses from '@/features/course/pages/teacher/TeacherCourses';
-import TeacherCourseForm from '@/features/course/pages/teacher/TeacherCourseForm';
-import TeacherTests from '@/features/test/pages/teacher/TeacherTests';
-import TeacherTestForm from '@/features/test/pages/teacher/TeacherTestForm';
-import TeacherTestAnalytics from '@/features/test/pages/teacher/TeacherTestAnalytics';
-import TeacherQuizzes from '@/features/quiz/pages/teacher/TeacherQuizzes';
-import TeacherQuizForm from '@/features/quiz/pages/teacher/TeacherQuizForm';
-import TeacherStudents from '@/features/teacher/pages/TeacherStudents';
-import TeacherRevenue from '@/features/teacher/pages/TeacherRevenue';
-import TeacherDiscussions from '@/features/teacher/pages/TeacherDiscussions';
+// Teacher (heavy — lazy critical)
+const TeacherLayout = lazy(() => import('@/features/teacher/pages/TeacherLayout'));
+const TeacherDashboard = lazy(() => import('@/features/teacher/pages/TeacherDashboard'));
+const TeacherCourses = lazy(() => import('@/features/course/pages/teacher/TeacherCourses'));
+const TeacherCourseForm = lazy(() => import('@/features/course/pages/teacher/TeacherCourseForm'));
+const TeacherTests = lazy(() => import('@/features/test/pages/teacher/TeacherTests'));
+const TeacherTestForm = lazy(() => import('@/features/test/pages/teacher/TeacherTestForm'));
+const TeacherTestAnalytics = lazy(
+  () => import('@/features/test/pages/teacher/TeacherTestAnalytics')
+);
+const TeacherQuizzes = lazy(() => import('@/features/quiz/pages/teacher/TeacherQuizzes'));
+const TeacherQuizForm = lazy(() => import('@/features/quiz/pages/teacher/TeacherQuizForm'));
+const TeacherStudents = lazy(() => import('@/features/teacher/pages/TeacherStudents'));
+const TeacherRevenue = lazy(() => import('@/features/teacher/pages/TeacherRevenue'));
+const TeacherDiscussions = lazy(() => import('@/features/teacher/pages/TeacherDiscussions'));
 
-// Misc
-import NotFoundPage from '@/features/home/pages/NotFoundPage';
-import TestTaking from '@/features/test/pages/TestTaking';
-import TestResult from '@/features/test/pages/TestResult';
+// AI
+const AIQuestionGenerator = lazy(() => import('@/features/ai/pages/AIQuestionGenerator'));
+const AIDoubtSolver = lazy(() => import('@/features/ai/pages/AIDoubtSolver'));
+const AIStudyPlan = lazy(() => import('@/features/ai/pages/AIStudyPlan'));
+
+// Live Classes
+const LiveClassList = lazy(() => import('@/features/liveclass/pages/LiveClassList'));
+const LiveClassRoom = lazy(() => import('@/features/liveclass/pages/LiveClassRoom'));
+
+// Institute
+const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingSettings'));
+
+// Super Admin
+const SuperAdminDashboard = lazy(() => import('@/features/superadmin/pages/SuperAdminDashboard'));
+const InstituteOnboarding = lazy(() => import('@/features/superadmin/pages/InstituteOnboarding'));
+
+// Test taking
+const TestTaking = lazy(() => import('@/features/test/pages/TestTaking'));
+const TestResult = lazy(() => import('@/features/test/pages/TestResult'));
+
+// Affiliate
+const AffiliateDashboard = lazy(() => import('@/features/affiliate/pages/AffiliateDashboard'));
+
+const PageLoader = () => (
+  <div className="h-screen bg-slate-950 flex items-center justify-center">
+    <div className="h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 let socket = null;
 
@@ -80,14 +108,12 @@ export default function App() {
   const dispatch = useDispatch();
   const { isAuthenticated, token, initialized } = useAuth();
 
-  // Load profile on mount if we have a token (to verify session & set initialized)
   useEffect(() => {
     if (token) {
       dispatch(getProfile());
     }
   }, [token, dispatch]);
 
-  // Socket.IO connection
   useEffect(() => {
     if (isAuthenticated && token) {
       const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
@@ -96,14 +122,8 @@ export default function App() {
         transports: ['websocket', 'polling'],
       });
 
-      socket.on('connect', () => {
-      });
-
       socket.on('notification', (data) => {
         dispatch(addNotification(data));
-      });
-
-      socket.on('disconnect', () => {
       });
 
       return () => {
@@ -121,83 +141,298 @@ export default function App() {
 
   return (
     <>
-    <ScrollManager />
-    <Routes>
-      {/* Auth Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-        <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
-        <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
-        <Route path="/reset-password/:token" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      </Route>
+      <ScrollManager />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Auth Routes */}
+          <Route element={<AuthLayout />}>
+            <Route
+              path="/login"
+              element={
+                <GuestRoute>
+                  <LoginPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <GuestRoute>
+                  <RegisterPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <GuestRoute>
+                  <ForgotPasswordPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/reset-password/:token"
+              element={
+                <GuestRoute>
+                  <ResetPasswordPage />
+                </GuestRoute>
+              }
+            />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          </Route>
 
-      {/* Main Layout Routes */}
-      <Route element={<MainLayout />}>
-        {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/courses" element={<CourseCatalog />} />
-        <Route path="/courses/:id" element={<CourseDetail />} />
-        <Route path="/tests" element={<TestCatalog />} />
-        <Route path="/tests/:id" element={<TestDetail />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
+          {/* Main Layout Routes */}
+          <Route element={<MainLayout />}>
+            {/* Public */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/courses" element={<CourseCatalog />} />
+            <Route path="/courses/:id" element={<CourseDetail />} />
+            <Route path="/tests" element={<TestCatalog />} />
+            <Route path="/tests/:id" element={<TestDetail />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/verify-certificate" element={<CertificateVerify />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogDetail />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/affiliate/validate/:code" element={<AffiliateDashboard />} />
 
-        <Route path="/verify-certificate" element={<CertificateVerify />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/blog" element={<BlogList />} />
-        <Route path="/blog/:slug" element={<BlogDetail />} />
+            {/* Protected Student */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-courses"
+              element={
+                <ProtectedRoute>
+                  <MyCourses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/courses/:id/learn"
+              element={
+                <ProtectedRoute>
+                  <CourseLearning />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-test-attempts"
+              element={
+                <ProtectedRoute>
+                  <MyTestAttempts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quiz/:id"
+              element={
+                <ProtectedRoute>
+                  <QuizPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/achievements"
+              element={
+                <ProtectedRoute>
+                  <AchievementsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute>
+                  <Wishlist />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/checkout/:id"
+              element={
+                <ProtectedRoute>
+                  <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/checkout/success"
+              element={
+                <ProtectedRoute>
+                  <CheckoutSuccess />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <OrderHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <ProfileSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/affiliate"
+              element={
+                <ProtectedRoute>
+                  <AffiliateDashboard />
+                </ProtectedRoute>
+              }
+            />
 
+            {/* AI */}
+            <Route
+              path="/ai/questions"
+              element={
+                <ProtectedRoute roles={['teacher', 'admin']}>
+                  <AIQuestionGenerator />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/doubt-solver"
+              element={
+                <ProtectedRoute>
+                  <AIDoubtSolver />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai/study-plan"
+              element={
+                <ProtectedRoute>
+                  <AIStudyPlan />
+                </ProtectedRoute>
+              }
+            />
 
-        {/* Protected Student Routes */}
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/my-courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
-        <Route path="/courses/:id/learn" element={<ProtectedRoute><CourseLearning /></ProtectedRoute>} />
-        <Route path="/my-test-attempts" element={<ProtectedRoute><MyTestAttempts /></ProtectedRoute>} />
-        <Route path="/quiz/:id" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
-        <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
-        <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
-        <Route path="/checkout/:id" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-        <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccess /></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            {/* Live Classes */}
+            <Route
+              path="/live-classes"
+              element={
+                <ProtectedRoute>
+                  <LiveClassList />
+                </ProtectedRoute>
+              }
+            />
 
-        {/* Teacher Routes */}
-        <Route path="/teacher" element={
-          <ProtectedRoute roles={['teacher', 'admin']}>
-            <TeacherLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<TeacherDashboard />} />
-          <Route path="courses" element={<TeacherCourses />} />
-          <Route path="courses/new" element={<TeacherCourseForm />} />
-          <Route path="courses/:id/edit" element={<TeacherCourseForm />} />
-          <Route path="tests" element={<TeacherTests />} />
-          <Route path="tests/new" element={<TeacherTestForm />} />
-          <Route path="tests/:id/edit" element={<TeacherTestForm />} />
-          <Route path="tests/:id/analytics" element={<TeacherTestAnalytics />} />
-          <Route path="quizzes" element={<TeacherQuizzes />} />
-          <Route path="quizzes/new" element={<TeacherQuizForm />} />
-          <Route path="quizzes/:id/edit" element={<TeacherQuizForm />} />
-          <Route path="students" element={<TeacherStudents />} />
-          <Route path="revenue" element={<TeacherRevenue />} />
-          <Route path="discussions" element={<TeacherDiscussions />} />
-        </Route>
+            {/* Teacher Routes */}
+            <Route
+              path="/teacher"
+              element={
+                <ProtectedRoute roles={['teacher', 'admin']}>
+                  <TeacherLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<TeacherDashboard />} />
+              <Route path="courses" element={<TeacherCourses />} />
+              <Route path="courses/new" element={<TeacherCourseForm />} />
+              <Route path="courses/:id/edit" element={<TeacherCourseForm />} />
+              <Route path="tests" element={<TeacherTests />} />
+              <Route path="tests/new" element={<TeacherTestForm />} />
+              <Route path="tests/:id/edit" element={<TeacherTestForm />} />
+              <Route path="tests/:id/analytics" element={<TeacherTestAnalytics />} />
+              <Route path="quizzes" element={<TeacherQuizzes />} />
+              <Route path="quizzes/new" element={<TeacherQuizForm />} />
+              <Route path="quizzes/:id/edit" element={<TeacherQuizForm />} />
+              <Route path="students" element={<TeacherStudents />} />
+              <Route path="revenue" element={<TeacherRevenue />} />
+              <Route path="discussions" element={<TeacherDiscussions />} />
+            </Route>
 
-        {/* 404 */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
 
-      {/* Full-screen Test Taking (no navbar/footer) */}
-      <Route path="/tests/:id/take" element={
-        <ProtectedRoute><TestTaking /></ProtectedRoute>
-      } />
-      <Route path="/tests/:id/result" element={
-        <ProtectedRoute><TestResult /></ProtectedRoute>
-      } />
-    </Routes>
+          {/* Super Admin */}
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute roles={['super_admin']}>
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-admin/onboard"
+            element={
+              <ProtectedRoute roles={['super_admin']}>
+                <InstituteOnboarding />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Institute Branding */}
+          <Route
+            path="/institute/branding"
+            element={
+              <ProtectedRoute roles={['admin', 'super_admin']}>
+                <BrandingSettings />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Full-screen Live Class Room */}
+          <Route
+            path="/live-classes/:id/room"
+            element={
+              <ProtectedRoute>
+                <LiveClassRoom />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Full-screen Test Taking */}
+          <Route
+            path="/tests/:id/take"
+            element={
+              <ProtectedRoute>
+                <TestTaking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tests/:id/result"
+            element={
+              <ProtectedRoute>
+                <TestResult />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
     </>
   );
 }
-

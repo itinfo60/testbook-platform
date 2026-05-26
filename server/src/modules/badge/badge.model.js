@@ -19,7 +19,7 @@ const badgeSchema = new mongoose.Schema(
     rarity: { type: String, enum: ['common', 'rare', 'epic', 'legendary'], default: 'common' },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, skipTenant: true }
 );
 
 const Badge = mongoose.model('Badge', badgeSchema);

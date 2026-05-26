@@ -80,8 +80,9 @@ export const getCourseBySlug = catchAsync(async (req, res) => {
 
   // Check enrollment status if user is logged in
   let isEnrolled = false;
+  let enrollment = null;
   if (req.user) {
-    const enrollment = await Enrollment.findOne({
+    enrollment = await Enrollment.findOne({
       user: req.userId,
       course: course._id,
       status: { $in: ['active', 'completed'] },
@@ -89,21 +90,37 @@ export const getCourseBySlug = catchAsync(async (req, res) => {
     isEnrolled = !!enrollment;
   }
 
-  // Hide lesson content for non-enrolled users (except free previews)
-  if (!isEnrolled) {
-    course.sections = course.sections.map((section) => ({
-      ...section,
-      lessons: section.lessons.map((lesson) => ({
-        _id: lesson._id,
-        title: lesson.title,
-        type: lesson.type,
-        duration: lesson.duration,
-        isFree: lesson.isFree,
-        content: lesson.isFree ? lesson.content : undefined,
-        videoUrl: lesson.isFree ? lesson.videoUrl : undefined,
-      })),
-    }));
-  }
+  const now = Date.now();
+
+  // For enrolled users apply drip lock; for non-enrolled hide content except free previews
+  course.sections = course.sections.map((section) => ({
+    ...section,
+    lessons: section.lessons.map((lesson) => {
+      if (!isEnrolled) {
+        return {
+          _id: lesson._id,
+          title: lesson.title,
+          type: lesson.type,
+          duration: lesson.duration,
+          isFree: lesson.isFree,
+          dripDays: lesson.dripDays,
+          content: lesson.isFree ? lesson.content : undefined,
+          videoUrl: lesson.isFree ? lesson.videoUrl : undefined,
+        };
+      }
+      // Drip lock check for enrolled users
+      const dripLocked =
+        lesson.dripDays > 0 &&
+        enrollment &&
+        now < new Date(enrollment.enrolledAt).getTime() + lesson.dripDays * 86400000;
+      return {
+        ...lesson,
+        dripLocked,
+        content: dripLocked ? undefined : lesson.content,
+        videoUrl: dripLocked ? undefined : lesson.videoUrl,
+      };
+    }),
+  }));
 
   const data = { course, reviews, isEnrolled };
 

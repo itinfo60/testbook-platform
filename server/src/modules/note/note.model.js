@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const noteSchema = new mongoose.Schema(
   {
@@ -19,6 +20,7 @@ const noteSchema = new mongoose.Schema(
 noteSchema.index({ user: 1, course: 1, createdAt: -1 });
 
 noteSchema.plugin(paginatePlugin);
+noteSchema.plugin(tenantPlugin);
 
 const Note = mongoose.model('Note', noteSchema);
 export default Note;

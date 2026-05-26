@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const answerSchema = new mongoose.Schema({
   questionId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -60,6 +61,7 @@ testAttemptSchema.methods.calculateScore = function () {
 };
 
 testAttemptSchema.plugin(paginatePlugin);
+testAttemptSchema.plugin(tenantPlugin);
 
 const TestAttempt = mongoose.model('TestAttempt', testAttemptSchema);
 export default TestAttempt;

@@ -68,6 +68,34 @@ class EmailService {
     });
   }
 
+  async sendWelcomeEmail(user) {
+    return this.send({
+      to: user.email,
+      subject: 'Welcome to TestBook!',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#4F46E5;">Welcome, ${user.name}!</h2>
+          <p>Your account is ready. Start exploring courses and tests on TestBook.</p>
+          <a href="${config.clientUrl}/dashboard" style="display:inline-block;padding:12px 24px;background:#4F46E5;color:#fff;text-decoration:none;border-radius:8px;margin:16px 0;">Go to Dashboard</a>
+        </div>
+      `,
+    });
+  }
+
+  async sendCertificateEmail(user, course, certificateUrl) {
+    return this.send({
+      to: user.email,
+      subject: `Your Certificate: ${course.title} - TestBook`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#4F46E5;">Congratulations, ${user.name}!</h2>
+          <p>You've successfully completed <strong>${course.title}</strong>. Your certificate is ready.</p>
+          <a href="${certificateUrl}" style="display:inline-block;padding:12px 24px;background:#4F46E5;color:#fff;text-decoration:none;border-radius:8px;margin:16px 0;">Download Certificate</a>
+        </div>
+      `,
+    });
+  }
+
   async sendEnrollmentConfirmation(user, course) {
     return this.send({
       to: user.email,

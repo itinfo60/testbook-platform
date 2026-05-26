@@ -6,7 +6,8 @@ import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import redis from '../../config/redis.js';
-import emailService from '../../utils/email.js';
+import { emailQueue, notificationQueue } from '../../queues/index.js';
+import { scheduleDripContent } from '../../utils/dripScheduler.js';
 import { buildPaginationQuery } from '../../utils/pagination.js';
 
 export const enrollInCourse = catchAsync(async (req, res) => {
@@ -64,9 +65,20 @@ export const enrollInCourse = catchAsync(async (req, res) => {
   // Clear caches
   await redis.delPattern('courses:*');
 
-  // Send confirmation email (non-blocking)
+  // Schedule drip content unlocks
+  await scheduleDripContent({ enrollment, course, tenantId: req.tenantId });
+
+  // Queue confirmation email + in-app notification
   const user = await User.findById(req.userId);
-  emailService.sendEnrollmentConfirmation(user, course).catch(() => {});
+  await emailQueue.add('send', { type: 'enrollment_confirmation', data: { user, course } });
+  await notificationQueue.add('send', {
+    type: 'enrollment',
+    userId: req.userId,
+    tenantId: req.tenantId,
+    title: 'Enrolled Successfully',
+    message: `You are now enrolled in "${course.title}"`,
+    data: { courseId: course._id },
+  });
 
   ApiResponse.created(res, { enrollment }, 'Enrolled successfully');
 });
@@ -80,7 +92,10 @@ export const getMyEnrollments = catchAsync(async (req, res) => {
   const result = await Enrollment.paginate(filter, {
     ...pagination,
     populate: [
-      { path: 'course', select: 'title slug thumbnail teacher totalLessons totalDuration averageRating' },
+      {
+        path: 'course',
+        select: 'title slug thumbnail teacher totalLessons totalDuration averageRating',
+      },
     ],
     sort: '-enrolledAt',
   });
@@ -102,7 +117,10 @@ export const getMyTestEnrollments = catchAsync(async (req, res) => {
   const result = await Enrollment.paginate(filter, {
     ...pagination,
     populate: [
-      { path: 'test', select: 'title slug thumbnail description price isFree duration totalMarks questionsCount' },
+      {
+        path: 'test',
+        select: 'title slug thumbnail description price isFree duration totalMarks questionsCount',
+      },
     ],
     sort: '-enrolledAt',
   });
@@ -162,12 +180,16 @@ export const updateProgress = catchAsync(async (req, res) => {
     await redis.del(`user_${req.userId}`);
   }
 
-  ApiResponse.ok(res, {
-    progress: enrollment.progressPercentage,
-    status: enrollment.status,
-    completedLessons: enrollment.progress.filter((p) => p.completed).length,
-    totalLessons: course.totalLessons,
-  }, 'Progress updated');
+  ApiResponse.ok(
+    res,
+    {
+      progress: enrollment.progressPercentage,
+      status: enrollment.status,
+      completedLessons: enrollment.progress.filter((p) => p.completed).length,
+      totalLessons: course.totalLessons,
+    },
+    'Progress updated'
+  );
 });
 
 export const checkEnrollment = catchAsync(async (req, res) => {
@@ -186,13 +208,16 @@ export const checkEnrollment = catchAsync(async (req, res) => {
 export const getTeacherStudents = catchAsync(async (req, res) => {
   // Get all courses by this teacher
   const courses = await Course.find({ teacher: req.userId }, '_id title').lean();
-  const courseIds = courses.map(c => c._id);
+  const courseIds = courses.map((c) => c._id);
 
   if (courseIds.length === 0) {
     return ApiResponse.ok(res, { students: [], total: 0 });
   }
 
-  const enrollments = await Enrollment.find({ course: { $in: courseIds }, status: { $in: ['active', 'completed'] } })
+  const enrollments = await Enrollment.find({
+    course: { $in: courseIds },
+    status: { $in: ['active', 'completed'] },
+  })
     .populate('user', 'name email avatar createdAt')
     .populate('course', 'title thumbnail')
     .sort('-enrolledAt')

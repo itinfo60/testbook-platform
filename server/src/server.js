@@ -1,11 +1,20 @@
+import './instrument.js'; // Sentry must be imported first
 import http from 'http';
 import { Server as SocketServer } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
 import app from './app.js';
 import config from './config/index.js';
 import database from './config/database.js';
 import redis from './config/redis.js';
 import logger from './utils/logger.js';
 import { initializeSocket } from './sockets/index.js';
+import emailWorker from './workers/email.worker.js';
+import notificationWorker from './workers/notification.worker.js';
+import certificateWorker from './workers/certificate.worker.js';
+import dripWorker from './workers/drip.worker.js';
+import { reminderWorker } from './workers/reminder.worker.js';
+import dunningWorker from './workers/dunning.worker.js';
 
 const server = http.createServer(app);
 
@@ -34,8 +43,29 @@ const startServer = async () => {
     // Connect to Redis
     await redis.connect();
 
+    // Set up Socket.IO Redis adapter for multi-instance support
+    try {
+      const redisUrl = config.redis.url || `redis://${config.redis.host}:${config.redis.port}`;
+      const pubClient = createClient({
+        url: redisUrl,
+        password: config.redis.password || undefined,
+      });
+      const subClient = pubClient.duplicate();
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      io.adapter(createAdapter(pubClient, subClient));
+      logger.info('Socket.IO Redis adapter connected');
+    } catch (err) {
+      logger.warn(
+        'Socket.IO Redis adapter failed, using in-memory (single instance only):',
+        err.message
+      );
+    }
+
     // Initialize Socket.IO
     initializeSocket(io);
+
+    // Start BullMQ workers (log startup, workers are self-managing)
+    logger.info(`BullMQ workers started: email, notification, certificate, drip, reminder`);
 
     // Start server
     server.listen(config.port, () => {
@@ -72,6 +102,17 @@ const gracefulShutdown = async (signal) => {
       // Close Socket.IO connections
       io.close();
       logger.info('Socket.IO closed');
+
+      // Stop workers
+      await Promise.all([
+        emailWorker.close(),
+        notificationWorker.close(),
+        certificateWorker.close(),
+        dripWorker.close(),
+        reminderWorker.close(),
+        dunningWorker.close(),
+      ]);
+      logger.info('BullMQ workers closed');
 
       // Disconnect from databases
       await database.disconnect();

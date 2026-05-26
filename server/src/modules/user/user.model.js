@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../config/index.js';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -18,7 +19,6 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Email is required'],
-      unique: true,
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
@@ -55,11 +55,24 @@ const userSchema = new mongoose.Schema(
     emailVerificationExpire: Date,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
-    refreshTokens: [{ token: String, expiresAt: Date, device: String }],
+    refreshTokens: [{ token: String, expiresAt: Date, device: String }], // tokens stored as SHA-256 hashes
+
+    // MFA
+    mfaSecret: { type: String, select: false },
+    mfaEnabled: { type: Boolean, default: false },
+    mfaBackupCodes: { type: [String], select: false },
+
+    // GDPR consent
+    consentGiven: { type: Boolean, default: false },
+    consentAt: { type: Date },
+    dataRetentionPolicyVersion: { type: String, default: '1.0' },
 
     // OAuth
     googleId: { type: String, sparse: true },
     authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
+
+    // Push notifications
+    fcmTokens: [{ type: String }], // FCM device tokens (multiple devices)
 
     // Stats
     enrolledCourses: { type: Number, default: 0 },
@@ -82,7 +95,14 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true, transform: (_, ret) => { delete ret.password; delete ret.refreshTokens; return ret; } },
+    toJSON: {
+      virtuals: true,
+      transform: (_, ret) => {
+        delete ret.password;
+        delete ret.refreshTokens;
+        return ret;
+      },
+    },
     toObject: { virtuals: true },
   }
 );
@@ -92,6 +112,12 @@ userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ totalPoints: -1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ name: 'text', email: 'text' });
+userSchema.index({ email: 1, tenantId: 1 }, { unique: true });
+userSchema.index({ tenantId: 1, role: 1, isActive: 1 }); // tenant-scoped user queries
+userSchema.index({ tenantId: 1, createdAt: -1 }); // tenant-scoped listing
+// TTL index: auto-expire password reset tokens (redundant field is cleaned but helps GC visibility)
+userSchema.index({ resetPasswordExpire: 1 }, { expireAfterSeconds: 0, sparse: true });
+userSchema.index({ emailVerificationExpire: 1 }, { expireAfterSeconds: 0, sparse: true });
 
 // Hash password before save
 userSchema.pre('save', async function (next) {
@@ -107,20 +133,16 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 // Generate access token
 userSchema.methods.generateAccessToken = function () {
-  return jwt.sign(
-    { id: this._id, role: this.role, email: this.email },
-    config.jwt.secret,
-    { expiresIn: config.jwt.accessExpiry }
-  );
+  return jwt.sign({ id: this._id, role: this.role, email: this.email }, config.jwt.secret, {
+    expiresIn: config.jwt.accessExpiry,
+  });
 };
 
 // Generate refresh token
 userSchema.methods.generateRefreshToken = function () {
-  return jwt.sign(
-    { id: this._id, type: 'refresh' },
-    config.jwt.secret,
-    { expiresIn: config.jwt.refreshExpiry }
-  );
+  return jwt.sign({ id: this._id, type: 'refresh' }, config.jwt.secret, {
+    expiresIn: config.jwt.refreshExpiry,
+  });
 };
 
 // Generate reset password token
@@ -147,6 +169,7 @@ userSchema.methods.cleanExpiredTokens = function () {
 
 // Apply plugins
 userSchema.plugin(paginatePlugin);
+userSchema.plugin(tenantPlugin);
 
 const User = mongoose.model('User', userSchema);
 export default User;

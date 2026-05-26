@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const notificationSchema = new mongoose.Schema(
   {
@@ -7,7 +8,16 @@ const notificationSchema = new mongoose.Schema(
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     type: {
       type: String,
-      enum: ['system', 'course', 'test', 'achievement', 'payment', 'announcement', 'discussion', 'review'],
+      enum: [
+        'system',
+        'course',
+        'test',
+        'achievement',
+        'payment',
+        'announcement',
+        'discussion',
+        'review',
+      ],
       required: true,
       index: true,
     },
@@ -44,6 +54,7 @@ notificationSchema.statics.markAllRead = async function (userId) {
 };
 
 notificationSchema.plugin(paginatePlugin);
+notificationSchema.plugin(tenantPlugin);
 
 const Notification = mongoose.model('Notification', notificationSchema);
 export default Notification;

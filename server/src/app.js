@@ -7,12 +7,27 @@ import cookieParser from 'cookie-parser';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js';
+import { ExpressAdapter } from '@bull-board/express';
 
 import config from './config/index.js';
 import logger from './utils/logger.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { notFoundHandler, errorConverter, errorHandler } from './middleware/errorHandler.js';
+import { tenantIdentification } from './middleware/tenant.middleware.js';
+import passport from './config/passport.js';
+import {
+  emailQueue,
+  notificationQueue,
+  certificateQueue,
+  dripQueue,
+  reminderQueue,
+  analyticsQueue,
+  dunningQueue,
+} from './queues/index.js';
 
 // Import routes
 import authRoutes from './modules/auth/auth.routes.js';
@@ -32,7 +47,16 @@ import noteRoutes from './modules/note/note.routes.js';
 import badgeRoutes from './modules/badge/badge.routes.js';
 import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
 import blogRoutes from './modules/blog/blog.routes.js';
-
+import instituteRoutes from './modules/institute/institute.routes.js';
+import subscriptionRoutes from './modules/subscription/subscription.routes.js';
+import aiRoutes from './modules/ai/ai.routes.js';
+import liveClassRoutes from './modules/liveclass/liveclass.routes.js';
+import auditRoutes from './modules/audit/audit.routes.js';
+import gdprRoutes from './modules/gdpr/gdpr.routes.js';
+import apiKeyRoutes from './modules/apikey/apikey.routes.js';
+import uploadRoutes from './modules/upload/upload.routes.js';
+import affiliateRoutes from './modules/affiliate/affiliate.routes.js';
+import { auditLog } from './middleware/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,19 +65,76 @@ const app = express();
 // Trust Railway's (and any other) reverse proxy so rate limiter sees real client IPs
 app.set('trust proxy', 1);
 
-// ===== SECURITY MIDDLEWARE =====
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-  contentSecurityPolicy: false,
-}));
+// ===== REQUEST ID =====
+app.use((req, _res, next) => {
+  req.id = req.headers['x-request-id'] || crypto.randomUUID();
+  next();
+});
 
-app.use(cors({
-  origin: [config.clientUrl, config.adminUrl, 'http://localhost:5173', 'http://localhost:5174'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  maxAge: 86400,
-}));
+// ===== BULL BOARD (Queue Monitor) =====
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath('/admin/queues');
+createBullBoard({
+  queues: [
+    new BullMQAdapter(emailQueue),
+    new BullMQAdapter(notificationQueue),
+    new BullMQAdapter(certificateQueue),
+    new BullMQAdapter(dripQueue),
+    new BullMQAdapter(reminderQueue),
+    new BullMQAdapter(analyticsQueue),
+    new BullMQAdapter(dunningQueue),
+  ],
+  serverAdapter,
+});
+// Protected by basic auth in production
+app.use(
+  '/admin/queues',
+  (req, res, next) => {
+    if (config.env !== 'production') return next();
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Basic ')) {
+      res.set('WWW-Authenticate', 'Basic realm="Queue Monitor"');
+      return res.status(401).send('Authentication required');
+    }
+    const [, b64] = auth.split(' ');
+    const [user, pass] = Buffer.from(b64, 'base64').toString().split(':');
+    if (
+      user !== (process.env.QUEUE_ADMIN_USER || 'admin') ||
+      pass !== process.env.QUEUE_ADMIN_PASS
+    ) {
+      return res.status(403).send('Forbidden');
+    }
+    next();
+  },
+  serverAdapter.getRouter()
+);
+
+// ===== TENANT ISOLATION =====
+app.use(tenantIdentification);
+
+// ===== SECURITY MIDDLEWARE =====
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: false,
+  })
+);
+
+app.use(
+  cors({
+    origin: [config.clientUrl, config.adminUrl, 'http://localhost:5173', 'http://localhost:5174'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Tenant-Id',
+      'X-Tenant-Subdomain',
+    ],
+    maxAge: 86400,
+  })
+);
 
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
@@ -63,17 +144,21 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(compression());
+app.use(passport.initialize());
 
 // ===== LOGGING =====
 if (config.env !== 'test') {
-  app.use(morgan('combined', {
-    stream: { write: (message) => logger.http(message.trim()) },
-    skip: (req) => req.url === '/health',
-  }));
+  app.use(
+    morgan('combined', {
+      stream: { write: (message) => logger.http(message.trim()) },
+      skip: (req) => req.url === '/health',
+    })
+  );
 }
 
 // ===== RATE LIMITING =====
-if (config.env === 'production') {
+// Apply in all environments (not test, to avoid slowing tests)
+if (config.env !== 'test') {
   app.use('/api/', globalLimiter);
 }
 
@@ -116,7 +201,18 @@ app.use(`${API_PREFIX}/notes`, noteRoutes);
 app.use(`${API_PREFIX}/badges`, badgeRoutes);
 app.use(`${API_PREFIX}/leaderboard`, leaderboardRoutes);
 app.use(`${API_PREFIX}/blogs`, blogRoutes);
+app.use(`${API_PREFIX}/institutes`, instituteRoutes);
+app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
+app.use(`${API_PREFIX}/ai`, aiRoutes);
+app.use(`${API_PREFIX}/live-classes`, liveClassRoutes);
+app.use(`${API_PREFIX}/audit-logs`, auditRoutes);
+app.use(`${API_PREFIX}/gdpr`, gdprRoutes);
+app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
+app.use(`${API_PREFIX}/uploads`, uploadRoutes);
+app.use(`${API_PREFIX}/affiliate`, affiliateRoutes);
 
+// ===== AUDIT LOG =====
+app.use(`${API_PREFIX}`, auditLog);
 
 // ===== API DOCS =====
 app.get(`${API_PREFIX}`, (req, res) => {

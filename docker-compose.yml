@@ -1,36 +1,56 @@
 version: '3.8'
 
 services:
-  # MongoDB
+  # MongoDB Primary (Replica Set for oplog + read scaling + point-in-time recovery)
   mongodb:
     image: mongo:7.0
     container_name: testbook-mongodb
     restart: always
     ports:
-      - "27017:27017"
+      - '27017:27017'
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
       MONGO_INITDB_DATABASE: testbook
     volumes:
       - mongodb_data:/data/db
+      - ./scripts/mongo-keyfile:/etc/mongo-keyfile:ro
+      - ./scripts/mongo-init-replica.js:/docker-entrypoint-initdb.d/01-init-replica.js:ro
     networks:
       - testbook-network
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'rs.status().ok || rs.initiate()']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
-  # Redis
+  # Redis (with password + persistence)
   redis:
     image: redis:7-alpine
     container_name: testbook-redis
     restart: always
     ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
+      - '6379:6379'
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --requirepass ${REDIS_PASSWORD:-redis_secret}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
       - testbook-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-redis_secret}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Backend API
+  # Backend API Server
   server:
     build:
       context: ./server
@@ -38,42 +58,83 @@ services:
     container_name: testbook-server
     restart: always
     ports:
-      - "5000:5000"
+      - '5000:5000'
+    env_file:
+      - ./server/.env
     environment:
-      - NODE_ENV=development
-      - PORT=5000
-      - MONGODB_URI=mongodb+srv://itinfo60:hHWTKq5QzG.ciJ7@cluster0.st80uui.mongodb.net/Test-Book?appName=Cluster0
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      MONGODB_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/testbook?authSource=admin&replicaSet=rs0
     depends_on:
-      - mongodb
-      - redis
-    volumes:
-      - ./server:/app
-      - /app/node_modules
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - testbook-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   # Frontend Client
   client:
     build:
       context: ./client
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-}
     container_name: testbook-client
     restart: always
     ports:
-      - "5173:5173"
-    volumes:
-      - ./client:/app
-      - /app/node_modules
+      - '80:80'
     depends_on:
       - server
+    networks:
+      - testbook-network
+
+  # Admin Panel
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    container_name: testbook-admin
+    restart: always
+    ports:
+      - '8080:80'
+    depends_on:
+      - server
+    networks:
+      - testbook-network
+
+  # MongoDB Backup (daily dump to /backups)
+  mongo-backup:
+    image: mongo:7.0
+    container_name: testbook-mongo-backup
+    restart: always
+    environment:
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/testbook?authSource=admin&replicaSet=rs0
+    volumes:
+      - mongo_backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    command: >
+      sh -c "while true; do sleep 86400; /backup.sh; done"
+    depends_on:
+      mongodb:
+        condition: service_healthy
     networks:
       - testbook-network
 
 volumes:
   mongodb_data:
   redis_data:
+  mongo_backups:
 
 networks:
   testbook-network:

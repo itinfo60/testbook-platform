@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const userBadgeSchema = new mongoose.Schema(
   {
@@ -13,6 +14,7 @@ const userBadgeSchema = new mongoose.Schema(
 userBadgeSchema.index({ user: 1, badge: 1 }, { unique: true });
 
 userBadgeSchema.plugin(paginatePlugin);
+userBadgeSchema.plugin(tenantPlugin);
 
 const UserBadge = mongoose.model('UserBadge', userBadgeSchema);
 export default UserBadge;

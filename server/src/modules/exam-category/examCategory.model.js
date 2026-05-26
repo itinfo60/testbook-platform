@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const examCategorySchema = new mongoose.Schema(
   {
@@ -42,6 +43,7 @@ examCategorySchema.virtual('subcategories', {
 });
 
 examCategorySchema.plugin(paginatePlugin);
+examCategorySchema.plugin(tenantPlugin);
 
 const ExamCategory = mongoose.model('ExamCategory', examCategorySchema);
 export default ExamCategory;

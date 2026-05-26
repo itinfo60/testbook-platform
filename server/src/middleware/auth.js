@@ -4,6 +4,7 @@ import ApiError from '../utils/ApiError.js';
 import catchAsync from '../utils/catchAsync.js';
 import config from '../config/index.js';
 import redis from '../config/redis.js';
+import { runWithTenant } from '../utils/TenantContext.js';
 
 export const authenticate = catchAsync(async (req, res, next) => {
   let token;
@@ -36,20 +37,37 @@ export const authenticate = catchAsync(async (req, res, next) => {
     throw ApiError.unauthorized('Invalid token. Please login again.');
   }
 
-  // Check cache first
-  let user = await redis.get(`user_${decoded.id}`);
-  
-  if (!user) {
-    user = await User.findById(decoded.id).select('-password -refreshTokens').lean();
-    if (!user) {
-      throw ApiError.unauthorized('User not found. Account may have been deleted.');
+  // Look up user globally (bypassing tenant filter so we can authenticate them)
+  let user = await runWithTenant(null, true, async () => {
+    let cachedUser = await redis.get(`user_${decoded.id}`);
+    if (!cachedUser) {
+      const dbUser = await User.findById(decoded.id).select('-password -refreshTokens').lean();
+      if (dbUser) {
+        // Cache for 5 minutes
+        await redis.set(`user_${decoded.id}`, dbUser, 300);
+        return dbUser;
+      }
+      return null;
     }
-    // Cache for 5 minutes
-    await redis.set(`user_${decoded.id}`, user, 300);
+    return cachedUser;
+  });
+
+  if (!user) {
+    throw ApiError.unauthorized('User not found. Account may have been deleted.');
   }
 
   if (!user.isActive) {
     throw ApiError.forbidden('Account has been deactivated. Contact support.');
+  }
+
+  // Cross-tenant access validation: Ensure tenant-scoped user belongs to the active tenant
+  if (
+    user.role !== 'super_admin' &&
+    user.tenantId &&
+    req.tenantId &&
+    user.tenantId.toString() !== req.tenantId
+  ) {
+    throw ApiError.forbidden('Access denied. You do not belong to this institute.');
   }
 
   req.user = user;
@@ -64,9 +82,7 @@ export const authorize = (...roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      throw ApiError.forbidden(
-        `Role '${req.user.role}' is not authorized to access this resource`
-      );
+      throw ApiError.forbidden(`Role '${req.user.role}' is not authorized to access this resource`);
     }
 
     next();
@@ -101,3 +117,5 @@ export const protect = authenticate;
 export const adminOnly = [authenticate, authorize('admin', 'super_admin')];
 export const teacherOnly = [authenticate, authorize('teacher', 'admin', 'super_admin')];
 export const studentOnly = [authenticate, authorize('student', 'admin')];
+export const superAdminOnly = [authenticate, authorize('super_admin')];
+export const instituteAdminOnly = [authenticate, authorize('admin')];

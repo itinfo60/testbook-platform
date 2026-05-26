@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const optionSchema = new mongoose.Schema({
   text: { type: String, required: true },
@@ -78,6 +79,8 @@ const testSchema = new mongoose.Schema(
     isFeatured: { type: Boolean, default: false },
     isFree: { type: Boolean, default: true },
     price: { type: Number, default: 0 },
+    randomizeQuestions: { type: Boolean, default: false },
+    randomizeOptions: { type: Boolean, default: false },
 
     publishedAt: Date,
     scheduledAt: Date,
@@ -107,6 +110,7 @@ testSchema.pre('save', function (next) {
 });
 
 testSchema.plugin(paginatePlugin);
+testSchema.plugin(tenantPlugin);
 
 const Test = mongoose.model('Test', testSchema);
 export default Test;

@@ -31,18 +31,20 @@ export const getTests = catchAsync(async (req, res) => {
     select: '-questions',
   });
 
-  let docs = result.docs.map(doc => doc.toObject ? doc.toObject() : doc);
+  let docs = result.docs.map((doc) => (doc.toObject ? doc.toObject() : doc));
 
   if (req.user) {
     const enrollments = await Enrollment.find({
       user: req.userId,
-      test: { $in: docs.map(t => t._id) },
-      status: { $in: ['active', 'completed'] }
-    }).select('test').lean();
-    
-    const purchasedTestIds = new Set(enrollments.map(e => e.test.toString()));
-    
-    docs = docs.map(test => {
+      test: { $in: docs.map((t) => t._id) },
+      status: { $in: ['active', 'completed'] },
+    })
+      .select('test')
+      .lean();
+
+    const purchasedTestIds = new Set(enrollments.map((e) => e.test.toString()));
+
+    docs = docs.map((test) => {
       if (test.isFree === false || test.price > 0) {
         test.isPurchased = purchasedTestIds.has(test._id.toString());
       } else {
@@ -74,14 +76,14 @@ export const getTestById = catchAsync(async (req, res) => {
   // Get user's attempt count
   let attemptCount = 0;
   let isPurchased = false;
-  
+
   if (req.user) {
     attemptCount = await TestAttempt.countDocuments({
       user: req.userId,
       test: test._id,
       status: 'completed',
     });
-    
+
     // Check purchase status
     if (test.isFree === false || test.price > 0) {
       const existing = await Enrollment.findOne({
@@ -138,10 +140,11 @@ export const startTest = catchAsync(async (req, res) => {
   });
 
   if (!attempt) {
-    const attemptNumber = await TestAttempt.countDocuments({
-      user: req.userId,
-      test: test._id,
-    }) + 1;
+    const attemptNumber =
+      (await TestAttempt.countDocuments({
+        user: req.userId,
+        test: test._id,
+      })) + 1;
 
     attempt = await TestAttempt.create({
       user: req.userId,
@@ -151,8 +154,8 @@ export const startTest = catchAsync(async (req, res) => {
     });
   }
 
-  // Send questions without answers
-  const questions = test.questions.map((q) => ({
+  // Strip answers, shuffle if test.randomizeQuestions is set
+  let questions = test.questions.map((q) => ({
     _id: q._id,
     question: q.question,
     type: q.type,
@@ -161,13 +164,70 @@ export const startTest = catchAsync(async (req, res) => {
     negativeMarks: q.negativeMarks,
   }));
 
+  if (test.randomizeQuestions) {
+    for (let i = questions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [questions[i], questions[j]] = [questions[j], questions[i]];
+    }
+    if (test.randomizeOptions) {
+      questions = questions.map((q) => {
+        const opts = [...q.options];
+        for (let i = opts.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [opts[i], opts[j]] = [opts[j], opts[i]];
+        }
+        return { ...q, options: opts };
+      });
+    }
+  }
+
+  // Restore saved answers for in-progress resume
+  const savedAnswers = attempt.answers.reduce((map, a) => {
+    map[a.questionId.toString()] = a.selectedOptions;
+    return map;
+  }, {});
+
   ApiResponse.ok(res, {
-    attempt: { _id: attempt._id, startedAt: attempt.startedAt, attemptNumber: attempt.attemptNumber },
+    attempt: {
+      _id: attempt._id,
+      startedAt: attempt.startedAt,
+      attemptNumber: attempt.attemptNumber,
+    },
     questions,
+    savedAnswers,
     duration: test.duration,
     totalMarks: test.totalMarks,
     title: test.title,
+    negativeMarking: test.questions.some((q) => q.negativeMarks > 0),
   });
+});
+
+// ===== AUTO-SAVE =====
+export const autoSave = catchAsync(async (req, res) => {
+  const { answers } = req.body; // [{ questionId, selectedOptions }]
+
+  const attempt = await TestAttempt.findOne({
+    _id: req.params.attemptId,
+    user: req.userId,
+    status: 'in_progress',
+  });
+
+  if (!attempt) throw ApiError.notFound('Active test attempt not found');
+
+  // Upsert each answer
+  for (const { questionId, selectedOptions } of answers) {
+    const idx = attempt.answers.findIndex((a) => a.questionId.toString() === questionId);
+    if (idx >= 0) {
+      attempt.answers[idx].selectedOptions = selectedOptions;
+    } else {
+      attempt.answers.push({ questionId, selectedOptions });
+    }
+  }
+
+  attempt.markModified('answers');
+  await attempt.save();
+
+  ApiResponse.ok(res, { saved: answers.length }, 'Progress auto-saved');
 });
 
 export const submitTest = catchAsync(async (req, res) => {
@@ -215,9 +275,11 @@ export const submitTest = catchAsync(async (req, res) => {
       const correctIndices = question.options
         .map((o, i) => (o.isCorrect ? i : -1))
         .filter((i) => i !== -1);
-      isCorrect = JSON.stringify(answer.selectedOptions?.sort()) === JSON.stringify(correctIndices.sort());
+      isCorrect =
+        JSON.stringify(answer.selectedOptions?.sort()) === JSON.stringify(correctIndices.sort());
     } else if (question.type === 'fill_blank') {
-      isCorrect = answer.textAnswer?.trim().toLowerCase() === question.correctAnswer?.trim().toLowerCase();
+      isCorrect =
+        answer.textAnswer?.trim().toLowerCase() === question.correctAnswer?.trim().toLowerCase();
     }
 
     if (isCorrect) {
@@ -240,7 +302,8 @@ export const submitTest = catchAsync(async (req, res) => {
 
   attempt.answers = gradedAnswers;
   attempt.score = Math.max(0, totalScore);
-  attempt.percentage = test.totalMarks > 0 ? Math.round((attempt.score / test.totalMarks) * 100) : 0;
+  attempt.percentage =
+    test.totalMarks > 0 ? Math.round((attempt.score / test.totalMarks) * 100) : 0;
   attempt.isPassed = attempt.score >= test.passingMarks;
   attempt.status = 'completed';
   attempt.completedAt = new Date();
@@ -264,21 +327,27 @@ export const submitTest = catchAsync(async (req, res) => {
   });
 
   const correctAnswers = gradedAnswers.filter((a) => a.isCorrect).length;
-  const incorrectAnswers = gradedAnswers.filter((a) => !a.isCorrect && (a.selectedOptions?.length > 0 || a.textAnswer)).length;
+  const incorrectAnswers = gradedAnswers.filter(
+    (a) => !a.isCorrect && (a.selectedOptions?.length > 0 || a.textAnswer)
+  ).length;
   const totalQuestions = test.questions.length;
 
-  ApiResponse.ok(res, {
-    score: attempt.score,
-    totalScore: attempt.totalMarks,
-    totalMarks: attempt.totalMarks,
-    percentage: attempt.percentage,
-    isPassed: attempt.isPassed,
-    timeTaken: attempt.timeTaken,
-    correctAnswers,
-    incorrectAnswers,
-    unanswered: totalQuestions - correctAnswers - incorrectAnswers,
-    totalQuestions,
-  }, 'Test submitted successfully');
+  ApiResponse.ok(
+    res,
+    {
+      score: attempt.score,
+      totalScore: attempt.totalMarks,
+      totalMarks: attempt.totalMarks,
+      percentage: attempt.percentage,
+      isPassed: attempt.isPassed,
+      timeTaken: attempt.timeTaken,
+      correctAnswers,
+      incorrectAnswers,
+      unanswered: totalQuestions - correctAnswers - incorrectAnswers,
+      totalQuestions,
+    },
+    'Test submitted successfully'
+  );
 });
 
 export const getTestResult = catchAsync(async (req, res) => {
@@ -328,11 +397,10 @@ export const createTest = catchAsync(async (req, res) => {
 });
 
 export const updateTest = catchAsync(async (req, res) => {
-  const test = await Test.findOneAndUpdate(
-    { _id: req.params.id, teacher: req.userId },
-    req.body,
-    { new: true, runValidators: true }
-  );
+  const test = await Test.findOneAndUpdate({ _id: req.params.id, teacher: req.userId }, req.body, {
+    new: true,
+    runValidators: true,
+  });
 
   if (!test) {
     throw ApiError.notFound('Test not found or unauthorized');
@@ -364,11 +432,12 @@ export const getTeacherTests = catchAsync(async (req, res) => {
   const result = await Test.paginate(filter, {
     ...pagination,
     populate: { path: 'category', select: 'name' },
-    select: 'title description duration difficulty status isPublished questionsCount totalAttempts category createdAt questions',
+    select:
+      'title description duration difficulty status isPublished questionsCount totalAttempts category createdAt questions',
   });
 
   // Compute questionsCount from array length for seeded docs that skipped the pre-save hook
-  const docs = result.docs.map(doc => {
+  const docs = result.docs.map((doc) => {
     const obj = doc.toObject ? doc.toObject() : { ...doc };
     obj.questionsCount = obj.questionsCount || (obj.questions?.length ?? 0);
     delete obj.questions; // don't send full questions in list
@@ -391,11 +460,17 @@ export const getTestAnalytics = catchAsync(async (req, res) => {
 
   const analytics = {
     totalAttempts: attempts.length,
-    averageScore: attempts.length ? Math.round(attempts.reduce((s, a) => s + a.percentage, 0) / attempts.length) : 0,
+    averageScore: attempts.length
+      ? Math.round(attempts.reduce((s, a) => s + a.percentage, 0) / attempts.length)
+      : 0,
     highestScore: attempts.length ? Math.max(...attempts.map((a) => a.percentage)) : 0,
     lowestScore: attempts.length ? Math.min(...attempts.map((a) => a.percentage)) : 0,
-    passRate: attempts.length ? Math.round((attempts.filter((a) => a.isPassed).length / attempts.length) * 100) : 0,
-    averageTimeTaken: attempts.length ? Math.round(attempts.reduce((s, a) => s + a.timeTaken, 0) / attempts.length) : 0,
+    passRate: attempts.length
+      ? Math.round((attempts.filter((a) => a.isPassed).length / attempts.length) * 100)
+      : 0,
+    averageTimeTaken: attempts.length
+      ? Math.round(attempts.reduce((s, a) => s + a.timeTaken, 0) / attempts.length)
+      : 0,
     scoreDistribution: {
       '0-20': attempts.filter((a) => a.percentage <= 20).length,
       '21-40': attempts.filter((a) => a.percentage > 20 && a.percentage <= 40).length,

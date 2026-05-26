@@ -3,12 +3,13 @@ import { Button } from '@/components/ui';
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiUser, HiMail, HiPhone } from 'react-icons/hi';
-import { updateProfile, clearError, clearMessage } from '@/features/auth/authSlice';
+import { updateProfile, clearError, clearMessage, getProfile } from '@/features/auth/authSlice';
 import toast from 'react-hot-toast';
+import MfaSetup from '@/features/auth/components/MfaSetup';
 
 export default function ProfileSettingsPage() {
   const dispatch = useDispatch();
-  const { user, loading, error, message } = useSelector(state => state.auth);
+  const { user, loading, error, message } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -24,25 +25,33 @@ export default function ProfileSettingsPage() {
   });
 
   useEffect(() => {
-    if (error) { toast.error(error); dispatch(clearError()); }
-    if (message) { toast.success(message); dispatch(clearMessage()); }
+    if (error) {
+      toast.error(error);
+      dispatch(clearError());
+    }
+    if (message) {
+      toast.success(message);
+      dispatch(clearMessage());
+    }
   }, [error, message, dispatch]);
 
-  const handleUpdateProfile = e => {
+  const handleUpdateProfile = (e) => {
     e.preventDefault();
     dispatch(updateProfile(formData));
   };
 
-  const handleChangePassword = e => {
+  const handleChangePassword = (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
-    dispatch(updateProfile({
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
-    }));
+    dispatch(
+      updateProfile({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      })
+    );
     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
@@ -52,70 +61,83 @@ export default function ProfileSettingsPage() {
 
       {/* Profile Settings */}
       <div className="card p-6 mb-6">
-        <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">Profile Information</h2>
+        <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">
+          Profile Information
+        </h2>
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <Input
             label="Full Name"
             icon={HiUser}
             value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
           <Input
             label="Email"
             type="email"
             icon={HiMail}
             value={formData.email}
-            onChange={e => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             disabled
           />
           <Input
             label="Phone"
             icon={HiPhone}
             value={formData.phone}
-            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="Enter phone number"
           />
           <div>
-            <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Bio</label>
+            <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">
+              Bio
+            </label>
             <textarea
               value={formData.bio}
-              onChange={e => setFormData({ ...formData, bio: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               className="input-field min-h-[100px] resize-none"
               placeholder="Tell us about yourself..."
             />
           </div>
-          <Button type="submit" loading={loading}>Save Changes</Button>
+          <Button type="submit" loading={loading}>
+            Save Changes
+          </Button>
         </form>
       </div>
 
       {/* Change Password */}
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">Change Password</h2>
+      <div className="card p-6 mb-6">
+        <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">
+          Change Password
+        </h2>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <Input
             label="Current Password"
             type="password"
             value={passwordData.currentPassword}
-            onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
             required
           />
           <Input
             label="New Password"
             type="password"
             value={passwordData.newPassword}
-            onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
             required
           />
           <Input
             label="Confirm New Password"
             type="password"
             value={passwordData.confirmPassword}
-            onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
             required
           />
-          <Button type="submit" variant="secondary" loading={loading}>Update Password</Button>
+          <Button type="submit" variant="secondary" loading={loading}>
+            Update Password
+          </Button>
         </form>
       </div>
+
+      {/* MFA Setup */}
+      <MfaSetup onStatusChange={() => dispatch(getProfile())} />
     </div>
   );
 }

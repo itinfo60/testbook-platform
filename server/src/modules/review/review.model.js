@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const reviewSchema = new mongoose.Schema(
   {
@@ -78,6 +79,7 @@ reviewSchema.post('findOneAndDelete', function (doc) {
 });
 
 reviewSchema.plugin(paginatePlugin);
+reviewSchema.plugin(tenantPlugin);
 
 const Review = mongoose.model('Review', reviewSchema);
 export default Review;

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const replySchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -40,6 +41,7 @@ discussionSchema.virtual('likeCount').get(function () {
 });
 
 discussionSchema.plugin(paginatePlugin);
+discussionSchema.plugin(tenantPlugin);
 
 const Discussion = mongoose.model('Discussion', discussionSchema);
 export default Discussion;

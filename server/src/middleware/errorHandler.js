@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
 import config from '../config/index.js';
@@ -63,8 +64,9 @@ export const errorHandler = (err, req, res, _next) => {
     message = 'File too large';
   }
 
-  // Log error
+  // Log error + capture 500s in Sentry
   if (statusCode >= 500) {
+    Sentry.captureException(err, { extra: { url: req.originalUrl, method: req.method } });
     logger.error(`${statusCode} - ${message}`, {
       url: req.originalUrl,
       method: req.method,

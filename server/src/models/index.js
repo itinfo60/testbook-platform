@@ -17,4 +17,5 @@ export { default as UserBadge } from '../modules/badge/userBadge.model.js';
 export { default as UserActivity } from '../modules/user/userActivity.model.js';
 export { default as Wishlist } from '../modules/wishlist/wishlist.model.js';
 export { default as Blog } from '../modules/blog/blog.model.js';
-
+export { default as Institute } from '../modules/institute/institute.model.js';
+export { default as SubscriptionPlan } from '../modules/subscription/subscriptionPlan.model.js';

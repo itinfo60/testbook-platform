@@ -3,6 +3,26 @@ import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
+const getSubdomain = () => {
+  if (typeof window === 'undefined') return null;
+  const host = window.location.host;
+  const parts = host.split('.');
+
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    if (parts.length > 1 && parts[0] !== 'localhost') {
+      return parts[0];
+    }
+    return null;
+  }
+
+  if (parts.length > 2) {
+    if (parts[0] === 'www') return parts[1];
+    return parts[0];
+  }
+
+  return null;
+};
+
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 30000,
@@ -21,19 +41,26 @@ const qs = (params) => {
 };
 
 // ── Request Interceptor ──
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
-  if (token && token !== 'cookie-auth') {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, (err) => Promise.reject(err));
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token && token !== 'cookie-auth') {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    const subdomain = getSubdomain();
+    if (subdomain) {
+      config.headers['X-Tenant-Subdomain'] = subdomain;
+    }
+    return config;
+  },
+  (err) => Promise.reject(err)
+);
 
 // ── Response Interceptor ──
 let isRefreshing = false;
 let failedQueue = [];
 const processQueue = (error, token = null) => {
-  failedQueue.forEach((p) => error ? p.reject(error) : p.resolve(token));
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
   failedQueue = [];
 };
 
@@ -55,7 +82,16 @@ api.interceptors.response.use(
       try {
         const rt = localStorage.getItem('adminRefreshToken');
         if (!rt) throw new Error('No refresh token');
-        const res = await axios.post(`${API_BASE}/auth/refresh-token`, { refreshToken: rt });
+        const subdomain = getSubdomain();
+        const res = await axios.post(
+          `${API_BASE}/auth/refresh-token`,
+          { refreshToken: rt },
+          {
+            headers: {
+              ...(subdomain && { 'X-Tenant-Subdomain': subdomain }),
+            },
+          }
+        );
         const d = res.data.data || res.data;
         const at = d.accessToken || d.token;
         const nrt = d.refreshToken;
@@ -118,12 +154,14 @@ export const usersAPI = {
 export const coursesAPI = {
   getAll: (params) => api.get(`/admin/courses${qs(params)}`),
   getById: (id) => api.get(`/courses/${id}`),
-  create: (data) => api.post('/courses', data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  update: (id, data) => api.put(`/courses/${id}`, data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  create: (data) =>
+    api.post('/courses', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  update: (id, data) =>
+    api.put(`/courses/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   delete: (id) => api.delete(`/admin/courses/${id}`),
   togglePublish: (id) => api.patch(`/courses/${id}/publish`),
   toggleFeatured: (id) => api.patch(`/admin/courses/${id}/featured`),
@@ -163,9 +201,10 @@ export const reviewsAPI = {
 // ══════════════════════════════════════════════
 export const enrollmentsAPI = {
   getAll: (params) => api.get(`/admin/enrollments${qs(params)}`),
-  export: (params) => api.get(`/admin/enrollments/export${qs(params)}`, {
-    responseType: 'blob',
-  }),
+  export: (params) =>
+    api.get(`/admin/enrollments/export${qs(params)}`, {
+      responseType: 'blob',
+    }),
 };
 
 // ══════════════════════════════════════════════

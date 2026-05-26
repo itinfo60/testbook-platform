@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 import softDeletePlugin from '../../models/plugins/softDeletePlugin.js';
 
 const blogSchema = new mongoose.Schema(
@@ -70,6 +71,7 @@ blogSchema.pre('save', function (next) {
 
 // Plugins
 blogSchema.plugin(paginatePlugin);
+blogSchema.plugin(tenantPlugin);
 blogSchema.plugin(softDeletePlugin);
 
 const Blog = mongoose.model('Blog', blogSchema);

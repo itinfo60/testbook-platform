@@ -77,6 +77,81 @@ export const initializeSocket = (io) => {
       });
     });
 
+    // ===== LIVE CLASS / WebRTC SIGNALING =====
+
+    // Join a live class room
+    socket.on('join_liveclass', ({ liveClassId }) => {
+      socket.join(`liveclass:${liveClassId}`);
+      socket.to(`liveclass:${liveClassId}`).emit('peer_joined', { userId, socketId: socket.id });
+      logger.debug(`User ${userId} joined liveclass:${liveClassId}`);
+    });
+
+    socket.on('leave_liveclass', ({ liveClassId }) => {
+      socket.leave(`liveclass:${liveClassId}`);
+      socket.to(`liveclass:${liveClassId}`).emit('peer_left', { userId, socketId: socket.id });
+    });
+
+    // WebRTC: relay offer from one peer to another
+    socket.on('webrtc_offer', ({ to, offer, liveClassId }) => {
+      io.to(to).emit('webrtc_offer', { from: socket.id, offer, liveClassId });
+    });
+
+    // WebRTC: relay answer
+    socket.on('webrtc_answer', ({ to, answer }) => {
+      io.to(to).emit('webrtc_answer', { from: socket.id, answer });
+    });
+
+    // WebRTC: relay ICE candidates
+    socket.on('webrtc_ice_candidate', ({ to, candidate }) => {
+      io.to(to).emit('webrtc_ice_candidate', { from: socket.id, candidate });
+    });
+
+    // Live class chat
+    socket.on('liveclass_chat', ({ liveClassId, message }) => {
+      io.to(`liveclass:${liveClassId}`).emit('liveclass_chat', {
+        userId,
+        message,
+        timestamp: new Date(),
+      });
+    });
+
+    // Screen sharing — teacher starts sharing, broadcast to all peers in room
+    socket.on('screen_share_start', ({ liveClassId }) => {
+      socket.to(`liveclass:${liveClassId}`).emit('screen_share_started', {
+        from: socket.id,
+        userId,
+      });
+    });
+
+    // Screen sharing offer (dedicated stream negotiation)
+    socket.on('screen_share_offer', ({ to, offer }) => {
+      io.to(to).emit('screen_share_offer', { from: socket.id, offer });
+    });
+
+    socket.on('screen_share_answer', ({ to, answer }) => {
+      io.to(to).emit('screen_share_answer', { from: socket.id, answer });
+    });
+
+    socket.on('screen_share_ice', ({ to, candidate }) => {
+      io.to(to).emit('screen_share_ice', { from: socket.id, candidate });
+    });
+
+    // Teacher stops sharing
+    socket.on('screen_share_stop', ({ liveClassId }) => {
+      socket.to(`liveclass:${liveClassId}`).emit('screen_share_stopped', { userId });
+    });
+
+    // Hand raise
+    socket.on('raise_hand', ({ liveClassId }) => {
+      socket.to(`liveclass:${liveClassId}`).emit('hand_raised', { userId, socketId: socket.id });
+    });
+
+    socket.on('lower_hand', ({ liveClassId }) => {
+      socket.to(`liveclass:${liveClassId}`).emit('hand_lowered', { userId, socketId: socket.id });
+    });
+
+    // ===== TYPING INDICATOR =====
+
     // Typing indicator
     socket.on('typing', (data) => {
       socket.to(`course:${data.courseId}`).emit('user_typing', {
@@ -136,4 +211,11 @@ export const getOnlineCount = () => onlineUsers.size;
 // Utility: Check if user is online
 export const isUserOnline = (userId) => onlineUsers.has(userId);
 
-export default { initializeSocket, sendToUser, sendToRole, broadcast, getOnlineCount, isUserOnline };
+export default {
+  initializeSocket,
+  sendToUser,
+  sendToRole,
+  broadcast,
+  getOnlineCount,
+  isUserOnline,
+};

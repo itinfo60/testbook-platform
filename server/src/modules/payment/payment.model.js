@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
+import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 
 const paymentSchema = new mongoose.Schema(
   {
@@ -33,7 +34,7 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ user: 1, createdAt: -1 });
 paymentSchema.index({ status: 1, createdAt: -1 });
 
-paymentSchema.pre('validate', function(next) {
+paymentSchema.pre('validate', function (next) {
   if (!this.course && !this.test) {
     next(new Error('Payment must be associated with either a course or a test.'));
   } else if (this.course && this.test) {
@@ -44,6 +45,7 @@ paymentSchema.pre('validate', function(next) {
 });
 
 paymentSchema.plugin(paginatePlugin);
+paymentSchema.plugin(tenantPlugin);
 
 const Payment = mongoose.model('Payment', paymentSchema);
 export default Payment;
