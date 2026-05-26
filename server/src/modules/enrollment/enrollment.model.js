@@ -74,6 +74,9 @@ enrollmentSchema.pre('validate', function (next) {
 });
 enrollmentSchema.index({ enrolledAt: -1 });
 enrollmentSchema.index({ status: 1, enrolledAt: -1 });
+enrollmentSchema.index({ tenantId: 1, user: 1, status: 1 });
+enrollmentSchema.index({ tenantId: 1, course: 1, status: 1 });
+enrollmentSchema.index({ tenantId: 1, test: 1, status: 1 });
 
 // Method to update progress
 enrollmentSchema.methods.updateLessonProgress = function (sectionId, lessonId, data = {}) {

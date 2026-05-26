@@ -15,7 +15,11 @@ const defaultJobOptions = {
   removeOnFail: { count: 500 },
 };
 
-export const emailQueue = new Queue('email', { connection, defaultJobOptions });
+export const transactionalEmailQueue = new Queue('transactional_email', {
+  connection,
+  defaultJobOptions,
+});
+export const bulkEmailQueue = new Queue('bulk_email', { connection, defaultJobOptions });
 export const notificationQueue = new Queue('notification', { connection, defaultJobOptions });
 export const certificateQueue = new Queue('certificate', { connection, defaultJobOptions });
 export const dripQueue = new Queue('drip', { connection, defaultJobOptions });

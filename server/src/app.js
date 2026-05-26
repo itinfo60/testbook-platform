@@ -17,10 +17,11 @@ import config from './config/index.js';
 import logger from './utils/logger.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { notFoundHandler, errorConverter, errorHandler } from './middleware/errorHandler.js';
-import { tenantIdentification } from './middleware/tenant.middleware.js';
+import { tenantIdentification, requireTenant } from './middleware/tenant.middleware.js';
 import passport from './config/passport.js';
 import {
-  emailQueue,
+  transactionalEmailQueue,
+  bulkEmailQueue,
   notificationQueue,
   certificateQueue,
   dripQueue,
@@ -76,7 +77,8 @@ const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
 createBullBoard({
   queues: [
-    new BullMQAdapter(emailQueue),
+    new BullMQAdapter(transactionalEmailQueue),
+    new BullMQAdapter(bulkEmailQueue),
     new BullMQAdapter(notificationQueue),
     new BullMQAdapter(certificateQueue),
     new BullMQAdapter(dripQueue),
@@ -185,31 +187,31 @@ app.get('/health', (req, res) => {
 const API_PREFIX = '/api/v1';
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
-app.use(`${API_PREFIX}/courses`, courseRoutes);
-app.use(`${API_PREFIX}/enrollments`, enrollmentRoutes);
-app.use(`${API_PREFIX}/reviews`, reviewRoutes);
-app.use(`${API_PREFIX}/tests`, testRoutes);
-app.use(`${API_PREFIX}/quizzes`, quizRoutes);
+app.use(`${API_PREFIX}/courses`, requireTenant, courseRoutes);
+app.use(`${API_PREFIX}/enrollments`, requireTenant, enrollmentRoutes);
+app.use(`${API_PREFIX}/reviews`, requireTenant, reviewRoutes);
+app.use(`${API_PREFIX}/tests`, requireTenant, testRoutes);
+app.use(`${API_PREFIX}/quizzes`, requireTenant, quizRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
-app.use(`${API_PREFIX}/categories`, categoryRoutes);
-app.use(`${API_PREFIX}/payments`, paymentRoutes);
-app.use(`${API_PREFIX}/coupons`, couponRoutes);
-app.use(`${API_PREFIX}/notifications`, notificationRoutes);
-app.use(`${API_PREFIX}/wishlist`, wishlistRoutes);
-app.use(`${API_PREFIX}/discussions`, discussionRoutes);
-app.use(`${API_PREFIX}/notes`, noteRoutes);
-app.use(`${API_PREFIX}/badges`, badgeRoutes);
-app.use(`${API_PREFIX}/leaderboard`, leaderboardRoutes);
-app.use(`${API_PREFIX}/blogs`, blogRoutes);
+app.use(`${API_PREFIX}/categories`, requireTenant, categoryRoutes);
+app.use(`${API_PREFIX}/payments`, requireTenant, paymentRoutes);
+app.use(`${API_PREFIX}/coupons`, requireTenant, couponRoutes);
+app.use(`${API_PREFIX}/notifications`, requireTenant, notificationRoutes);
+app.use(`${API_PREFIX}/wishlist`, requireTenant, wishlistRoutes);
+app.use(`${API_PREFIX}/discussions`, requireTenant, discussionRoutes);
+app.use(`${API_PREFIX}/notes`, requireTenant, noteRoutes);
+app.use(`${API_PREFIX}/badges`, requireTenant, badgeRoutes);
+app.use(`${API_PREFIX}/leaderboard`, requireTenant, leaderboardRoutes);
+app.use(`${API_PREFIX}/blogs`, requireTenant, blogRoutes);
 app.use(`${API_PREFIX}/institutes`, instituteRoutes);
 app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
-app.use(`${API_PREFIX}/ai`, aiRoutes);
-app.use(`${API_PREFIX}/live-classes`, liveClassRoutes);
-app.use(`${API_PREFIX}/audit-logs`, auditRoutes);
-app.use(`${API_PREFIX}/gdpr`, gdprRoutes);
-app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
+app.use(`${API_PREFIX}/ai`, requireTenant, aiRoutes);
+app.use(`${API_PREFIX}/live-classes`, requireTenant, liveClassRoutes);
+app.use(`${API_PREFIX}/audit-logs`, requireTenant, auditRoutes);
+app.use(`${API_PREFIX}/gdpr`, requireTenant, gdprRoutes);
+app.use(`${API_PREFIX}/api-keys`, requireTenant, apiKeyRoutes);
 app.use(`${API_PREFIX}/uploads`, uploadRoutes);
-app.use(`${API_PREFIX}/affiliate`, affiliateRoutes);
+app.use(`${API_PREFIX}/affiliate`, requireTenant, affiliateRoutes);
 
 // ===== AUDIT LOG =====
 app.use(`${API_PREFIX}`, auditLog);

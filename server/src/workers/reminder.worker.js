@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq';
 import { queueConnection } from '../queues/index.js';
-import { notificationQueue, emailQueue } from '../queues/index.js';
+import { notificationQueue, transactionalEmailQueue } from '../queues/index.js';
 import Enrollment from '../modules/enrollment/enrollment.model.js';
 import User from '../modules/user/user.model.js';
 import logger from '../utils/logger.js';
@@ -40,7 +40,7 @@ export const reminderWorker = new Worker(
           data: { liveClassId },
         });
 
-        await emailQueue.add('send', {
+        await transactionalEmailQueue.add('send', {
           type: 'liveclass_reminder',
           data: { userId, title, scheduledAt, liveClassId },
         });

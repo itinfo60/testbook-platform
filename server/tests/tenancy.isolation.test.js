@@ -7,26 +7,11 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { runWithTenant } from '../src/utils/TenantContext.js';
 import Course from '../src/modules/course/course.model.js';
-import User from '../src/modules/user/user.model.js';
-import Enrollment from '../src/modules/enrollment/enrollment.model.js';
-
-let mongod;
-
 const tenantA = new mongoose.Types.ObjectId();
 const tenantB = new mongoose.Types.ObjectId();
 
-beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
-});
-
 describe('Multi-tenancy isolation', () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     // Seed data for Tenant A
     await runWithTenant(tenantA.toString(), false, async () => {
       await Course.create({

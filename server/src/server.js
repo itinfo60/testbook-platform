@@ -9,7 +9,7 @@ import database from './config/database.js';
 import redis from './config/redis.js';
 import logger from './utils/logger.js';
 import { initializeSocket } from './sockets/index.js';
-import emailWorker from './workers/email.worker.js';
+import { transactionalEmailWorker, bulkEmailWorker } from './workers/email.worker.js';
 import notificationWorker from './workers/notification.worker.js';
 import certificateWorker from './workers/certificate.worker.js';
 import dripWorker from './workers/drip.worker.js';
@@ -105,7 +105,8 @@ const gracefulShutdown = async (signal) => {
 
       // Stop workers
       await Promise.all([
-        emailWorker.close(),
+        transactionalEmailWorker.close(),
+        bulkEmailWorker.close(),
         notificationWorker.close(),
         certificateWorker.close(),
         dripWorker.close(),

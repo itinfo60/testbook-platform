@@ -7,7 +7,7 @@ import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import { runWithTenant } from '../../utils/TenantContext.js';
 import config from '../../config/index.js';
-import { emailQueue } from '../../queues/index.js';
+import { transactionalEmailQueue } from '../../queues/index.js';
 
 const razorpay = config.razorpay.keyId
   ? new Razorpay({ key_id: config.razorpay.keyId, key_secret: config.razorpay.keySecret })
@@ -143,7 +143,7 @@ export const verifySubscriptionPayment = catchAsync(async (req, res) => {
     await institute.save();
 
     // Queue confirmation email
-    await emailQueue.add('send', {
+    await transactionalEmailQueue.add('send', {
       type: 'subscription_activated',
       data: { institute, plan, expiresAt },
     });

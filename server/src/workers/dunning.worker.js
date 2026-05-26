@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq';
 import Institute from '../modules/institute/institute.model.js';
 import User from '../modules/user/user.model.js';
-import { emailQueue } from '../queues/index.js';
+import { transactionalEmailQueue } from '../queues/index.js';
 import { queueConnection } from '../queues/index.js';
 import { runWithTenant } from '../utils/TenantContext.js';
 import logger from '../utils/logger.js';
@@ -40,7 +40,7 @@ const dunningWorker = new Worker(
           );
           if (!admin) continue;
 
-          await emailQueue.add('send', {
+          await transactionalEmailQueue.add('send', {
             type: 'subscription_expiry_warning',
             data: {
               user: admin,
@@ -72,7 +72,7 @@ const dunningWorker = new Worker(
           User.findOne({ tenantId: institute._id, role: 'admin' })
         );
         if (admin) {
-          await emailQueue.add('send', {
+          await transactionalEmailQueue.add('send', {
             type: 'subscription_expired',
             data: { user: admin, institute },
           });

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
-import { emailQueue } from '../../queues/index.js';
+import { transactionalEmailQueue } from '../../queues/index.js';
 import redis from '../../config/redis.js';
 import config from '../../config/index.js';
 import crypto from 'crypto';
@@ -65,7 +65,10 @@ export const register = catchAsync(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   // Queue verification email
-  await emailQueue.add('send', { type: 'verification', data: { user, token: verifyToken } });
+  await transactionalEmailQueue.add('send', {
+    type: 'verification',
+    data: { user, token: verifyToken },
+  });
 
   const accessToken = user.generateAccessToken();
   const rawRefreshToken = user.generateRefreshToken();
@@ -289,7 +292,10 @@ export const forgotPassword = catchAsync(async (req, res) => {
   const resetToken = user.generateResetToken();
   await runWithTenant(null, true, () => user.save({ validateBeforeSave: false }));
 
-  await emailQueue.add('send', { type: 'reset_password', data: { user, token: resetToken } });
+  await transactionalEmailQueue.add('send', {
+    type: 'reset_password',
+    data: { user, token: resetToken },
+  });
   ApiResponse.ok(res, null, 'Password reset email sent');
 });
 

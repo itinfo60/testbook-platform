@@ -6,7 +6,7 @@ import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import redis from '../../config/redis.js';
-import { emailQueue, notificationQueue } from '../../queues/index.js';
+import { transactionalEmailQueue, notificationQueue } from '../../queues/index.js';
 import { scheduleDripContent } from '../../utils/dripScheduler.js';
 import { buildPaginationQuery } from '../../utils/pagination.js';
 
@@ -70,7 +70,10 @@ export const enrollInCourse = catchAsync(async (req, res) => {
 
   // Queue confirmation email + in-app notification
   const user = await User.findById(req.userId);
-  await emailQueue.add('send', { type: 'enrollment_confirmation', data: { user, course } });
+  await transactionalEmailQueue.add('send', {
+    type: 'enrollment_confirmation',
+    data: { user, course },
+  });
   await notificationQueue.add('send', {
     type: 'enrollment',
     userId: req.userId,

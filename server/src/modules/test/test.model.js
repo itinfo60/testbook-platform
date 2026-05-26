@@ -95,6 +95,9 @@ const testSchema = new mongoose.Schema(
 testSchema.index({ title: 'text', description: 'text' });
 testSchema.index({ teacher: 1, status: 1 });
 testSchema.index({ category: 1, isPublished: 1 });
+testSchema.index({ tenantId: 1, isPublished: 1, createdAt: -1 });
+testSchema.index({ tenantId: 1, teacher: 1, status: 1 });
+testSchema.index({ tenantId: 1, category: 1, isPublished: 1 });
 
 testSchema.virtual('questionCount').get(function () {
   return this.questions?.length || 0;

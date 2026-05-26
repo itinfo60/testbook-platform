@@ -11,7 +11,7 @@ import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import config from '../../config/index.js';
 import redis from '../../config/redis.js';
-import { emailQueue, notificationQueue } from '../../queues/index.js';
+import { transactionalEmailQueue, notificationQueue } from '../../queues/index.js';
 import { buildPaginationQuery } from '../../utils/pagination.js';
 
 const razorpay = new Razorpay({
@@ -205,7 +205,10 @@ export const verifyPayment = catchAsync(async (req, res) => {
   const user = await User.findById(req.userId);
   if (payment.course) {
     const course = await Course.findById(payment.course);
-    await emailQueue.add('send', { type: 'enrollment_confirmation', data: { user, course } });
+    await transactionalEmailQueue.add('send', {
+      type: 'enrollment_confirmation',
+      data: { user, course },
+    });
     await notificationQueue.add('send', {
       type: 'enrollment',
       userId: req.userId,
@@ -284,7 +287,10 @@ export const dummyCheckout = catchAsync(async (req, res) => {
     await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
     await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
     await redis.delPattern('courses:*');
-    await emailQueue.add('send', { type: 'enrollment_confirmation', data: { user, course: item } });
+    await transactionalEmailQueue.add('send', {
+      type: 'enrollment_confirmation',
+      data: { user, course: item },
+    });
     await notificationQueue.add('send', {
       type: 'enrollment',
       userId: req.userId,
@@ -335,24 +341,31 @@ export const handleWebhook = catchAsync(async (req, res) => {
   const rPayment = payload?.payment?.entity;
 
   if (event === 'payment.captured' && rPayment) {
-    const payment = await Payment.findOne({ orderId: rPayment.order_id });
-    if (payment && payment.status === 'pending') {
-      payment.paymentId = rPayment.id;
-      payment.status = 'completed';
-      await payment.save();
-    }
+    // Atomic update to prevent race conditions if webhook is delivered twice
+    await Payment.findOneAndUpdate(
+      { orderId: rPayment.order_id, status: 'pending' },
+      {
+        $set: {
+          paymentId: rPayment.id,
+          status: 'completed',
+        },
+      }
+    );
   }
 
   if (event === 'refund.created' && payload?.refund?.entity) {
     const refund = payload.refund.entity;
-    const payment = await Payment.findOne({ paymentId: refund.payment_id });
-    if (payment) {
-      payment.status = 'refunded';
-      payment.refundId = refund.id;
-      payment.refundAmount = refund.amount / 100;
-      payment.refundedAt = new Date();
-      await payment.save();
-    }
+    await Payment.findOneAndUpdate(
+      { paymentId: refund.payment_id, status: { $ne: 'refunded' } },
+      {
+        $set: {
+          status: 'refunded',
+          refundId: refund.id,
+          refundAmount: refund.amount / 100,
+          refundedAt: new Date(),
+        },
+      }
+    );
   }
 
   res.json({ received: true });

@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq';
 import { generateCertificatePDF } from '../utils/certificate.js';
-import { emailQueue } from '../queues/index.js';
+import { transactionalEmailQueue } from '../queues/index.js';
 import logger from '../utils/logger.js';
 import { queueConnection } from '../queues/index.js';
 
@@ -13,7 +13,7 @@ const certificateWorker = new Worker(
     const certificateUrl = await generateCertificatePDF({ user, course, enrollment });
 
     // Queue email with certificate
-    await emailQueue.add('send', {
+    await transactionalEmailQueue.add('send', {
       type: 'certificate',
       data: { user, course, certificateUrl },
     });

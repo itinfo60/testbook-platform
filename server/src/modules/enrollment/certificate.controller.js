@@ -5,7 +5,7 @@ import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import { generateCertificatePDF } from '../../utils/certificate.js';
-import { emailQueue } from '../../queues/index.js';
+import { transactionalEmailQueue } from '../../queues/index.js';
 
 export const generateCertificate = catchAsync(async (req, res) => {
   const enrollment = await Enrollment.findOne({
@@ -37,7 +37,7 @@ export const generateCertificate = catchAsync(async (req, res) => {
   await enrollment.save();
 
   // Email the certificate
-  await emailQueue.add('send', {
+  await transactionalEmailQueue.add('send', {
     type: 'certificate',
     data: { user, course, certificateUrl },
   });

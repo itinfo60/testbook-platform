@@ -60,7 +60,7 @@ describe('Tenant Middleware', () => {
   describe('tenantIdentification', () => {
     it('should identify tenant by X-Tenant-Subdomain header', async () => {
       mockReq.headers['x-tenant-subdomain'] = 'alpha';
-      Institute.findOne.mockResolvedValue(activeTenant);
+      Institute.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(activeTenant) });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
 
@@ -72,7 +72,7 @@ describe('Tenant Middleware', () => {
 
     it('should identify tenant by X-Tenant-Id header', async () => {
       mockReq.headers['x-tenant-id'] = 'tenant123';
-      Institute.findById.mockResolvedValue(activeTenant);
+      Institute.findById.mockReturnValue({ lean: vi.fn().mockResolvedValue(activeTenant) });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
 
@@ -82,7 +82,7 @@ describe('Tenant Middleware', () => {
 
     it('should parse subdomain from host header (e.g. alpha.localhost)', async () => {
       mockReq.headers.host = 'alpha.localhost:5000';
-      Institute.findOne.mockResolvedValue(activeTenant);
+      Institute.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(activeTenant) });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
 
@@ -92,7 +92,7 @@ describe('Tenant Middleware', () => {
 
     it('should parse subdomain from production host (e.g. alpha.platform.com)', async () => {
       mockReq.headers.host = 'alpha.platform.com';
-      Institute.findOne.mockResolvedValue(activeTenant);
+      Institute.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(activeTenant) });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
 
@@ -112,7 +112,9 @@ describe('Tenant Middleware', () => {
 
     it('should throw 403 if institute is inactive', async () => {
       mockReq.headers['x-tenant-subdomain'] = 'alpha';
-      Institute.findOne.mockResolvedValue({ ...activeTenant, isActive: false });
+      Institute.findOne.mockReturnValue({
+        lean: vi.fn().mockResolvedValue({ ...activeTenant, isActive: false }),
+      });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
 
@@ -124,9 +126,11 @@ describe('Tenant Middleware', () => {
 
     it('should throw 403 if subscription status is suspended', async () => {
       mockReq.headers['x-tenant-subdomain'] = 'alpha';
-      Institute.findOne.mockResolvedValue({
-        ...activeTenant,
-        subscription: { ...activeTenant.subscription, status: 'suspended' },
+      Institute.findOne.mockReturnValue({
+        lean: vi.fn().mockResolvedValue({
+          ...activeTenant,
+          subscription: { ...activeTenant.subscription, status: 'suspended' },
+        }),
       });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
@@ -142,11 +146,11 @@ describe('Tenant Middleware', () => {
         ...activeTenant,
         subscription: {
           status: 'active',
-          expiresAt: new Date(Date.now() - 1000), // expired yesterday
+          expiresAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // expired 8 days ago (past 7 day grace period)
         },
         save: vi.fn(),
       };
-      Institute.findOne.mockResolvedValue(expiredTenant);
+      Institute.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(expiredTenant) });
 
       await tenantIdentification(mockReq, mockRes, mockNext);
 
