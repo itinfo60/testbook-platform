@@ -20,12 +20,14 @@ export const validate = (schema: ZodSchema, source: 'body' | 'query' | 'params' 
 
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errors = error.errors.map((err) => ({
-          field: err.path.join('.'),
+      // Handle ZodError — use instanceof or duck-type check for ESM interop safety
+      const issues = (error as any)?.errors ?? (error as any)?.issues;
+      if (error instanceof ZodError || (issues && Array.isArray(issues))) {
+        const errs = (issues || (error as ZodError).errors).map((err: any) => ({
+          field: Array.isArray(err.path) ? err.path.join('.') : String(err.path ?? ''),
           message: err.message,
         }));
-        return next(ApiError.badRequest('Validation failed', errors));
+        return next(ApiError.badRequest('Validation failed', errs));
       }
       next(error);
     }

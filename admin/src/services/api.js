@@ -229,14 +229,14 @@ export const teachersAPI = {
 };
 
 // ══════════════════════════════════════════════
-// COUPONS — confirmed: /coupons
+// COUPONS — uses /admin/coupons (no tenant header needed)
 // ══════════════════════════════════════════════
 export const couponsAPI = {
-  getAll: (params) => api.get(`/coupons${qs(params)}`),
-  getById: (id) => api.get(`/coupons/${id}`),
-  create: (data) => api.post('/coupons', data),
-  update: (id, data) => api.put(`/coupons/${id}`, data),
-  delete: (id) => api.delete(`/coupons/${id}`),
+  getAll: (params) => api.get(`/admin/coupons${qs(params)}`),
+  getById: (id) => api.get(`/admin/coupons/${id}`),
+  create: (data) => api.post('/admin/coupons', data),
+  update: (id, data) => api.put(`/admin/coupons/${id}`, data),
+  delete: (id) => api.delete(`/admin/coupons/${id}`),
 };
 
 // ══════════════════════════════════════════════

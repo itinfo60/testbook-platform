@@ -1,410 +1,237 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { BookOpen, Eye, EyeOff, Info, Star, StarOff, Trash2 } from 'lucide-react';
-import {
-  fetchCourses,
-  deleteCourse,
-  togglePublish,
-  toggleFeatured,
-} from '@/features/course/courseSlice';
-import useDebounce from '@/hooks/useDebounce';
-import DataTable from '@/components/DataTable';
-import ConfirmDialog from '@/components/ConfirmDialog';
-import Modal from '@/components/Modal';
-import { truncate, formatDate, formatCurrency, getStatusColor } from '@/utils';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Save } from 'lucide-react';
+import { fetchCourseById, clearSelected } from '@/features/course/courseSlice';
+import { fetchCategories } from '@/features/category/categorySlice';
+import { coursesAPI } from '@/services/api';
+import LoadingSpinner from '@/components/loadingSpinner';
+import toast from 'react-hot-toast';
 
-export default function CourseList() {
+export default function CourseForm() {
+  const { id } = useParams();
   const dispatch = useDispatch();
-  const { list, pagination, loading } = useSelector((s) => s.courses);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [sortField, setSortField] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [viewCourse, setViewCourse] = useState(null);
+  const navigate = useNavigate();
+  const { selected, loading } = useSelector((s) => s.courses);
+  const { list: categories } = useSelector((s) => s.categories);
+  const isEdit = !!id;
+  const [saving, setSaving] = useState(false);
+  const [thumbnail, setThumbnail] = useState(null);
 
-  const debouncedSearch = useDebounce(search);
-
-  const load = useCallback(() => {
-    dispatch(
-      fetchCourses({
-        page,
-        limit: 10,
-        search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        sort: `${sortOrder === 'desc' ? '-' : ''}${sortField}`,
-      })
-    );
-  }, [dispatch, page, debouncedSearch, statusFilter, sortField, sortOrder]);
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    shortDescription: '',
+    price: 0,
+    category: '',
+    level: 'beginner',
+    language: 'English',
+    isFree: false,
+  });
 
   useEffect(() => {
-    load();
-  }, [load]);
+    dispatch(fetchCategories());
+    if (isEdit) dispatch(fetchCourseById(id));
+    return () => dispatch(clearSelected());
+  }, [dispatch, id, isEdit]);
 
-  const handleSort = (field) => {
-    if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    else {
-      setSortField(field);
-      setSortOrder('asc');
+  useEffect(() => {
+    if (isEdit && selected) {
+      setForm({
+        title: selected.title || '',
+        description: selected.description || '',
+        shortDescription: selected.shortDescription || '',
+        price: selected.price || 0,
+        category: selected.category?._id || selected.category || '',
+        level: selected.level || 'beginner',
+        language: selected.language || 'English',
+        isFree: selected.isFree || selected.price === 0,
+      });
+    }
+  }, [selected, isEdit]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => {
+        if (v !== '' && v !== null && v !== undefined) fd.append(k, v);
+      });
+      if (thumbnail) fd.append('thumbnail', thumbnail);
+
+      if (isEdit) {
+        await coursesAPI.update(id, fd);
+        toast.success('Course updated');
+      } else {
+        await coursesAPI.create(fd);
+        toast.success('Course created');
+      }
+      navigate('/courses');
+    } catch {
+      // handled by interceptor
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (deleteTarget) {
-      await dispatch(deleteCourse(deleteTarget));
-      setDeleteTarget(null);
-      load();
-    }
-  };
+  const handleChange = (field) => (e) =>
+    setForm({ ...form, [field]: field === 'price' ? Number(e.target.value) : e.target.value });
 
-  const handleTogglePublish = async (id) => {
-    await dispatch(togglePublish(id));
-    load();
-  };
-
-  const handleToggleFeatured = async (id) => {
-    await dispatch(toggleFeatured(id));
-    load();
-  };
-
-  const columns = [
-    {
-      key: 'title',
-      label: 'Course',
-      sortable: true,
-      render: (_, row) => (
-        <div className="flex items-center gap-3">
-          {row.thumbnail?.url || row.thumbnail ? (
-            <img
-              src={row.thumbnail?.url || row.thumbnail}
-              alt=""
-              className="w-12 h-8 rounded object-cover"
-            />
-          ) : (
-            <div className="w-12 h-8 rounded bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-primary-600" />
-            </div>
-          )}
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">{truncate(row.title, 40)}</p>
-            <p className="text-xs text-gray-500">
-              by {row.teacher?.name || row.instructor?.name || 'Unknown Teacher'}
-            </p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'price',
-      label: 'Price',
-      sortable: true,
-      render: (val, row) => (
-        <div>
-          <p className="font-medium">{val > 0 ? formatCurrency(val) : 'Free'}</p>
-          {row.discountedPrice > 0 && row.discountedPrice < val && (
-            <p className="text-xs text-emerald-600">Sale: {formatCurrency(row.discountedPrice)}</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'level',
-      label: 'Level',
-      render: (val) => <span className="badge-info capitalize">{val || 'N/A'}</span>,
-    },
-    {
-      key: 'enrollmentCount',
-      label: 'Students',
-      sortable: true,
-      render: (val, row) => val || row.enrolledStudents || row.totalEnrollments || 0,
-    },
-    {
-      key: 'averageRating',
-      label: 'Rating',
-      sortable: true,
-      render: (val, row) => {
-        const rating = val || row.rating || 0;
-        return rating > 0 ? (
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span>{rating.toFixed(1)}</span>
-          </div>
-        ) : (
-          <span className="text-gray-400">-</span>
-        );
-      },
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      sortable: true,
-      render: (val) => <span className={getStatusColor(val)}>{val || 'draft'}</span>,
-    },
-    {
-      key: 'isFeatured',
-      label: 'Featured',
-      render: (val) =>
-        val ? (
-          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-        ) : (
-          <span className="text-gray-300">-</span>
-        ),
-    },
-    {
-      key: 'createdAt',
-      label: 'Created',
-      sortable: true,
-      render: (val) => formatDate(val),
-    },
-  ];
+  if (isEdit && loading && !selected) {
+    return (
+      <div className="flex justify-center py-20">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Courses</h2>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">
-            Manage courses created by teachers
-            {pagination && (
-              <span className="ml-2 text-primary-600">({pagination.total || 0} total)</span>
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="input-field w-40 py-2"
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate('/courses')}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <option value="">All Status</option>
-          <option value="published">Published</option>
-          <option value="draft">Draft</option>
-        </select>
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {isEdit ? 'Edit Course' : 'Create Course'}
+        </h2>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={list}
-        loading={loading}
-        pagination={pagination}
-        onPageChange={setPage}
-        searchable
-        searchValue={search}
-        onSearch={(val) => {
-          setSearch(val);
-          setPage(1);
-        }}
-        searchPlaceholder="Search courses..."
-        sortField={sortField}
-        sortOrder={sortOrder}
-        onSort={handleSort}
-        emptyMessage="No courses found. Courses will appear here when teachers create them."
-        emptyIcon={BookOpen}
-        actions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            {/* View Details */}
-            <button
-              onClick={() => setViewCourse(row)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="View details"
+      <form onSubmit={handleSubmit} className="card p-6 space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Title *
+          </label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={handleChange('title')}
+            className="input-field"
+            required
+            minLength={3}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Short Description
+          </label>
+          <input
+            type="text"
+            value={form.shortDescription}
+            onChange={handleChange('shortDescription')}
+            className="input-field"
+            maxLength={200}
+            placeholder="One-line summary shown on course cards"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Description *
+          </label>
+          <textarea
+            value={form.description}
+            onChange={handleChange('description')}
+            className="input-field"
+            rows={5}
+            required
+            minLength={10}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Category
+            </label>
+            <select
+              value={form.category}
+              onChange={handleChange('category')}
+              className="input-field"
             >
-              <Info className="w-4 h-4 text-blue-600" />
-            </button>
-            {/* Toggle Publish */}
-            <button
-              onClick={() => handleTogglePublish(row._id)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title={row.status === 'published' ? 'Unpublish' : 'Publish'}
-            >
-              {row.status === 'published' ? (
-                <Eye className="w-4 h-4 text-emerald-600" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-            {/* Toggle Featured */}
-            <button
-              onClick={() => handleToggleFeatured(row._id)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title={row.isFeatured ? 'Unfeature' : 'Feature'}
-            >
-              {row.isFeatured ? (
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              ) : (
-                <StarOff className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-            {/* Delete */}
-            <button
-              onClick={() => setDeleteTarget(row._id)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </button>
+              <option value="">-- Select --</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
-      />
-
-      {/* Delete Confirm */}
-      <ConfirmDialog
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete Course"
-        message="This will permanently delete this course and all associated enrollments, reviews, and content. This cannot be undone."
-        confirmText="Delete Course"
-      />
-
-      {/* Course Detail Modal */}
-      <Modal
-        isOpen={!!viewCourse}
-        onClose={() => setViewCourse(null)}
-        title="Course Details"
-        size="lg"
-      >
-        {viewCourse && (
-          <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-start gap-4">
-              {viewCourse.thumbnail?.url || viewCourse.thumbnail ? (
-                <img
-                  src={viewCourse.thumbnail?.url || viewCourse.thumbnail}
-                  alt=""
-                  className="w-40 h-24 object-cover rounded-lg"
-                />
-              ) : (
-                <div className="w-40 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-8 h-8 text-primary-600" />
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {viewCourse.title}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  by {viewCourse.teacher?.name || viewCourse.instructor?.name || 'Unknown'}
-                </p>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className={getStatusColor(viewCourse.status)}>
-                    {viewCourse.status || 'draft'}
-                  </span>
-                  <span className="badge-info capitalize">{viewCourse.level || 'N/A'}</span>
-                  {viewCourse.isFeatured && <span className="badge-warning">⭐ Featured</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
-                <p className="text-xs text-gray-500">Price</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {viewCourse.price > 0 ? formatCurrency(viewCourse.price) : 'Free'}
-                </p>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
-                <p className="text-xs text-gray-500">Students</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {viewCourse.enrollmentCount || viewCourse.enrolledStudents || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
-                <p className="text-xs text-gray-500">Rating</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {(viewCourse.averageRating || viewCourse.rating || 0).toFixed(1)} ⭐
-                </p>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
-                <p className="text-xs text-gray-500">Reviews</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {viewCourse.totalReviews || viewCourse.reviewCount || 0}
-                </p>
-              </div>
-            </div>
-
-            {/* Description */}
-            {viewCourse.description && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-1">Description</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">
-                  {viewCourse.description}
-                </p>
-              </div>
-            )}
-
-            {/* Meta */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-gray-500">Category:</span>{' '}
-                <span className="font-medium">{viewCourse.category?.name || 'Uncategorized'}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">Language:</span>{' '}
-                <span className="font-medium">{viewCourse.language || 'English'}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">Created:</span>{' '}
-                <span className="font-medium">{formatDate(viewCourse.createdAt)}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">Updated:</span>{' '}
-                <span className="font-medium">{formatDate(viewCourse.updatedAt)}</span>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex gap-2 pt-3 border-t dark:border-gray-700">
-              <button
-                onClick={() => {
-                  handleTogglePublish(viewCourse._id);
-                  setViewCourse(null);
-                }}
-                className={
-                  viewCourse.status === 'published' ? 'btn-secondary gap-2' : 'btn-success gap-2'
-                }
-              >
-                {viewCourse.status === 'published' ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-                {viewCourse.status === 'published' ? 'Unpublish' : 'Publish'}
-              </button>
-              <button
-                onClick={() => {
-                  handleToggleFeatured(viewCourse._id);
-                  setViewCourse(null);
-                }}
-                className="btn-secondary gap-2"
-              >
-                {viewCourse.isFeatured ? (
-                  <StarOff className="w-4 h-4" />
-                ) : (
-                  <Star className="w-4 h-4" />
-                )}
-                {viewCourse.isFeatured ? 'Unfeature' : 'Feature'}
-              </button>
-              <button
-                onClick={() => {
-                  setDeleteTarget(viewCourse._id);
-                  setViewCourse(null);
-                }}
-                className="btn-danger gap-2"
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Level
+            </label>
+            <select value={form.level} onChange={handleChange('level')} className="input-field">
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
           </div>
-        )}
-      </Modal>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Price (₹)
+            </label>
+            <input
+              type="number"
+              value={form.price}
+              onChange={handleChange('price')}
+              className="input-field"
+              min={0}
+              max={100000}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Language
+            </label>
+            <select
+              value={form.language}
+              onChange={handleChange('language')}
+              className="input-field"
+            >
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Telugu">Telugu</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Thumbnail Image
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setThumbnail(e.target.files[0])}
+            className="input-field py-2"
+          />
+          {selected?.thumbnail?.url && !thumbnail && (
+            <img
+              src={selected.thumbnail.url}
+              alt="current"
+              className="mt-2 w-32 h-20 object-cover rounded-lg"
+            />
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button type="submit" disabled={saving} className="btn-primary gap-2">
+            <Save className="w-4 h-4" /> {isEdit ? 'Update Course' : 'Create Course'}
+          </button>
+          <button type="button" onClick={() => navigate('/courses')} className="btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

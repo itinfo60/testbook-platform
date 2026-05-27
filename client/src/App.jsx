@@ -25,6 +25,7 @@ const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'));
 const AuthCallbackPage = lazy(() => import('@/features/auth/pages/AuthCallbackPage'));
+const VerifyEmailPage = lazy(() => import('@/features/auth/pages/verify/VerifyEmailPage'));
 
 // Public
 const HomePage = lazy(() => import('@/features/home/pages/HomePage'));
@@ -72,6 +73,7 @@ const TeacherQuizForm = lazy(() => import('@/features/quiz/pages/teacher/Teacher
 const TeacherStudents = lazy(() => import('@/features/teacher/pages/TeacherStudents'));
 const TeacherRevenue = lazy(() => import('@/features/teacher/pages/TeacherRevenue'));
 const TeacherDiscussions = lazy(() => import('@/features/teacher/pages/TeacherDiscussions'));
+const TeacherAttendance = lazy(() => import('@/features/teacher/pages/TeacherAttendance'));
 
 // AI
 const AIQuestionGenerator = lazy(() => import('@/features/ai/pages/AIQuestionGenerator'));
@@ -91,6 +93,10 @@ const TestResult = lazy(() => import('@/features/test/pages/TestResult'));
 
 // Affiliate
 const AffiliateDashboard = lazy(() => import('@/features/affiliate/pages/AffiliateDashboard'));
+
+// Parent Portal
+const ParentDashboard = lazy(() => import('@/features/parent/pages/ParentDashboard'));
+const ParentMessages = lazy(() => import('@/features/parent/pages/ParentMessages'));
 
 const PageLoader = () => (
   <div className="h-screen bg-slate-950 flex items-center justify-center">
@@ -120,6 +126,7 @@ export default function App() {
 
       socket.on('notification', (data) => {
         dispatch(addNotification(data));
+        toast(data.message || data.title || 'New Notification', { icon: '🔔' });
       });
 
       return () => {
@@ -174,6 +181,7 @@ export default function App() {
                 </GuestRoute>
               }
             />
+            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
           </Route>
 
@@ -343,6 +351,24 @@ export default function App() {
               }
             />
 
+            {/* Parent Routes */}
+            <Route
+              path="/parent"
+              element={
+                <ProtectedRoute roles={['parent', 'admin']}>
+                  <ParentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute roles={['parent', 'teacher', 'admin']}>
+                  <ParentMessages />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Teacher Routes */}
             <Route
               path="/teacher"
@@ -366,6 +392,7 @@ export default function App() {
               <Route path="students" element={<TeacherStudents />} />
               <Route path="revenue" element={<TeacherRevenue />} />
               <Route path="discussions" element={<TeacherDiscussions />} />
+              <Route path="attendance" element={<TeacherAttendance />} />
             </Route>
 
             {/* 404 */}

@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { HiLightBulb, HiPhotograph, HiX } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
@@ -11,6 +12,8 @@ export default function AIDoubtSolver() {
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const fileRef = useRef();
+  const controllerRef = useRef(null);
+  const token = useSelector((s) => s.auth?.token);
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -33,6 +36,10 @@ export default function AIDoubtSolver() {
     setImageBase64(null);
     setImagePreview(null);
     fileRef.current.value = '';
+    // Abort any ongoing request
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+    }
   };
 
   const handleSolve = async (e) => {
@@ -43,15 +50,104 @@ export default function AIDoubtSolver() {
     }
     setLoading(true);
     setAnswer('');
+    // Create a fresh abort controller for this request
+    const abortCtrl = new AbortController();
+    controllerRef.current = abortCtrl;
+
     try {
-      const { data } = await api.post('/ai/solve-doubt', { question, subject, imageBase64 });
-      setAnswer(data.data?.answer || '');
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const host = window.location.host;
+      const parts = host.split('.');
+      let subdomain = null;
+
+      if (host.includes('localhost') || host.includes('127.0.0.1')) {
+        if (parts.length > 1 && parts[0] !== 'localhost') {
+          subdomain = parts[0];
+        }
+      } else if (parts.length > 2) {
+        if (parts[0] === 'www') subdomain = parts[1];
+        else subdomain = parts[0];
+      }
+
+      if (subdomain) {
+        headers['X-Tenant-Subdomain'] = subdomain;
+      } else {
+        const devTenantId = import.meta.env.VITE_TENANT_ID;
+        const devTenantSubdomain = import.meta.env.VITE_TENANT_SUBDOMAIN;
+        if (devTenantId) {
+          headers['X-Tenant-Id'] = devTenantId;
+        } else if (devTenantSubdomain) {
+          headers['X-Tenant-Subdomain'] = devTenantSubdomain;
+        }
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/ai/solve-doubt`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ question, subject, imageBase64, stream: true }),
+        signal: abortCtrl.signal,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to solve doubt');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let textBuffer = '';
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          textBuffer += decoder.decode(value, { stream: !done });
+          const lines = textBuffer.split('\n');
+          textBuffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (cleanLine.startsWith('data: ')) {
+              const jsonStr = cleanLine.substring(6);
+              if (jsonStr === '[DONE]') {
+                done = true;
+                break;
+              }
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+                if (parsed.token) {
+                  setAnswer((prev) => prev + parsed.token);
+                }
+              } catch {}
+            }
+          }
+        }
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to solve doubt');
+      toast.error(err.message || 'Failed to solve doubt');
     } finally {
       setLoading(false);
     }
   };
+
+  // Cleanup abort controller on component unmount
+  useEffect(() => {
+    return () => {
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+      }
+    };
+  }, []);
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">

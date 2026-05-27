@@ -46,4 +46,11 @@ router.patch('/teachers/:id/verify', adminController.verifyTeacher);
 // Announcements
 router.post('/announcements', adminController.sendAnnouncement);
 
+// Coupons (no requireTenant — tenantId taken from authenticated user)
+router.get('/coupons', adminController.adminGetCoupons);
+router.get('/coupons/:id', adminController.adminGetCouponById);
+router.post('/coupons', adminController.adminCreateCoupon);
+router.put('/coupons/:id', adminController.adminUpdateCoupon);
+router.delete('/coupons/:id', adminController.adminDeleteCoupon);
+
 export default router;

@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import config from '../../config/index.js';
 import paginatePlugin from '../../models/plugins/paginatePlugin.js';
 import tenantPlugin from '../../models/plugins/tenantPlugin.js';
-import { IUser } from '../auth/auth.dto.js';
+import { IUser } from '../auth/auth.dto.ts';
 
 const userSchema = new Schema<IUser>(
   {
@@ -31,7 +31,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['student', 'teacher', 'admin', 'super_admin'],
+      enum: ['student', 'teacher', 'admin', 'super_admin', 'parent'],
       default: 'student',
       index: true,
     },
@@ -68,6 +68,20 @@ const userSchema = new Schema<IUser>(
     mfaSecret: { type: String, select: false },
     mfaEnabled: { type: Boolean, default: false },
     mfaBackupCodes: { type: [String], select: false },
+
+    // Parent Portal fields
+    parentAccessCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    linkedStudents: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
 
     // GDPR consent
     consentGiven: { type: Boolean, default: false },

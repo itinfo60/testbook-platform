@@ -896,7 +896,7 @@ const run = async () => {
 
   const teacher = await User.create({
     name: 'Rahul Sharma',
-    email: 'teacher@demo.com',
+    email: 'teacher@testbook.com',
     password: 'Teacher@123456',
     role: 'teacher',
     isEmailVerified: true,
@@ -927,7 +927,7 @@ const run = async () => {
   });
 
   const STUDENT_NAMES = [
-    ['Arjun Nair', 'arjun@demo.com'],
+    ['Arjun Nair', 'arjun@student.com'],
     ['Sneha Reddy', 'sneha@demo.com'],
     ['Vikram Singh', 'vikram@demo.com'],
     ['Ananya Iyer', 'ananya@demo.com'],
@@ -1151,9 +1151,9 @@ const run = async () => {
   console.log('─'.repeat(60));
   console.log('  Super Admin  :  admin@testbook.com         /  Admin@123456');
   console.log('  Inst. Admin  :  institute@demo.com         /  Admin@123456');
-  console.log('  Teacher      :  teacher@demo.com           /  Teacher@123456');
+  console.log('  Teacher      :  teacher@testbook.com       /  Teacher@123456');
   console.log('  Teacher 2    :  teacher2@demo.com          /  Teacher@123456');
-  console.log('  Student      :  arjun@demo.com             /  Student@123456');
+  console.log('  Student      :  arjun@student.com          /  Student@123456');
   console.log('  (all 10 students use Student@123456)');
   console.log('─'.repeat(60));
   console.log('  FRONT-END SETUP');

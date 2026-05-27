@@ -12,6 +12,8 @@ const makeStore = () => {
   });
 };
 
+const noopMiddleware = (_req, _res, next) => next();
+
 const limiterOptions = (windowMs, max, message, prefix = 'rl') => ({
   windowMs,
   max,
@@ -22,32 +24,40 @@ const limiterOptions = (windowMs, max, message, prefix = 'rl') => ({
   keyGenerator: (req) => `${prefix}:${req.ip}`,
 });
 
-export const globalLimiter = rateLimit(
-  limiterOptions(
-    config.rateLimit.windowMs,
-    config.rateLimit.max,
-    'Too many requests. Please try again later.',
-    'global'
-  )
-);
+const isTest = config.env === 'test';
+
+export const globalLimiter = isTest
+  ? noopMiddleware
+  : rateLimit(
+      limiterOptions(
+        config.rateLimit.windowMs,
+        config.rateLimit.max,
+        'Too many requests. Please try again later.',
+        'global'
+      )
+    );
 
 const authMax = config.env === 'development' ? 200 : 10;
-export const authLimiter = rateLimit(
-  limiterOptions(
-    15 * 60 * 1000,
-    authMax,
-    'Too many login attempts. Please try again after 15 minutes.',
-    'auth'
-  )
-);
+export const authLimiter = isTest
+  ? noopMiddleware
+  : rateLimit(
+      limiterOptions(
+        15 * 60 * 1000,
+        authMax,
+        'Too many login attempts. Please try again after 15 minutes.',
+        'auth'
+      )
+    );
 
-export const uploadLimiter = rateLimit(
-  limiterOptions(60 * 60 * 1000, 50, 'Upload limit reached. Try again in an hour.', 'upload')
-);
+export const uploadLimiter = isTest
+  ? noopMiddleware
+  : rateLimit(
+      limiterOptions(60 * 60 * 1000, 50, 'Upload limit reached. Try again in an hour.', 'upload')
+    );
 
-export const apiLimiter = rateLimit(
-  limiterOptions(60 * 1000, 60, 'API rate limit exceeded.', 'api')
-);
+export const apiLimiter = isTest
+  ? noopMiddleware
+  : rateLimit(limiterOptions(60 * 1000, 60, 'API rate limit exceeded.', 'api'));
 
 export const createRateLimiter = (windowMs, max, message, prefix = 'custom') =>
-  rateLimit(limiterOptions(windowMs, max, message, prefix));
+  isTest ? noopMiddleware : rateLimit(limiterOptions(windowMs, max, message, prefix));

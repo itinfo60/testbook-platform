@@ -228,3 +228,41 @@ export const getTeacherStudents = catchAsync(async (req, res) => {
 
   ApiResponse.ok(res, { students: enrollments, total: enrollments.length });
 });
+
+export const verifyPayment = catchAsync(async (req, res) => {
+  const { id } = req.params; // enrollment id
+  const enrollment = await Enrollment.findById(id);
+  if (!enrollment) {
+    throw ApiError.notFound('Enrollment not found');
+  }
+  if (String(enrollment.user) !== String(req.userId)) {
+    throw ApiError.forbidden('Not authorized to verify this enrollment');
+  }
+  if (enrollment.status !== 'pending') {
+    throw ApiError.badRequest('Enrollment status is not pending');
+  }
+  // Ensure payment is completed
+  const payment = await Payment.findOne({ _id: enrollment.paymentId, status: 'completed' });
+  if (!payment) {
+    throw ApiError.badRequest('Associated payment not completed');
+  }
+  enrollment.status = 'active';
+  enrollment.enrolledAt = new Date();
+  await enrollment.save();
+
+  // Optional notifications
+  await transactionalEmailQueue.add('send', {
+    type: 'enrollment_confirmation',
+    data: { user: req.userId, course: enrollment.course },
+  });
+  await notificationQueue.add('send', {
+    type: 'enrollment',
+    userId: req.userId,
+    tenantId: req.tenantId,
+    title: 'Enrollment Verified',
+    message: `Your enrollment has been verified and is now active`,
+    data: { enrollmentId: enrollment._id },
+  });
+
+  ApiResponse.ok(res, { enrollment }, 'Enrollment verified');
+});

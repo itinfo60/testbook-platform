@@ -1,13 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiArrowLeft, HiTrash, HiDownload, HiMenu, HiX } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 import { fetchCourseById } from '@/features/course/courseSlice';
-import { fetchProgress, completeLesson, markLessonDone } from '@/features/enrollment/enrollmentSlice';
+import {
+  fetchProgress,
+  completeLesson,
+  markLessonDone,
+} from '@/features/enrollment/enrollmentSlice';
 import { fetchNotes, createNote, deleteNote } from '@/features/note/noteSlice';
 import { fetchDiscussions, createDiscussion } from '@/features/discussion/discussionSlice';
+import { enrollmentAPI } from '@/services/api';
 
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Tabs from '@/components/common/Tabs';
@@ -17,10 +22,10 @@ import LessonSidebar from '../components/learning/LessonSidebar';
 export default function CourseLearning() {
   const { id } = useParams();
   const dispatch = useDispatch();
-  const { currentCourse: course, loading } = useSelector(state => state.courses);
-  const { currentProgress } = useSelector(state => state.enrollments);
-  const { notes } = useSelector(state => state.notes);
-  const { discussions } = useSelector(state => state.discussions);
+  const { currentCourse: course, loading } = useSelector((state) => state.courses);
+  const { currentProgress } = useSelector((state) => state.enrollments);
+  const { notes } = useSelector((state) => state.notes);
+  const { discussions } = useSelector((state) => state.discussions);
 
   const [currentLesson, setCurrentLesson] = useState(null);
   const [currentSection, setCurrentSection] = useState(null);
@@ -28,6 +33,13 @@ export default function CourseLearning() {
   const [noteText, setNoteText] = useState('');
   const [discussionText, setDiscussionText] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const playerRef = useRef(null);
+  const [videoTime, setVideoTime] = useState(0);
+  const sessionWatchTime = useRef(0);
+  const lastHeartbeatTime = useRef(0);
+  const [attachTimestamp, setAttachTimestamp] = useState(true);
+  const [claimingCertificate, setClaimingCertificate] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
@@ -54,17 +66,52 @@ export default function CourseLearning() {
     setCurrentSection(section);
     setActiveTab('content');
     setSidebarOpen(false);
+    setVideoTime(0);
+    sessionWatchTime.current = 0;
+    lastHeartbeatTime.current = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  const handleVideoProgress = useCallback(
+    (state) => {
+      setVideoTime(state.playedSeconds);
+
+      // Accumulate session watch time
+      sessionWatchTime.current += 1;
+
+      // Heartbeat every 30 seconds of active watching
+      if (sessionWatchTime.current - lastHeartbeatTime.current >= 30) {
+        const progressRecord = currentProgress?.progress?.find(
+          (p) => String(p.lessonId || p.lesson) === String(currentLesson?._id)
+        );
+        const initialWatchTime = progressRecord?.watchTime || 0;
+
+        enrollmentAPI
+          .updateProgress(id, {
+            sectionId: currentSection?._id,
+            lessonId: currentLesson?._id,
+            watchTime: initialWatchTime + sessionWatchTime.current,
+            lastPosition: Math.floor(state.playedSeconds),
+            completed: false,
+          })
+          .catch((err) => console.error('Heartbeat progress save failed:', err));
+
+        lastHeartbeatTime.current = sessionWatchTime.current;
+      }
+    },
+    [id, currentSection, currentLesson, currentProgress]
+  );
 
   const handleLessonComplete = useCallback(async () => {
     if (!currentLesson) return;
     try {
-      await dispatch(completeLesson({
-        courseId: id,
-        lessonId: currentLesson._id,
-        sectionId: currentSection?._id,
-      })).unwrap();
+      await dispatch(
+        completeLesson({
+          courseId: id,
+          lessonId: currentLesson._id,
+          sectionId: currentSection?._id,
+        })
+      ).unwrap();
       // Optimistically mark done in local progress
       dispatch(markLessonDone(currentLesson._id));
       toast.success('Lesson marked as complete!');
@@ -73,10 +120,29 @@ export default function CourseLearning() {
     }
   }, [dispatch, id, currentLesson, currentSection]);
 
+  const handleVideoComplete = useCallback(async () => {
+    const isCompleted =
+      currentLesson &&
+      (currentProgress?.progress || [])
+        .filter((p) => p.completed)
+        .map((p) => String(p.lessonId || p.lesson))
+        .includes(String(currentLesson._id));
+    if (!currentLesson || isCompleted) return;
+    await handleLessonComplete();
+  }, [currentLesson, currentProgress, handleLessonComplete]);
+
   const handleAddNote = async (e) => {
     e.preventDefault();
     if (!noteText.trim()) return;
-    await dispatch(createNote({ course: id, content: noteText, lessonId: currentLesson?._id }));
+    const noteData = {
+      course: id,
+      content: noteText,
+      lessonId: currentLesson?._id,
+    };
+    if (currentLesson?.type === 'video' && attachTimestamp) {
+      noteData.timestamp = Math.floor(videoTime);
+    }
+    await dispatch(createNote(noteData));
     setNoteText('');
     toast.success('Note saved');
   };
@@ -94,29 +160,56 @@ export default function CourseLearning() {
   const handleAddDiscussion = async (e) => {
     e.preventDefault();
     if (!discussionText.trim()) return;
-    await dispatch(createDiscussion({ course: id, content: discussionText, lessonId: currentLesson?._id }));
+    await dispatch(
+      createDiscussion({ course: id, content: discussionText, lessonId: currentLesson?._id })
+    );
     setDiscussionText('');
     toast.success('Discussion posted');
+  };
+
+  const handleSeekTo = (timestamp) => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(timestamp, 'seconds');
+    }
+  };
+
+  const handleClaimCertificate = async () => {
+    setClaimingCertificate(true);
+    try {
+      const { data } = await enrollmentAPI.getCertificate(id);
+      const url = data?.data?.certificateUrl || data?.certificateUrl;
+      if (url) {
+        window.open(url, '_blank');
+        toast.success('Certificate claimed successfully!');
+      } else {
+        toast.error('Certificate URL not returned');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate certificate');
+    } finally {
+      setClaimingCertificate(false);
+    }
   };
 
   if (loading || !course) return <LoadingSpinner fullScreen />;
 
   const sections = course.sections || [];
-  const allLessons = sections.flatMap(s => s.lessons || []);
+  const allLessons = sections.flatMap((s) => s.lessons || []);
   const totalLessons = allLessons.length;
 
   // Completed lesson IDs from progress (normalize to strings for comparison)
   const completedLessonIds = (currentProgress?.progress || [])
-    .filter(p => p.completed)
-    .map(p => String(p.lessonId || p.lesson));
+    .filter((p) => p.completed)
+    .map((p) => String(p.lessonId || p.lesson));
   const totalCompleted = completedLessonIds.length;
 
-  const isCurrentCompleted = currentLesson && completedLessonIds.includes(String(currentLesson._id));
+  const isCurrentCompleted =
+    currentLesson && completedLessonIds.includes(String(currentLesson._id));
 
   // Navigate to next lesson
   const goToNext = () => {
     if (!currentLesson) return;
-    const flatLessons = sections.flatMap(s => s.lessons.map(l => ({ lesson: l, section: s })));
+    const flatLessons = sections.flatMap((s) => s.lessons.map((l) => ({ lesson: l, section: s })));
     const idx = flatLessons.findIndex(({ lesson }) => lesson._id === currentLesson._id);
     if (idx < flatLessons.length - 1) {
       const next = flatLessons[idx + 1];
@@ -134,17 +227,33 @@ export default function CourseLearning() {
     <div className="min-h-screen bg-dark-50 dark:bg-dark-950">
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-white dark:bg-dark-900 border-b border-dark-100 dark:border-dark-800 px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
-        <Link to="/my-courses" className="flex items-center gap-2 text-dark-500 hover:text-dark-900 dark:hover:text-white text-sm transition-colors flex-shrink-0">
+        <Link
+          to="/my-courses"
+          className="flex items-center gap-2 text-dark-500 hover:text-dark-900 dark:hover:text-white text-sm transition-colors flex-shrink-0"
+        >
           <HiArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">My Courses</span>
         </Link>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-dark-900 dark:text-white truncate">{course.title}</p>
+          <p className="text-sm font-semibold text-dark-900 dark:text-white truncate">
+            {course.title}
+          </p>
           {currentLesson && (
-            <p className="text-xs text-dark-400 truncate">{currentSection?.title} · {currentLesson.title}</p>
+            <p className="text-xs text-dark-400 truncate">
+              {currentSection?.title} · {currentLesson.title}
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {currentProgress?.status === 'completed' && (
+            <button
+              onClick={handleClaimCertificate}
+              disabled={claimingCertificate}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+            >
+              🎓 {claimingCertificate ? 'Claiming...' : 'Get Certificate'}
+            </button>
+          )}
           <div className="text-xs text-dark-400 hidden sm:block">
             {totalCompleted}/{totalLessons} completed
           </div>
@@ -165,8 +274,13 @@ export default function CourseLearning() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
           <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[90vw] bg-white dark:bg-dark-900 overflow-y-auto shadow-xl flex flex-col">
             <div className="flex items-center justify-between p-3 border-b border-dark-100 dark:border-dark-700 flex-shrink-0">
-              <span className="font-semibold text-dark-900 dark:text-white text-sm">Course Contents</span>
-              <button onClick={() => setSidebarOpen(false)} className="p-1 rounded-lg text-dark-400 hover:text-dark-700 dark:hover:text-white">
+              <span className="font-semibold text-dark-900 dark:text-white text-sm">
+                Course Contents
+              </span>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-1 rounded-lg text-dark-400 hover:text-dark-700 dark:hover:text-white"
+              >
                 <HiX className="h-5 w-5" />
               </button>
             </div>
@@ -192,6 +306,9 @@ export default function CourseLearning() {
             sectionTitle={currentSection?.title}
             onComplete={handleLessonComplete}
             isCompleted={isCurrentCompleted}
+            playerRef={playerRef}
+            onProgress={handleVideoProgress}
+            onVideoComplete={handleVideoComplete}
           />
 
           {/* Next lesson button */}
@@ -209,8 +326,12 @@ export default function CourseLearning() {
 
             {activeTab === 'content' && currentLesson && (
               <div className="card p-4 sm:p-6">
-                <h3 className="font-semibold text-dark-900 dark:text-white mb-1 text-sm sm:text-base">{currentLesson.title}</h3>
-                {currentSection && <p className="text-xs text-primary-500 mb-3">{currentSection.title}</p>}
+                <h3 className="font-semibold text-dark-900 dark:text-white mb-1 text-sm sm:text-base">
+                  {currentLesson.title}
+                </h3>
+                {currentSection && (
+                  <p className="text-xs text-primary-500 mb-3">{currentSection.title}</p>
+                )}
                 <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed">
                   {currentLesson.content || 'No additional description for this lesson.'}
                 </p>
@@ -222,11 +343,37 @@ export default function CourseLearning() {
                 <form onSubmit={handleAddNote} className="card p-4">
                   <textarea
                     value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    placeholder={currentLesson ? `Add a note for "${currentLesson.title}"...` : 'Add a note...'}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder={
+                      currentLesson ? `Add a note for "${currentLesson.title}"...` : 'Add a note...'
+                    }
                     className="input-field mb-3 min-h-[90px] resize-none"
                   />
-                  <button type="submit" className="btn-primary text-sm">Save Note</button>
+                  {currentLesson?.type === 'video' && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <input
+                        type="checkbox"
+                        id="attachTimestamp"
+                        checked={attachTimestamp}
+                        onChange={(e) => setAttachTimestamp(e.target.checked)}
+                        className="rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <label
+                        htmlFor="attachTimestamp"
+                        className="text-xs text-dark-600 dark:text-dark-400"
+                      >
+                        Attach video timestamp at{' '}
+                        {(() => {
+                          const m = Math.floor(videoTime / 60);
+                          const s = Math.floor(videoTime % 60);
+                          return `${m}:${s < 10 ? '0' : ''}${s}`;
+                        })()}
+                      </label>
+                    </div>
+                  )}
+                  <button type="submit" className="btn-primary text-sm">
+                    Save Note
+                  </button>
                 </form>
 
                 {notes.length === 0 ? (
@@ -235,10 +382,27 @@ export default function CourseLearning() {
                     <p className="text-sm">No notes yet. Add one above!</p>
                   </div>
                 ) : (
-                  notes.map(note => (
+                  notes.map((note) => (
                     <div key={note._id} className="card p-4">
                       <div className="flex justify-between items-start gap-3">
-                        <p className="text-dark-700 dark:text-dark-300 text-sm flex-1 leading-relaxed break-words">{note.content}</p>
+                        <div className="flex-1 min-w-0">
+                          {note.timestamp !== undefined && note.timestamp > 0 && (
+                            <button
+                              onClick={() => handleSeekTo(note.timestamp)}
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 mb-2 transition-colors border border-indigo-100 dark:border-indigo-900/50"
+                            >
+                              ⏱️{' '}
+                              {(() => {
+                                const m = Math.floor(note.timestamp / 60);
+                                const s = Math.floor(note.timestamp % 60);
+                                return `${m}:${s < 10 ? '0' : ''}${s}`;
+                              })()}
+                            </button>
+                          )}
+                          <p className="text-dark-700 dark:text-dark-300 text-sm leading-relaxed break-words">
+                            {note.content}
+                          </p>
+                        </div>
                         <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={() => handleDownloadNote(note)}
@@ -257,7 +421,13 @@ export default function CourseLearning() {
                         </div>
                       </div>
                       <p className="text-xs text-dark-400 mt-2">
-                        {note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                        {note.createdAt
+                          ? new Date(note.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : ''}
                       </p>
                     </div>
                   ))
@@ -270,11 +440,13 @@ export default function CourseLearning() {
                 <form onSubmit={handleAddDiscussion} className="card p-4">
                   <textarea
                     value={discussionText}
-                    onChange={e => setDiscussionText(e.target.value)}
+                    onChange={(e) => setDiscussionText(e.target.value)}
                     placeholder="Ask a question or start a discussion..."
                     className="input-field mb-3 min-h-[90px] resize-none"
                   />
-                  <button type="submit" className="btn-primary text-sm">Post</button>
+                  <button type="submit" className="btn-primary text-sm">
+                    Post
+                  </button>
                 </form>
 
                 {discussions.length === 0 ? (
@@ -283,7 +455,7 @@ export default function CourseLearning() {
                     <p className="text-sm">No discussions yet. Start one!</p>
                   </div>
                 ) : (
-                  discussions.map(d => (
+                  discussions.map((d) => (
                     <div key={d._id} className="card p-4">
                       <div className="flex items-start gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-sm font-bold text-primary-600 dark:text-primary-400 flex-shrink-0">
@@ -291,15 +463,23 @@ export default function CourseLearning() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-dark-900 dark:text-white">{d.user?.name || 'User'}</span>
-                            <span className="text-xs text-dark-400">{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}</span>
+                            <span className="text-sm font-medium text-dark-900 dark:text-white">
+                              {d.user?.name || 'User'}
+                            </span>
+                            <span className="text-xs text-dark-400">
+                              {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}
+                            </span>
                           </div>
-                          <p className="text-sm text-dark-600 dark:text-dark-400 mt-1 break-words">{d.content}</p>
+                          <p className="text-sm text-dark-600 dark:text-dark-400 mt-1 break-words">
+                            {d.content}
+                          </p>
                           {d.replies?.length > 0 && (
                             <div className="mt-3 pl-3 sm:pl-4 border-l-2 border-dark-100 dark:border-dark-700 space-y-2">
                               {d.replies.map((r, ri) => (
                                 <div key={ri} className="text-sm">
-                                  <span className="font-medium text-dark-700 dark:text-dark-300">{r.user?.name || 'User'}: </span>
+                                  <span className="font-medium text-dark-700 dark:text-dark-300">
+                                    {r.user?.name || 'User'}:{' '}
+                                  </span>
                                   <span className="text-dark-500 break-words">{r.content}</span>
                                 </div>
                               ))}

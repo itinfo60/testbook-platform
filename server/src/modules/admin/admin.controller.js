@@ -1,10 +1,23 @@
-import { User, Course, Enrollment, Review, Test, TestAttempt, Quiz, Payment, Notification } from '../../models/index.js';
+import {
+  User,
+  Course,
+  Enrollment,
+  Review,
+  Test,
+  TestAttempt,
+  Quiz,
+  Payment,
+  Notification,
+  Coupon,
+} from '../../models/index.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import ApiError from '../../utils/ApiError.js';
 import catchAsync from '../../utils/catchAsync.js';
 import redis from '../../config/redis.js';
 import { buildPaginationQuery, buildFilterQuery } from '../../utils/pagination.js';
 import { getDateRange } from '../../utils/helpers.js';
+import { runWithTenant } from '../../utils/TenantContext.js';
+import { reminderQueue, transactionalEmailQueue } from '../../queues/index.js';
 
 // ===== DASHBOARD =====
 
@@ -47,7 +60,9 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     Enrollment.countDocuments({ status: 'active' }),
     Enrollment.countDocuments({ status: 'completed' }),
     User.find().sort('-createdAt').limit(5).select('name email role createdAt avatar').lean(),
-    Enrollment.find().sort('-enrolledAt').limit(5)
+    Enrollment.find()
+      .sort('-enrolledAt')
+      .limit(5)
       .populate('user', 'name email avatar')
       .populate('course', 'title thumbnail price')
       .lean(),
@@ -66,7 +81,12 @@ export const getDashboardStats = catchAsync(async (req, res) => {
         lastMonthRevenue: {
           $sum: {
             $cond: [
-              { $and: [{ $gte: ['$createdAt', startOfLastMonth] }, { $lte: ['$createdAt', endOfLastMonth] }] },
+              {
+                $and: [
+                  { $gte: ['$createdAt', startOfLastMonth] },
+                  { $lte: ['$createdAt', endOfLastMonth] },
+                ],
+              },
               '$amount',
               0,
             ],
@@ -79,7 +99,12 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     },
   ]);
 
-  const revenue = revenueAgg[0] || { totalRevenue: 0, thisMonthRevenue: 0, lastMonthRevenue: 0, thisWeekRevenue: 0 };
+  const revenue = revenueAgg[0] || {
+    totalRevenue: 0,
+    thisMonthRevenue: 0,
+    lastMonthRevenue: 0,
+    thisWeekRevenue: 0,
+  };
 
   // Monthly trends (last 6 months)
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
@@ -131,7 +156,10 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       usersThisMonth,
       enrollmentsThisMonth,
     },
-    roleDistribution: roleDistribution.reduce((acc, r) => { acc[r._id] = r.count; return acc; }, {}),
+    roleDistribution: roleDistribution.reduce((acc, r) => {
+      acc[r._id] = r.count;
+      return acc;
+    }, {}),
     monthlyTrends,
     recent: { users: recentUsers, enrollments: recentEnrollments },
   };
@@ -209,15 +237,21 @@ export const createUser = catchAsync(async (req, res) => {
     isEmailVerified: true, // Admin-created users are auto-verified
   });
 
-  ApiResponse.created(res, {
-    user: { _id: user._id, name: user.name, email: user.email, role: user.role },
-  }, 'User created');
+  ApiResponse.created(
+    res,
+    {
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role },
+    },
+    'User created'
+  );
 });
 
 export const updateUser = catchAsync(async (req, res) => {
   const allowedFields = ['name', 'email', 'role', 'isActive', 'isEmailVerified', 'bio', 'phone'];
   const updates = {};
-  allowedFields.forEach((f) => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+  allowedFields.forEach((f) => {
+    if (req.body[f] !== undefined) updates[f] = req.body[f];
+  });
 
   const user = await User.findByIdAndUpdate(req.params.id, updates, {
     new: true,
@@ -322,7 +356,11 @@ export const toggleFeatured = catchAsync(async (req, res) => {
 
   await redis.delPattern('courses:*');
 
-  ApiResponse.ok(res, { isFeatured: course.isFeatured }, `Course ${course.isFeatured ? 'featured' : 'unfeatured'}`);
+  ApiResponse.ok(
+    res,
+    { isFeatured: course.isFeatured },
+    `Course ${course.isFeatured ? 'featured' : 'unfeatured'}`
+  );
 });
 
 // ===== QUIZ OVERSIGHT =====
@@ -447,7 +485,11 @@ export const adminBulkDeleteReviews = catchAsync(async (req, res) => {
 
   await redis.delPattern('courses:*');
 
-  ApiResponse.ok(res, { deletedCount: result.deletedCount }, `${result.deletedCount} reviews deleted`);
+  ApiResponse.ok(
+    res,
+    { deletedCount: result.deletedCount },
+    `${result.deletedCount} reviews deleted`
+  );
 });
 
 export const adminToggleReviewApproval = catchAsync(async (req, res) => {
@@ -457,7 +499,11 @@ export const adminToggleReviewApproval = catchAsync(async (req, res) => {
   review.isApproved = !review.isApproved;
   await review.save();
 
-  ApiResponse.ok(res, { isApproved: review.isApproved }, `Review ${review.isApproved ? 'approved' : 'hidden'}`);
+  ApiResponse.ok(
+    res,
+    { isApproved: review.isApproved },
+    `Review ${review.isApproved ? 'approved' : 'hidden'}`
+  );
 });
 
 // ===== REVENUE =====
@@ -502,8 +548,14 @@ export const getRevenue = catchAsync(async (req, res) => {
         lastMonth: {
           $sum: {
             $cond: [
-              { $and: [{ $gte: ['$createdAt', startOfLastMonth] }, { $lte: ['$createdAt', endOfLastMonth] }] },
-              '$amount', 0,
+              {
+                $and: [
+                  { $gte: ['$createdAt', startOfLastMonth] },
+                  { $lte: ['$createdAt', endOfLastMonth] },
+                ],
+              },
+              '$amount',
+              0,
             ],
           },
         },
@@ -596,7 +648,7 @@ export const adminGetEnrollments = catchAsync(async (req, res) => {
 
   if (req.query.search) {
     const searchRegex = new RegExp(req.query.search, 'i');
-    
+
     // Find matching users and courses
     const [matchingUsers, matchingCourses] = await Promise.all([
       User.find({
@@ -605,10 +657,7 @@ export const adminGetEnrollments = catchAsync(async (req, res) => {
       Course.find({ title: searchRegex }).distinct('_id'),
     ]);
 
-    filter.$or = [
-      { user: { $in: matchingUsers } },
-      { course: { $in: matchingCourses } },
-    ];
+    filter.$or = [{ user: { $in: matchingUsers } }, { course: { $in: matchingCourses } }];
   }
 
   const result = await Enrollment.paginate(filter, {
@@ -659,9 +708,12 @@ export const adminExportEnrollments = catchAsync(async (req, res) => {
 
   // Generate CSV
   const headers = 'Student Name,Email,Course,Amount Paid,Status,Enrolled Date,Progress\n';
-  const rows = enrollments.map((e) =>
-    `"${e.user?.name || 'N/A'}","${e.user?.email || 'N/A'}","${e.course?.title || 'N/A'}",${e.amountPaid || 0},"${e.status}","${e.enrolledAt?.toISOString().split('T')[0] || ''}",${e.progressPercentage || 0}%`
-  ).join('\n');
+  const rows = enrollments
+    .map(
+      (e) =>
+        `"${e.user?.name || 'N/A'}","${e.user?.email || 'N/A'}","${e.course?.title || 'N/A'}",${e.amountPaid || 0},"${e.status}","${e.enrolledAt?.toISOString().split('T')[0] || ''}",${e.progressPercentage || 0}%`
+    )
+    .join('\n');
 
   const csv = headers + rows;
 
@@ -736,14 +788,17 @@ export const verifyTeacher = catchAsync(async (req, res) => {
 
   await redis.del(`user_${user._id}`);
 
-  ApiResponse.ok(res, { isVerified: user.teacherProfile.isVerified },
-    `Teacher ${user.teacherProfile.isVerified ? 'verified' : 'unverified'}`);
+  ApiResponse.ok(
+    res,
+    { isVerified: user.teacherProfile.isVerified },
+    `Teacher ${user.teacherProfile.isVerified ? 'verified' : 'unverified'}`
+  );
 });
 
 // ===== ANNOUNCEMENTS =====
 
 export const sendAnnouncement = catchAsync(async (req, res) => {
-  const { title, message, targetRoles, link } = req.body;
+  const { title, message, targetRoles, link, scheduledAt } = req.body;
 
   if (!title || !message) {
     throw ApiError.badRequest('Title and message are required');
@@ -751,13 +806,45 @@ export const sendAnnouncement = catchAsync(async (req, res) => {
 
   const roles = targetRoles || ['student', 'teacher'];
 
-  // Get target users
+  // Handle scheduling
+  if (scheduledAt) {
+    const delay = new Date(scheduledAt).getTime() - Date.now();
+    if (delay > 0) {
+      await reminderQueue.add(
+        'announcement',
+        {
+          type: 'announcement',
+          title,
+          message,
+          targetRoles: roles,
+          tenantId: req.tenantId,
+          link: link || '',
+          senderId: req.userId,
+        },
+        { delay }
+      );
+
+      return ApiResponse.created(
+        res,
+        {
+          scheduled: true,
+          scheduledAt,
+          targetRoles: roles,
+        },
+        'Announcement scheduled successfully'
+      );
+    }
+  }
+
+  // Get target users (instant send)
   const targetUsers = await User.find({
     role: { $in: roles },
     isActive: true,
-  }).select('_id').lean();
+  })
+    .select('_id name email')
+    .lean();
 
-  // Create notifications in bulk
+  // Create notifications in bulk (In-App)
   const notifications = targetUsers.map((user) => ({
     recipient: user._id,
     sender: req.userId,
@@ -778,8 +865,98 @@ export const sendAnnouncement = catchAsync(async (req, res) => {
     totalCreated += result.length;
   }
 
-  ApiResponse.created(res, {
-    recipientCount: totalCreated,
-    targetRoles: roles,
-  }, `Announcement sent to ${totalCreated} users`);
+  // Queue emails for each user (Multi-channel)
+  for (const user of targetUsers) {
+    await transactionalEmailQueue.add('send', {
+      type: 'announcement',
+      data: {
+        user,
+        title,
+        message,
+      },
+    });
+  }
+
+  ApiResponse.created(
+    res,
+    {
+      recipientCount: totalCreated,
+      targetRoles: roles,
+      scheduled: false,
+    },
+    `Announcement sent to ${totalCreated} users via email and in-app`
+  );
+});
+
+// ===== COUPONS (Admin — no requireTenant needed) =====
+
+// Helper: get tenantId from req.user, falling back to a fresh DB lookup in case the cache is stale
+async function getAdminTenantId(req) {
+  // 1. Tenant middleware already resolved it from X-Tenant-Id / subdomain header
+  if (req.tenantId) return req.tenantId;
+  // 2. Attached from JWT/user object
+  if (req.user?.tenantId) return req.user.tenantId.toString();
+  // 3. Redis cache may be stale — re-fetch in bypass mode so the tenant plugin
+  //    doesn't add a tenantId filter that would exclude this user
+  const fresh = await runWithTenant(null, true, () =>
+    User.findById(req.userId).select('tenantId').lean()
+  );
+  if (!fresh?.tenantId) {
+    throw ApiError.forbidden(
+      'Your account is not linked to an institute. Super-admin accounts must supply an X-Tenant-Id header.'
+    );
+  }
+  return fresh.tenantId.toString();
+}
+
+export const adminGetCoupons = catchAsync(async (req, res) => {
+  const tenantId = await getAdminTenantId(req);
+  const filter = { tenantId };
+  if (req.query.search) filter.code = { $regex: req.query.search, $options: 'i' };
+  if (req.query.isActive !== undefined) filter.isActive = req.query.isActive === 'true';
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const total = await Coupon.countDocuments(filter);
+  const docs = await Coupon.find(filter)
+    .sort('-createdAt')
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+
+  ApiResponse.paginated(res, { docs, page, limit, total });
+});
+
+export const adminGetCouponById = catchAsync(async (req, res) => {
+  const tenantId = await getAdminTenantId(req);
+  const coupon = await Coupon.findOne({ _id: req.params.id, tenantId }).lean();
+  if (!coupon) throw ApiError.notFound('Coupon not found');
+  ApiResponse.ok(res, { coupon });
+});
+
+export const adminCreateCoupon = catchAsync(async (req, res) => {
+  const tenantId = await getAdminTenantId(req);
+  const code = req.body.code?.toUpperCase();
+  const existing = await Coupon.findOne({ code, tenantId });
+  if (existing) throw ApiError.conflict('Coupon code already exists');
+  const coupon = await Coupon.create({ ...req.body, code, tenantId });
+  ApiResponse.created(res, { coupon }, 'Coupon created');
+});
+
+export const adminUpdateCoupon = catchAsync(async (req, res) => {
+  const tenantId = await getAdminTenantId(req);
+  if (req.body.code) req.body.code = req.body.code.toUpperCase();
+  const coupon = await Coupon.findOneAndUpdate({ _id: req.params.id, tenantId }, req.body, {
+    new: true,
+    runValidators: true,
+  });
+  if (!coupon) throw ApiError.notFound('Coupon not found');
+  ApiResponse.ok(res, { coupon }, 'Coupon updated');
+});
+
+export const adminDeleteCoupon = catchAsync(async (req, res) => {
+  const tenantId = await getAdminTenantId(req);
+  const coupon = await Coupon.findOneAndDelete({ _id: req.params.id, tenantId });
+  if (!coupon) throw ApiError.notFound('Coupon not found');
+  ApiResponse.ok(res, null, 'Coupon deleted');
 });

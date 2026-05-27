@@ -9,7 +9,17 @@ import { sendLiveClassReminder } from '../utils/whatsapp.js';
 export const reminderWorker = new Worker(
   'reminder',
   async (job) => {
-    const { type, liveClassId, title, scheduledAt, tenantId, courseId } = job.data;
+    const {
+      type,
+      liveClassId,
+      title,
+      message,
+      targetRoles,
+      scheduledAt,
+      tenantId,
+      courseId,
+      link,
+    } = job.data;
 
     if (type === 'liveclass') {
       const enrollments = await Enrollment.find({ course: courseId, status: 'active' })
@@ -55,6 +65,36 @@ export const reminderWorker = new Worker(
       }
 
       logger.info(`Reminder sent for live class ${liveClassId} to ${userIds.length} students`);
+    } else if (type === 'announcement') {
+      const roles = targetRoles || ['student', 'teacher'];
+      const targetUsers = await User.find({
+        role: { $in: roles },
+        isActive: true,
+        tenantId,
+      })
+        .select('_id name email')
+        .lean();
+
+      for (const user of targetUsers) {
+        await notificationQueue.add('send', {
+          type: 'announcement',
+          userId: user._id,
+          tenantId,
+          title,
+          message,
+          data: { link: link || '' },
+        });
+
+        await transactionalEmailQueue.add('send', {
+          type: 'announcement',
+          data: {
+            user,
+            title,
+            message,
+          },
+        });
+      }
+      logger.info(`Scheduled announcement "${title}" processed for ${targetUsers.length} users`);
     }
   },
   { connection: queueConnection, concurrency: 2 }

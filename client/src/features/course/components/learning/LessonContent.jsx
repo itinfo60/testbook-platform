@@ -1,37 +1,4 @@
-import { useState } from 'react';
-import { HiDownload, HiExternalLink, HiDocumentText, HiCheckCircle, HiPlay } from 'react-icons/hi';
-
-function VideoPlayer({ url }) {
-  if (!url) return <div className="aspect-video bg-dark-900 rounded-xl flex items-center justify-center text-dark-400">No video URL</div>;
-
-  // YouTube embed
-  if (url.includes('youtube.com/embed') || url.includes('youtu.be') || url.includes('youtube.com/watch')) {
-    const embedUrl = url.includes('youtube.com/embed')
-      ? url
-      : url.includes('youtu.be')
-        ? `https://www.youtube.com/embed/${url.split('youtu.be/')[1]?.split('?')[0]}`
-        : `https://www.youtube.com/embed/${new URLSearchParams(url.split('?')[1]).get('v')}`;
-
-    return (
-      <div className="aspect-video rounded-xl overflow-hidden bg-black">
-        <iframe
-          src={embedUrl}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          title="Lesson video"
-        />
-      </div>
-    );
-  }
-
-  // Native video
-  return (
-    <div className="aspect-video rounded-xl overflow-hidden bg-black">
-      <video src={url} controls className="w-full h-full" />
-    </div>
-  );
-}
+import VideoPlayer from './VideoPlayer';
 
 function TextContent({ content }) {
   if (!content) return <p className="text-dark-400 italic">No content available.</p>;
@@ -69,15 +36,24 @@ function ResourceItem({ resource }) {
       <span className="flex-1 text-sm font-medium text-dark-700 dark:text-dark-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 truncate">
         {resource.title}
       </span>
-      {resource.type === 'link'
-        ? <HiExternalLink className="h-4 w-4 text-dark-400 group-hover:text-primary-500 flex-shrink-0" />
-        : <HiDownload className="h-4 w-4 text-dark-400 group-hover:text-primary-500 flex-shrink-0" />
-      }
+      {resource.type === 'link' ? (
+        <HiExternalLink className="h-4 w-4 text-dark-400 group-hover:text-primary-500 flex-shrink-0" />
+      ) : (
+        <HiDownload className="h-4 w-4 text-dark-400 group-hover:text-primary-500 flex-shrink-0" />
+      )}
     </button>
   );
 }
 
-export default function LessonContent({ lesson, sectionTitle, onComplete, isCompleted }) {
+export default function LessonContent({
+  lesson,
+  sectionTitle,
+  onComplete,
+  isCompleted,
+  playerRef,
+  onProgress,
+  onVideoComplete,
+}) {
   const [completing, setCompleting] = useState(false);
 
   if (!lesson) {
@@ -111,7 +87,9 @@ export default function LessonContent({ lesson, sectionTitle, onComplete, isComp
       {/* Lesson header */}
       <div>
         {sectionTitle && (
-          <p className="text-xs text-primary-500 font-semibold uppercase tracking-wider mb-1">{sectionTitle}</p>
+          <p className="text-xs text-primary-500 font-semibold uppercase tracking-wider mb-1">
+            {sectionTitle}
+          </p>
         )}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -137,7 +115,14 @@ export default function LessonContent({ lesson, sectionTitle, onComplete, isComp
       </div>
 
       {/* Main content by type */}
-      {lesson.type === 'video' && <VideoPlayer url={lesson.videoUrl} />}
+      {lesson.type === 'video' && (
+        <VideoPlayer
+          ref={playerRef}
+          url={lesson.videoUrl}
+          onProgress={onProgress}
+          onComplete={onVideoComplete}
+        />
+      )}
 
       {lesson.type === 'text' && (
         <div className="card p-6">
@@ -149,7 +134,9 @@ export default function LessonContent({ lesson, sectionTitle, onComplete, isComp
         <div className="card p-8 text-center">
           <div className="text-5xl mb-4">📝</div>
           <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">Quiz Lesson</h3>
-          <p className="text-dark-500 text-sm">{lesson.content || 'Complete the quiz to mark this lesson done.'}</p>
+          <p className="text-dark-500 text-sm">
+            {lesson.content || 'Complete the quiz to mark this lesson done.'}
+          </p>
         </div>
       )}
 
@@ -159,7 +146,9 @@ export default function LessonContent({ lesson, sectionTitle, onComplete, isComp
           <h4 className="text-sm font-semibold text-dark-700 dark:text-dark-300 mb-2 flex items-center gap-2">
             <HiDocumentText className="h-4 w-4" /> Description
           </h4>
-          <p className="text-sm text-dark-600 dark:text-dark-400 leading-relaxed whitespace-pre-wrap">{lesson.content}</p>
+          <p className="text-sm text-dark-600 dark:text-dark-400 leading-relaxed whitespace-pre-wrap">
+            {lesson.content}
+          </p>
         </div>
       )}
 

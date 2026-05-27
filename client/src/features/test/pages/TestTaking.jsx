@@ -9,6 +9,7 @@ import TestNavigator from '../components/TestNavigator';
 import TestQuestion from '../components/TestQuestion';
 import toast from 'react-hot-toast';
 import { HiX, HiMenu } from 'react-icons/hi';
+import { testAPI } from '@/services/api';
 
 const enterFullscreen = () => {
   const el = document.documentElement;
@@ -47,8 +48,12 @@ export default function TestTaking() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const isExitingRef = useRef(false); // true when we intentionally exit fullscreen
+  const webcamRef = useRef(null);
+  const [webcamStream, setWebcamStream] = useState(null);
 
-  const isTestActive = !!attempt && !result;
+  const questions = storedQuestions.length ? storedQuestions : attempt?.questions || [];
+  const currentQuestion = questions[currentQuestionIndex];
+  const duration = attempt?.duration || 60;
 
   // Start test
   useEffect(() => {
@@ -111,13 +116,49 @@ export default function TestTaking() {
     return () => document.removeEventListener('keydown', handler, true);
   }, [isTestActive]);
 
-  // Block tab switch / window blur warning
+  // Log violations for copy, cut, paste actions
   useEffect(() => {
     if (!isTestActive) return;
-    const handler = () =>
+    const handler = (e) => {
+      e.preventDefault();
+      testAPI.logViolation(attemptId).catch(() => {});
+    };
+    document.addEventListener('copy', handler);
+    document.addEventListener('cut', handler);
+    document.addEventListener('paste', handler);
+    return () => {
+      document.removeEventListener('copy', handler);
+      document.removeEventListener('cut', handler);
+      document.removeEventListener('paste', handler);
+    };
+  }, [isTestActive, attemptId]);
+
+  // Block tab switch / window blur warning and log violation
+  useEffect(() => {
+    if (!isTestActive) return;
+    const handler = () => {
       toast('Please focus on the test window!', { icon: '⚠️', id: 'focus-warn' });
+      testAPI.logViolation(attemptId).catch(() => {});
+    };
     window.addEventListener('blur', handler);
     return () => window.removeEventListener('blur', handler);
+  }, [isTestActive, attemptId]);
+
+  // Initialize webcam stream for PiP proctoring
+  useEffect(() => {
+    if (!isTestActive) return;
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        setWebcamStream(stream);
+        if (webcamRef.current) webcamRef.current.srcObject = stream;
+      })
+      .catch(() => {});
+    return () => {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach((track) => track.stop());
+      }
+    };
   }, [isTestActive]);
 
   // Prevent page refresh / close
@@ -177,9 +218,7 @@ export default function TestTaking() {
     }
   }, [result, navigate, id]);
 
-  const questions = storedQuestions.length ? storedQuestions : attempt?.questions || [];
-  const currentQuestion = questions[currentQuestionIndex];
-  const duration = attempt?.duration || 60;
+  // Extract attempt related values early for hooks
   const attemptId = attempt?.attempt?._id;
   const startTime = attempt?.attempt?.startedAt;
   const testTitle = attempt?.title || 'Test';
@@ -384,6 +423,14 @@ export default function TestTaking() {
           </div>
         </div>
       </Modal>
+      {/* Webcam PiP */}
+      <video
+        ref={webcamRef}
+        autoPlay
+        muted
+        playsInline
+        className="fixed bottom-4 right-4 w-32 h-24 rounded-lg border shadow-lg object-cover"
+      />
     </div>
   );
 }

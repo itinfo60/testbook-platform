@@ -44,7 +44,7 @@ export async function generateCertificatePDF({ user, course, enrollment }) {
       }
     });
 
-    const certId = crypto.randomBytes(8).toString('hex').toUpperCase();
+    const certId = enrollment.certificateId || crypto.randomBytes(8).toString('hex').toUpperCase();
     const issuedDate = new Date().toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'long',

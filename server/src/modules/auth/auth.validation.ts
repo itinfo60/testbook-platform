@@ -41,6 +41,7 @@ export const updateProfileSchema = z.object({
   phone: z
     .string()
     .regex(/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number')
+    .or(z.literal(''))
     .optional(),
   avatar: z
     .object({

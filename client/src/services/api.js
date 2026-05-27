@@ -159,6 +159,24 @@ export const authAPI = {
   setupMfa: () => api.post('/auth/mfa/setup'),
   verifyMfa: (token) => api.post('/auth/mfa/verify', { token }),
   disableMfa: (token) => api.post('/auth/mfa/disable', { token }),
+  checkEmail: (email) => api.get('/auth/check-email', { params: { email } }),
+};
+
+export const parentAPI = {
+  generateAccessCode: () => api.post('/parent/generate-code'),
+  linkStudent: (data) => api.post('/parent/link', data),
+  getLinkedStudents: () => api.get('/parent/students'),
+  getStudentProgress: (studentId) => api.get(`/parent/students/${studentId}/progress`),
+  getTeachers: (studentId) => api.get(`/parent/messages/teachers/${studentId}`),
+  getThreadMessages: (threadId) => api.get(`/parent/messages/thread/${threadId}`),
+  getActiveThreads: () => api.get('/parent/messages/threads'),
+  sendMessage: (data) => api.post('/parent/messages', data),
+};
+
+export const attendanceAPI = {
+  getAttendance: (courseId, date) =>
+    api.get(`/attendance/course/${courseId}`, { params: { date } }),
+  saveAttendance: (courseId, data) => api.post(`/attendance/course/${courseId}`, data),
 };
 
 export const courseAPI = {
@@ -173,15 +191,8 @@ export const courseAPI = {
 };
 
 export const enrollmentAPI = {
-  enroll: (data) => api.post('/enrollments', data),
-  getMyEnrollments: () => api.get('/enrollments/my'),
-  getMyTestEnrollments: () => api.get('/enrollments/my-tests'),
-  checkEnrollment: (courseId) => api.get(`/enrollments/check/${courseId}`),
-  getProgress: (courseId) => api.get(`/enrollments/progress/${courseId}`),
-  updateProgress: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
-  completeLesson: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
+  verifyPayment: (id) => api.patch(`/enrollments/${id}/verify`),
   getTeacherStudents: () => api.get('/enrollments/teacher/students'),
-  getCertificate: (courseId) => api.get(`/enrollments/certificate/${courseId}`),
 };
 
 export const reviewAPI = {
@@ -198,6 +209,7 @@ export const testAPI = {
   update: (id, data) => api.put(`/tests/${id}`, data),
   start: (id) => api.post(`/tests/${id}/start`),
   submit: (attemptId, data) => api.post(`/tests/submit/${attemptId}`, data),
+  logViolation: (attemptId) => api.post(`/tests/violation/${attemptId}`),
   getAnalytics: (id) => api.get(`/tests/${id}/analytics`),
   getTeacherTests: () => api.get('/tests/teacher/my-tests'),
   getMyAttempts: () => api.get('/tests/my/attempts'),

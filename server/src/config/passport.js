@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import User from '../modules/user/user.model.js';
+import User from '../modules/user/user.model.ts';
 import config from './index.js';
 
 if (config.google.clientId && config.google.clientSecret) {

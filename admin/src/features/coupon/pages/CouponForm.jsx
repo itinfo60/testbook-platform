@@ -2,7 +2,13 @@ import LoadingSpinner from '@/components/loadingSpinner';
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createCoupon, updateCoupon, fetchCouponById, clearSelected } from '@/features/coupon/couponSlice';
+import { ArrowLeft, Save } from 'lucide-react';
+import {
+  createCoupon,
+  updateCoupon,
+  fetchCouponById,
+  clearSelected,
+} from '@/features/coupon/couponSlice';
 
 // Helper: format date for input[type=date]
 const toDateInput = (d) => {
@@ -65,7 +71,7 @@ export default function CouponForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Build payload with ALL possible field names the server might expect
     const data = {
       code: form.code.toUpperCase().trim(),
@@ -107,7 +113,6 @@ export default function CouponForm() {
       data.description = form.description;
     }
 
-
     const action = isEdit ? updateCoupon({ id, data }) : createCoupon(data);
     const result = await dispatch(action);
     if (!result.error) navigate('/coupons');
@@ -116,13 +121,20 @@ export default function CouponForm() {
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
   if (isEdit && loading && !selected) {
-    return <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>;
+    return (
+      <div className="flex justify-center py-20">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/coupons')} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+        <button
+          onClick={() => navigate('/coupons')}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -166,7 +178,11 @@ export default function CouponForm() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Discount Type
             </label>
-            <select value={form.discountType} onChange={handleChange('discountType')} className="input-field">
+            <select
+              value={form.discountType}
+              onChange={handleChange('discountType')}
+              className="input-field"
+            >
               <option value="percentage">Percentage (%)</option>
               <option value="fixed">Fixed Amount (₹)</option>
             </select>

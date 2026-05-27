@@ -56,12 +56,16 @@ import blogRoutes from './modules/blog/blog.routes.js';
 import instituteRoutes from './modules/institute/institute.routes.js';
 import subscriptionRoutes from './modules/subscription/subscription.routes.js';
 import aiRoutes from './modules/ai/ai.routes.js';
+import aiQuizRoutes from './modules/aiQuiz/aiQuiz.routes.js';
 import liveClassRoutes from './modules/liveclass/liveclass.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 import gdprRoutes from './modules/gdpr/gdpr.routes.js';
 import apiKeyRoutes from './modules/apikey/apikey.routes.js';
 import uploadRoutes from './modules/upload/upload.routes.js';
+import libraryRoutes from './modules/library/library.routes.js';
 import affiliateRoutes from './modules/affiliate/affiliate.routes.js';
+import parentRoutes from './modules/parent/parent.routes.js';
+import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import { auditLog } from './middleware/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -80,19 +84,21 @@ app.use((req, _res, next) => {
 // ===== BULL BOARD (Queue Monitor) =====
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
-createBullBoard({
-  queues: [
-    new BullMQAdapter(transactionalEmailQueue),
-    new BullMQAdapter(bulkEmailQueue),
-    new BullMQAdapter(notificationQueue),
-    new BullMQAdapter(certificateQueue),
-    new BullMQAdapter(dripQueue),
-    new BullMQAdapter(reminderQueue),
-    new BullMQAdapter(analyticsQueue),
-    new BullMQAdapter(dunningQueue),
-  ],
-  serverAdapter,
-});
+if (process.env.NODE_ENV !== 'test') {
+  createBullBoard({
+    queues: [
+      new BullMQAdapter(transactionalEmailQueue),
+      new BullMQAdapter(bulkEmailQueue),
+      new BullMQAdapter(notificationQueue),
+      new BullMQAdapter(certificateQueue),
+      new BullMQAdapter(dripQueue),
+      new BullMQAdapter(reminderQueue),
+      new BullMQAdapter(analyticsQueue),
+      new BullMQAdapter(dunningQueue),
+    ],
+    serverAdapter,
+  });
+}
 // Protected by basic auth in production
 app.use(
   '/admin/queues',
@@ -222,12 +228,16 @@ app.use(`${API_PREFIX}/notes`, requireTenant, noteRoutes);
 app.use(`${API_PREFIX}/institutes`, instituteRoutes);
 app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/ai`, requireTenant, aiRoutes);
+app.use(`${API_PREFIX}/ai-quiz`, requireTenant, aiQuizRoutes);
 app.use(`${API_PREFIX}/live-classes`, requireTenant, liveClassRoutes);
 app.use(`${API_PREFIX}/audit-logs`, requireTenant, auditRoutes);
 app.use(`${API_PREFIX}/gdpr`, requireTenant, gdprRoutes);
 app.use(`${API_PREFIX}/api-keys`, requireTenant, apiKeyRoutes);
-app.use(`${API_PREFIX}/uploads`, uploadRoutes);
+import digitalLibraryRoutes from './modules/digitalLibrary/digitalLibrary.routes.js';
+app.use(`${API_PREFIX}/library`, requireTenant, digitalLibraryRoutes);
 app.use(`${API_PREFIX}/affiliate`, requireTenant, affiliateRoutes);
+app.use(`${API_PREFIX}/parent`, requireTenant, parentRoutes);
+app.use(`${API_PREFIX}/attendance`, requireTenant, attendanceRoutes);
 
 // ===== AUDIT LOG =====
 app.use(`${API_PREFIX}`, auditLog);

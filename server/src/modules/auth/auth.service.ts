@@ -6,7 +6,7 @@ import config from '../../config/index.js';
 import redis from '../../config/redis.js';
 import { AuthRepository } from './auth.repository.js';
 import { RegisterInput, LoginInput, UpdateProfileInput } from './auth.validation.js';
-import { IUser, AuthResponseDto } from './auth.dto.js';
+import { IUser, AuthResponseDto } from './auth.dto.ts';
 import { ApiError } from '../../core/api-error.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 import { transactionalEmailQueue } from '../../queues/index.js';
@@ -23,6 +23,13 @@ export class AuthService {
 
   constructor(authRepository = new AuthRepository()) {
     this.authRepository = authRepository;
+  }
+
+  async checkEmail(email: string, tenantId: string | null): Promise<boolean> {
+    const existingUser = await runWithTenant(null, true, () =>
+      this.authRepository.findOne({ email })
+    );
+    return !existingUser;
   }
 
   async register(
@@ -57,7 +64,6 @@ export class AuthService {
       }
     }
 
-    // Check if email already registered (needs bypass tenant check to ensure global uniqueness)
     const existingUser = await runWithTenant(null, true, () =>
       this.authRepository.findOne({ email })
     );
@@ -161,14 +167,7 @@ export class AuthService {
         if (userTenantId && userTenantId !== tenantId) {
           throw ApiError.unauthorized('Invalid email or password');
         }
-      } else if (!userTenantId) {
-        // User has no tenant AND request has no tenant — this is a platform-level
-        // account without a tenant (shouldn't normally exist, but be safe)
-        throw ApiError.badRequest(
-          'No institute context found. Please access this platform via your institute URL or provide X-Tenant-Id.'
-        );
       }
-      // else: tenantId is null but user.tenantId is set — self-identifying login ✓
     }
 
     const isPasswordValid = await user.comparePassword(password);

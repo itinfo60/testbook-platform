@@ -190,6 +190,21 @@ class EmailService {
       `,
     });
   }
+
+  async sendAnnouncementEmail(user, title, message) {
+    return this.send({
+      to: user.email,
+      subject: `[Announcement] ${title}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1F2937;">
+          <h2 style="color:#4F46E5;margin-bottom:16px;">Announcement: ${title}</h2>
+          <p>Hi ${user.name},</p>
+          <div style="background:#F3F4F6;padding:16px;border-radius:8px;margin:16px 0;white-space:pre-wrap;line-height:1.6;color:#374151;">${message}</div>
+          <p style="color:#6B7280;font-size:12px;margin-top:24px;">This is a system broadcast notification from your institute.</p>
+        </div>
+      `,
+    });
+  }
 }
 
 /**

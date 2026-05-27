@@ -13,21 +13,21 @@ test.describe('Critical Path — New User Journey', () => {
   test('step 1: register a new account', async ({ page }) => {
     await page.goto('/register');
 
-    // Fill registration form fields (selectors may vary by actual form)
-    const nameInput = page.getByPlaceholder(/name|full name/i).first();
-    const emailInput = page.getByPlaceholder(/email/i).first();
-    const passwordInput = page.getByPlaceholder(/password/i).first();
+    // Fill registration form fields using robust name selectors
+    const nameInput = page.locator('input[name="name"]');
+    const emailInput = page.locator('input[name="email"]');
+    const passwordInput = page.locator('input[name="password"]');
 
     await nameInput.fill(TEST_NAME);
     await emailInput.fill(TEST_EMAIL);
     await passwordInput.fill(TEST_PASSWORD);
 
-    // Handle confirm password if present
-    const confirmInput = page.getByPlaceholder(/confirm/i).first();
+    // Handle confirm password
+    const confirmInput = page.locator('input[name="confirmPassword"]');
     const confirmCount = await confirmInput.count();
     if (confirmCount > 0) await confirmInput.fill(TEST_PASSWORD);
 
-    await page.getByRole('button', { name: /register|sign up|create/i }).click();
+    await page.getByRole('button', { name: /register|sign up|create account/i }).click();
 
     // After registration: should redirect or show success (not stay on /register)
     await page.waitForTimeout(3000);

@@ -5,7 +5,12 @@ import { HiLockClosed, HiShieldCheck, HiCheckCircle, HiBeaker } from 'react-icon
 import { fetchCourseById } from '@/features/course/courseSlice';
 import { fetchTestById } from '@/features/test/testSlice';
 import { enrollInCourse } from '@/features/enrollment/enrollmentSlice';
-import { dummyCheckout, validateCoupon, clearPaymentState, clearCoupon } from '@/features/payment/paymentSlice';
+import {
+  dummyCheckout,
+  validateCoupon,
+  clearPaymentState,
+  clearCoupon,
+} from '@/features/payment/paymentSlice';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import PriceTag from '@/components/common/PriceTag';
 import { Button, Input } from '@/components/ui';
@@ -15,9 +20,9 @@ export default function Checkout() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { currentCourse: course, loading: courseLoading } = useSelector(state => state.courses);
-  const { currentTest: test, loading: testLoading } = useSelector(state => state.tests);
-  const { coupon, discount, loading } = useSelector(state => state.payments);
+  const { currentCourse: course, loading: courseLoading } = useSelector((state) => state.courses);
+  const { currentTest: test, loading: testLoading } = useSelector((state) => state.tests);
+  const { coupon, discount, loading } = useSelector((state) => state.payments);
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') || 'course';
   const isTest = type === 'test';
@@ -34,7 +39,12 @@ export default function Checkout() {
     dispatch(clearPaymentState());
   }, [dispatch, id, isTest]);
 
-  if ((courseLoading && !isTest) || (testLoading && isTest) || (!course && !isTest) || (!test && isTest)) {
+  if (
+    (courseLoading && !isTest) ||
+    (testLoading && isTest) ||
+    (!course && !isTest) ||
+    (!test && isTest)
+  ) {
     return <LoadingSpinner fullScreen />;
   }
 
@@ -45,7 +55,13 @@ export default function Checkout() {
 
   const handleApplyCoupon = () => {
     if (!couponCode.trim()) return;
-    dispatch(validateCoupon({ code: couponCode, courseId: id }));
+    dispatch(
+      validateCoupon({
+        code: couponCode,
+        courseId: isTest ? undefined : id,
+        amount: effectivePrice,
+      })
+    );
   };
 
   const handleFreeEnroll = async () => {
@@ -57,7 +73,9 @@ export default function Checkout() {
     try {
       await dispatch(enrollInCourse({ courseId: id })).unwrap();
       toast.success('Enrolled successfully!');
-      navigate('/checkout/success', { state: { courseId: id, itemName: item.title, free: true, isTest: false } });
+      navigate('/checkout/success', {
+        state: { courseId: id, itemName: item.title, free: true, isTest: false },
+      });
     } catch (err) {
       toast.error(err || 'Enrollment failed');
     }
@@ -65,11 +83,14 @@ export default function Checkout() {
 
   const handlePaidEnroll = async () => {
     if (!confirmed) {
-      toast.error('Please confirm the test payment to proceed');
+      toast.error('Please confirm the payment to proceed');
       return;
     }
     try {
       const payload = isTest ? { testId: id } : { courseId: id };
+      if (coupon) {
+        payload.couponCode = coupon.coupon?.code || coupon.code;
+      }
       await dispatch(dummyCheckout(payload)).unwrap();
       toast.success(`Payment successful! Purchased ${isTest ? 'test' : 'course'}.`);
       navigate('/checkout/success', {
@@ -89,15 +110,24 @@ export default function Checkout() {
       {/* Course card */}
       <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
         <div className="flex gap-3 sm:gap-4">
-          <div className="h-16 w-22 sm:h-20 sm:w-28 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden" style={{minWidth:'5.5rem'}}>
-            {(item.thumbnail?.url || item.thumbnail) ? (
-              <img src={item.thumbnail?.url || item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
+          <div
+            className="h-16 w-22 sm:h-20 sm:w-28 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden"
+            style={{ minWidth: '5.5rem' }}
+          >
+            {item.thumbnail?.url || item.thumbnail ? (
+              <img
+                src={item.thumbnail?.url || item.thumbnail}
+                alt={item.title}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-2xl">📘</div>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-dark-900 dark:text-white line-clamp-2">{item.title}</h3>
+            <h3 className="font-semibold text-dark-900 dark:text-white line-clamp-2">
+              {item.title}
+            </h3>
             <p className="text-sm text-dark-500 mt-1">{item.teacher?.name}</p>
             <PriceTag
               price={effectivePrice}
@@ -110,17 +140,19 @@ export default function Checkout() {
       </div>
 
       {/* Coupon — only for paid courses/tests */}
-      {!isFree && !isTest && (
+      {!isFree && (
         <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
           <h3 className="font-semibold text-dark-900 dark:text-white mb-3">Have a coupon?</h3>
           <div className="flex gap-2">
             <Input
               value={couponCode}
-              onChange={e => setCouponCode(e.target.value.toUpperCase())}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               placeholder="Enter coupon code"
               className="flex-1"
             />
-            <Button variant="outline" onClick={handleApplyCoupon} loading={loading}>Apply</Button>
+            <Button variant="outline" onClick={handleApplyCoupon} loading={loading}>
+              Apply
+            </Button>
           </div>
           {coupon && (
             <div className="mt-3 flex items-center justify-between p-3 bg-secondary-50 dark:bg-secondary-900/20 rounded-lg">
@@ -128,7 +160,10 @@ export default function Checkout() {
                 Coupon applied! You save ₹{discount}
               </span>
               <button
-                onClick={() => { dispatch(clearCoupon()); setCouponCode(''); }}
+                onClick={() => {
+                  dispatch(clearCoupon());
+                  setCouponCode('');
+                }}
                 className="text-xs text-dark-400 hover:text-red-500"
               >
                 Remove
@@ -173,20 +208,23 @@ export default function Checkout() {
             <h3 className="font-semibold text-amber-800 dark:text-amber-300">Demo / Test Mode</h3>
           </div>
           <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-            This is a demo app. No real money is charged. Check the box below to simulate a successful payment.
+            This is a demo app. No real money is charged. Check the box below to simulate a
+            successful payment.
           </p>
           <label className="flex items-start gap-3 cursor-pointer group">
             <div className="relative mt-0.5 flex-shrink-0">
               <input
                 type="checkbox"
                 checked={confirmed}
-                onChange={e => setConfirmed(e.target.checked)}
+                onChange={(e) => setConfirmed(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all
-                ${confirmed
-                  ? 'bg-primary-600 border-primary-600'
-                  : 'bg-white dark:bg-dark-700 border-dark-300 dark:border-dark-500 group-hover:border-primary-400'
+              <div
+                className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all
+                ${
+                  confirmed
+                    ? 'bg-primary-600 border-primary-600'
+                    : 'bg-white dark:bg-dark-700 border-dark-300 dark:border-dark-500 group-hover:border-primary-400'
                 }`}
               >
                 {confirmed && <HiCheckCircle className="h-4 w-4 text-white" />}
@@ -209,19 +247,20 @@ export default function Checkout() {
         loading={loading}
         disabled={!isFree && finalPrice > 0 && !confirmed}
       >
-        {isFree || finalPrice === 0
-          ? 'Enroll for Free'
-          : (
-            <span className="flex items-center justify-center gap-2">
-              <HiLockClosed className="h-4 w-4" />
-              Pay ₹{finalPrice.toLocaleString('en-IN')}
-            </span>
-          )
-        }
+        {isFree || finalPrice === 0 ? (
+          'Enroll for Free'
+        ) : (
+          <span className="flex items-center justify-center gap-2">
+            <HiLockClosed className="h-4 w-4" />
+            Pay ₹{finalPrice.toLocaleString('en-IN')}
+          </span>
+        )}
       </Button>
 
       {!isFree && finalPrice > 0 && !confirmed && (
-        <p className="text-xs text-dark-400 text-center mt-2">Check the box above to enable payment</p>
+        <p className="text-xs text-dark-400 text-center mt-2">
+          Check the box above to enable payment
+        </p>
       )}
 
       <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-dark-400">

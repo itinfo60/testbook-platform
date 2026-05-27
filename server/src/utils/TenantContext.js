@@ -1,1 +1,1 @@
-export { runWithTenant, getTenantId, isBypassTenant } from '../core/tenant.context.js';
+export { runWithTenant, getTenantId, isBypassTenant } from '../core/tenant.context.ts';

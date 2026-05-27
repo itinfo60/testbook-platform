@@ -11,6 +11,7 @@ import Test from '../test/test.model.js';
 import redis from '../../config/redis.js';
 import { transactionalEmailQueue, notificationQueue } from '../../queues/index.js';
 import mongoose from 'mongoose';
+import CouponService from '../coupon/coupon.service.js';
 
 export class PaymentController extends BaseController {
   private readonly paymentService: PaymentService;
@@ -121,7 +122,7 @@ export class PaymentController extends BaseController {
   });
 
   dummyCheckout = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const { courseId, testId } = req.body;
+    const { courseId, testId, couponCode } = req.body;
     if (!req.userId) throw ApiError.unauthorized();
 
     if (!courseId && !testId) {
@@ -155,6 +156,25 @@ export class PaymentController extends BaseController {
       if (existing) throw ApiError.conflict('Already purchased test');
     }
 
+    // Apply Coupon
+    let discount = 0;
+    let appliedCoupon = null;
+    if (couponCode) {
+      const couponService = new CouponService();
+      try {
+        const validation = await couponService.validateCoupon(req.userId, {
+          code: couponCode,
+          courseId: courseId || undefined,
+          amount,
+        });
+        discount = validation.discount;
+        amount = validation.finalAmount;
+        appliedCoupon = validation.coupon;
+      } catch (err) {
+        throw ApiError.badRequest((err as any).message || 'Invalid coupon code');
+      }
+    }
+
     const paymentData: any = {
       user: new mongoose.Types.ObjectId(req.userId),
       orderId: `DEMO_${Date.now()}_${req.userId.slice(-6)}`,
@@ -169,6 +189,12 @@ export class PaymentController extends BaseController {
     if (courseId) paymentData.course = new mongoose.Types.ObjectId(courseId);
     if (testId) paymentData.test = new mongoose.Types.ObjectId(testId);
 
+    if (appliedCoupon) {
+      paymentData.couponUsed = appliedCoupon.code;
+      paymentData.metadata.coupon = appliedCoupon.code;
+      paymentData.metadata.discount = discount;
+    }
+
     const payment = await Payment.create(paymentData);
 
     const enrollmentData: any = {
@@ -181,6 +207,12 @@ export class PaymentController extends BaseController {
 
     const enrollment = await Enrollment.create(enrollmentData);
     const user = await User.findById(req.userId);
+
+    // Record coupon usage
+    if (couponCode) {
+      const couponService = new CouponService();
+      await couponService.recordUsage(couponCode, req.userId).catch(() => {});
+    }
 
     if (courseId) {
       await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });

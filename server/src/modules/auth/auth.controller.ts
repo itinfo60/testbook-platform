@@ -3,7 +3,7 @@ import { BaseController } from '../../core/base.controller.js';
 import { AuthService } from './auth.service.js';
 import { ApiError } from '../../core/api-error.js';
 import config from '../../config/index.js';
-import { IUser } from './auth.dto.js';
+import { IUser } from './auth.dto.ts';
 import User from '../user/user.model.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 
@@ -55,6 +55,7 @@ export class AuthController extends BaseController {
   login = this.catchAsync(async (req: CustomRequest, res: Response) => {
     const userAgent = req.headers['user-agent'] || 'unknown';
     const result = await this.authService.login(req.body, req.tenantId || null, userAgent);
+    console.log('Login result:', result);
 
     if ('requiresMfa' in result && result.requiresMfa) {
       return this.ok(
@@ -72,6 +73,11 @@ export class AuthController extends BaseController {
       {
         user: mfaResult.user,
         accessToken: mfaResult.tokens.accessToken,
+        refreshToken: mfaResult.tokens.refreshToken,
+        tokens: {
+          accessToken: mfaResult.tokens.accessToken,
+          refreshToken: mfaResult.tokens.refreshToken,
+        },
       },
       'Login successful'
     );
@@ -143,6 +149,13 @@ export class AuthController extends BaseController {
     }
     const user = await this.authService.getMe(req.userId);
     return this.ok(res, { user });
+  });
+
+  checkEmail = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    const email = req.query.email as string;
+    if (!email) throw ApiError.badRequest('Email is required');
+    const isAvailable = await this.authService.checkEmail(email, req.tenantId || null);
+    return this.ok(res, { available: isAvailable });
   });
 
   updateProfile = this.catchAsync(async (req: CustomRequest, res: Response) => {

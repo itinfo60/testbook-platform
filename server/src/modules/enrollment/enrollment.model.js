@@ -31,8 +31,8 @@ const enrollmentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'completed', 'expired', 'refunded'],
-      default: 'active',
+      enum: ['active', 'completed', 'expired', 'refunded', 'pending'],
+      default: 'pending',
       index: true,
     },
     progress: [progressSchema],
@@ -46,6 +46,7 @@ const enrollmentSchema = new mongoose.Schema(
     lastAccessedAt: { type: Date, default: Date.now },
     certificateIssued: { type: Boolean, default: false },
     certificateUrl: String,
+    certificateId: { type: String, unique: true, sparse: true },
   },
   {
     timestamps: true,

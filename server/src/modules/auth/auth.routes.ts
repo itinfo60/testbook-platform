@@ -19,6 +19,7 @@ const controller = new AuthController();
 
 router.post('/register', authLimiter, validate(registerSchema), controller.register);
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
+router.get('/check-email', controller.checkEmail);
 router.post('/logout', authenticate, controller.logout);
 router.post('/refresh-token', controller.refreshToken);
 router.post(

@@ -15,6 +15,7 @@ import AdminLayout from '@/layouts/AdminLayout';
 // Features / Pages
 import LoginPage from '@/features/auth/pages/LoginPage';
 import DashboardPage from '@/features/dashboard/pages/DashboardPage';
+import LibraryAdmin from '@/features/library/pages/LibraryAdmin';
 import UserList from '@/features/user/pages/UserList';
 import UserForm from '@/features/user/pages/UserForm';
 import CourseList from '@/features/course/pages/CourseList';
@@ -58,7 +59,10 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+      />
       <Route element={<ProtectedRoute />}>
         <Route element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
@@ -85,6 +89,7 @@ export default function App() {
           <Route path="coupons/create" element={<CouponForm />} />
           <Route path="coupons/:id/edit" element={<CouponForm />} />
           <Route path="announcements" element={<AnnouncementCenter />} />
+          <Route path="library" element={<LibraryAdmin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>

@@ -11,10 +11,31 @@ export const errorConverter = (err, req, res, next) => {
   let error = err;
 
   if (!(error instanceof ApiError)) {
-    const statusCode = error.statusCode || error.status || 500;
-    const message = error.message || 'Internal Server Error';
-    error = new ApiError(statusCode, message, [], err.stack);
-    error.isOperational = false;
+    // Mongoose validation error → 400
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map((e) => ({ field: e.path, message: e.message }));
+      error = new ApiError(400, 'Validation Error', errors, err.stack);
+      error.isOperational = true;
+      // Mongoose bad ObjectId → 400
+    } else if (err.name === 'CastError') {
+      error = new ApiError(400, `Invalid ${err.path}: ${err.value}`, [], err.stack);
+      error.isOperational = true;
+      // Mongoose duplicate key → 409
+    } else if (err.code === 11000) {
+      const field = Object.keys(err.keyValue || {})[0] || 'field';
+      error = new ApiError(
+        409,
+        `Duplicate value for '${field}'`,
+        [{ field, message: `Duplicate value` }],
+        err.stack
+      );
+      error.isOperational = true;
+    } else {
+      const statusCode = error.statusCode || error.status || 500;
+      const message = error.message || 'Internal Server Error';
+      error = new ApiError(statusCode, message, [], err.stack);
+      error.isOperational = false;
+    }
   }
 
   next(error);

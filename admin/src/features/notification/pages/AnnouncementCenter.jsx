@@ -10,6 +10,7 @@ export default function AnnouncementCenter() {
     targetRole: 'all',
     type: 'info',
     priority: 'normal',
+    scheduledAt: '',
   });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState([]);
@@ -22,10 +23,24 @@ export default function AnnouncementCenter() {
     }
     setSending(true);
     try {
-      await notificationsAPI.send(form);
-      toast.success('Announcement sent successfully!');
+      await notificationsAPI.send({
+        ...form,
+        scheduledAt: form.scheduledAt || undefined,
+      });
+      toast.success(
+        form.scheduledAt
+          ? 'Announcement scheduled successfully!'
+          : 'Announcement sent successfully!'
+      );
       setSent((prev) => [{ ...form, sentAt: new Date().toISOString(), id: Date.now() }, ...prev]);
-      setForm({ title: '', message: '', targetRole: 'all', type: 'info', priority: 'normal' });
+      setForm({
+        title: '',
+        message: '',
+        targetRole: 'all',
+        type: 'info',
+        priority: 'normal',
+        scheduledAt: '',
+      });
     } catch (err) {
       // handled by interceptor
     } finally {
@@ -111,7 +126,7 @@ export default function AnnouncementCenter() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Target Audience
@@ -152,6 +167,17 @@ export default function AnnouncementCenter() {
                   <option value="normal">Normal</option>
                   <option value="high">High</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Schedule Send (Optional)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.scheduledAt}
+                  onChange={handleChange('scheduledAt')}
+                  className="input-field"
+                />
               </div>
             </div>
 

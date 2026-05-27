@@ -10,13 +10,14 @@ test.describe('Course Catalog', () => {
 
   test('course detail page loads', async ({ page }) => {
     await page.goto('/courses');
-    const firstCourse = page.locator('a[href*="/courses/"]').first();
-    const count = await firstCourse.count();
-    if (count === 0) {
-      // No courses seeded — skip
+    // Wait for the course cards to load from the API
+    try {
+      await page.waitForSelector('a[href*="/courses/"]', { timeout: 5000 });
+    } catch (err) {
       test.skip(true, 'No courses found in catalog');
       return;
     }
+    const firstCourse = page.locator('a[href*="/courses/"]').first();
     await firstCourse.click();
     await expect(page).toHaveURL(/\/courses\//);
   });

@@ -29,6 +29,9 @@ const processEmail = async (job) => {
       case 'bulk':
         // Bulk email sending handled separately — no-op here
         break;
+      case 'announcement':
+        await emailService.sendAnnouncementEmail(data.user, data.title, data.message);
+        break;
       default:
         // Unknown type — do not retry
         throw new UnrecoverableError(`Unknown email type: ${type}`);

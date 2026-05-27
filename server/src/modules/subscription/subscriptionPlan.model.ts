@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { ISubscriptionPlan } from '../payment/payment.dto.js';
+import { ISubscriptionPlan } from '../payment/payment.dto.ts';
 
 const subscriptionPlanSchema = new Schema<ISubscriptionPlan>(
   {

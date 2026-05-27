@@ -1,6 +1,18 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { HiChartBar, HiBookOpen, HiClipboardList, HiPuzzle, HiUsers, HiCurrencyRupee, HiChat, HiArrowLeft, HiMenu, HiX } from 'react-icons/hi';
+import {
+  HiChartBar,
+  HiBookOpen,
+  HiClipboardList,
+  HiPuzzle,
+  HiUsers,
+  HiCurrencyRupee,
+  HiChat,
+  HiCalendar,
+  HiArrowLeft,
+  HiMenu,
+  HiX,
+} from 'react-icons/hi';
 
 const navItems = [
   { path: '/teacher', icon: HiChartBar, label: 'Dashboard', end: true },
@@ -8,8 +20,10 @@ const navItems = [
   { path: '/teacher/tests', icon: HiClipboardList, label: 'Tests' },
   { path: '/teacher/quizzes', icon: HiPuzzle, label: 'Quizzes' },
   { path: '/teacher/students', icon: HiUsers, label: 'Students' },
+  { path: '/teacher/attendance', icon: HiCalendar, label: 'Attendance' },
   { path: '/teacher/revenue', icon: HiCurrencyRupee, label: 'Revenue' },
   { path: '/teacher/discussions', icon: HiChat, label: 'Discussions' },
+  { path: '/messages', icon: HiChat, label: 'Parent Messages' },
 ];
 
 export default function TeacherLayout() {
@@ -58,7 +72,7 @@ export default function TeacherLayout() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
-              {navItems.map(item => (
+              {navItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
@@ -85,7 +99,7 @@ export default function TeacherLayout() {
         {/* Sidebar — desktop only */}
         <nav className="hidden md:block w-56 flex-shrink-0">
           <div className="sticky top-24 space-y-1">
-            {navItems.map(item => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}

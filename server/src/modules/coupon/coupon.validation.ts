@@ -9,6 +9,15 @@ export const validateCouponSchema = z.object({
   code: z.string({ required_error: 'Coupon code is required' }).min(1),
   courseId: z.string().optional(),
   amount: z.number().min(0).optional(),
+  // Legacy support fields (optional)
+  discountPercent: z.number().min(0).max(100).optional(),
+  discountAmount: z.number().min(0).optional(),
+  validUntil: z
+    .preprocess((arg) => {
+      if (typeof arg === 'string' || arg instanceof Date) return new Date(arg);
+      return arg;
+    }, z.date())
+    .optional(),
 });
 
 export const createCouponSchema = z.object({

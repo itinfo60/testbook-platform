@@ -31,7 +31,21 @@ export class CouponController extends BaseController {
   });
 
   createCoupon = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const coupon = await this.couponService.createCoupon(req.body);
+    // Map legacy fields to new schema
+    const { discountPercent, discountAmount, validUntil, ...rest } = req.body;
+    if (discountPercent !== undefined) {
+      rest.discountType = 'percentage';
+      rest.discountValue = discountPercent;
+    }
+    if (discountAmount !== undefined) {
+      rest.discountType = 'fixed';
+      rest.discountValue = discountAmount;
+    }
+    if (validUntil) rest.endDate = new Date(validUntil);
+    // Ensure defaults for start and end dates
+    if (!rest.startDate) rest.startDate = new Date();
+    if (!rest.endDate) rest.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const coupon = await this.couponService.createCoupon(rest);
     return this.created(res, { coupon }, 'Coupon created');
   });
 

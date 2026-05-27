@@ -29,14 +29,28 @@ export default function UserList() {
   const debouncedSearch = useDebounce(search);
 
   const loadUsers = useCallback(() => {
-    dispatch(fetchUsers({ page, limit: 10, search: debouncedSearch, role: roleFilter, sort: sortField, order: sortOrder }));
+    dispatch(
+      fetchUsers({
+        page,
+        limit: 10,
+        search: debouncedSearch,
+        role: roleFilter,
+        sort: sortField,
+        order: sortOrder,
+      })
+    );
   }, [dispatch, page, debouncedSearch, roleFilter, sortField, sortOrder]);
 
-  useEffect(() => { loadUsers(); }, [loadUsers]);
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortOrder('asc'); }
+    else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
   };
 
   const handleDelete = async () => {
@@ -74,7 +88,10 @@ export default function UserList() {
       key: 'status',
       label: 'Status',
       sortable: true,
-      render: (val) => <span className={getStatusColor(val)}>{val || 'active'}</span>,
+      render: (_, row) => {
+        const status = row.isActive !== false ? 'active' : 'inactive';
+        return <span className={getStatusColor(status)}>{status}</span>;
+      },
     },
     {
       key: 'createdAt',
@@ -98,7 +115,14 @@ export default function UserList() {
 
       {/* Filters */}
       <div className="flex gap-3">
-        <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }} className="input-field w-40 py-2">
+        <select
+          value={roleFilter}
+          onChange={(e) => {
+            setRoleFilter(e.target.value);
+            setPage(1);
+          }}
+          className="input-field w-40 py-2"
+        >
           <option value="">All Roles</option>
           <option value="admin">Admin</option>
           <option value="teacher">Teacher</option>
@@ -114,7 +138,10 @@ export default function UserList() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search users..."
         sortField={sortField}
         sortOrder={sortOrder}
@@ -128,12 +155,24 @@ export default function UserList() {
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               title="Toggle status"
             >
-              {row.status === 'active' ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+              {row.status === 'active' ? (
+                <ToggleRight className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <ToggleLeft className="w-4 h-4 text-gray-400" />
+              )}
             </button>
-            <button onClick={() => navigate(`/users/${row._id}/edit`)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit">
+            <button
+              onClick={() => navigate(`/users/${row._id}/edit`)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Edit"
+            >
               <Edit className="w-4 h-4 text-blue-600" />
             </button>
-            <button onClick={() => setDeleteTarget(row._id)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Delete">
+            <button
+              onClick={() => setDeleteTarget(row._id)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Delete"
+            >
               <Trash2 className="w-4 h-4 text-red-600" />
             </button>
           </div>

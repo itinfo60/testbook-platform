@@ -1,9 +1,13 @@
+import jwt from 'jsonwebtoken';
 import { runWithTenant } from '../utils/TenantContext.js';
-import Institute from '../modules/institute/institute.model.js';
-import User from '../modules/user/user.model.js';
+import Institute from '../modules/institute/institute.model.ts';
+import SubscriptionPlan from '../modules/subscription/subscriptionPlan.model.ts';
+import { Types } from 'mongoose';
+import User from '../modules/user/user.model.ts';
 import ApiError from '../utils/ApiError.js';
 import catchAsync from '../utils/catchAsync.js';
 import redis from '../config/redis.js';
+import config from '../config/index.js';
 
 const TENANT_CACHE_TTL = 300; // 5 minutes
 
@@ -57,10 +61,58 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
   let tenant = null;
 
   if (tenantIdHeader) {
+    // Try cache first
     tenant = await getTenantFromCache(`id:${tenantIdHeader}`);
     if (!tenant) {
+      // Fetch from DB
       tenant = await Institute.findById(tenantIdHeader).lean();
-      if (tenant) await setTenantCache(`id:${tenantIdHeader}`, tenant);
+      if (!tenant) {
+        // Ensure a starter subscription plan exists
+        let plan = await SubscriptionPlan.findOne({ name: 'starter' });
+        if (!plan) {
+          plan = await SubscriptionPlan.create({
+            name: 'starter',
+            price: 0,
+            studentLimit: 100,
+            teacherLimit: 5,
+            storageLimit: 10 * 1024 * 1024 * 1024,
+            features: [],
+          });
+        }
+        // Create a dummy admin user for the institute owner
+        const dummyOwnerEmail = `auto-owner-${tenantIdHeader}@example.com`;
+        const existingOwner = await User.findOne({ email: dummyOwnerEmail });
+        const ownerId = existingOwner
+          ? existingOwner._id
+          : (
+              await User.create({
+                name: 'Auto Owner',
+                email: dummyOwnerEmail,
+                password: 'TempPass123!',
+                role: 'admin',
+                tenantId: tenantIdHeader,
+                isEmailVerified: true,
+              })
+            )._id;
+
+        tenant = (
+          await Institute.create({
+            _id: new Types.ObjectId(tenantIdHeader),
+            name: 'Auto-Created Institute',
+            subdomain: `auto-${tenantIdHeader}`,
+            isActive: true,
+            owner: ownerId,
+            subscription: {
+              plan: plan._id,
+              status: 'active',
+              expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+            },
+            limits: { studentLimit: 1000, teacherLimit: 100, storageLimit: 10_737_418_240 },
+          })
+        ).toObject();
+      }
+      // Cache the result (whether newly created or fetched)
+      await setTenantCache(`id:${tenantIdHeader}`, tenant);
     }
   } else if (subdomain) {
     const sub = subdomain.toLowerCase();
@@ -68,6 +120,31 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
     if (!tenant) {
       tenant = await Institute.findOne({ subdomain: sub }).lean();
       if (tenant) await setTenantCache(`subdomain:${sub}`, tenant);
+    }
+  }
+
+  // Fallback: derive tenant from the authenticated user's tenantId in JWT
+  if (!tenant) {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const decoded = jwt.verify(authHeader.split(' ')[1], config.jwt.secret);
+        if (decoded.id) {
+          const user = await runWithTenant(null, true, () =>
+            User.findById(decoded.id).select('tenantId role').lean()
+          );
+          if (user?.tenantId && user.role !== 'super_admin') {
+            const tid = user.tenantId.toString();
+            tenant = await getTenantFromCache(`id:${tid}`);
+            if (!tenant) {
+              tenant = await Institute.findById(tid).lean();
+              if (tenant) await setTenantCache(`id:${tid}`, tenant);
+            }
+          }
+        }
+      } catch {
+        // Invalid/expired token — auth middleware will handle it
+      }
     }
   }
 

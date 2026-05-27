@@ -3,8 +3,12 @@ import config from '../config/index.js';
 import logger from '../utils/logger.js';
 
 const onlineUsers = new Map();
+let ioInstance = null;
+
+export const getIO = () => ioInstance;
 
 export const initializeSocket = (io) => {
+  ioInstance = io;
   // Auth middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token || socket.handshake.query.token;

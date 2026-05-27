@@ -1,6 +1,6 @@
 import { Model } from 'mongoose';
 import { TenantRepository } from '../../core/tenant.repository.js';
-import { IUser } from './auth.dto.js';
+import { IUser } from './auth.dto.ts';
 import User from '../user/user.model.js';
 
 export class AuthRepository extends TenantRepository<IUser> {

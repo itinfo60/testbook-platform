@@ -1,17 +1,19 @@
-import ReactPlayer from 'react-player/youtube';
+import { forwardRef } from 'react';
+import ReactPlayer from 'react-player';
 
-export default function VideoPlayer({ url, onProgress, onComplete }) {
-  const handleProgress = state => {
+const VideoPlayer = forwardRef(({ url, onProgress, onComplete }, ref) => {
+  const handleProgress = (state) => {
     onProgress?.(state);
-    if (state.played >= 0.9) {
+    if (state.played >= 0.95) {
       onComplete?.();
     }
   };
 
   return (
-    <div className="relative bg-black rounded-xl overflow-hidden aspect-video">
+    <div className="relative bg-black rounded-xl overflow-hidden aspect-video shadow-2xl border border-dark-200 dark:border-dark-800">
       {url ? (
         <ReactPlayer
+          ref={ref}
           url={url}
           width="100%"
           height="100%"
@@ -31,4 +33,8 @@ export default function VideoPlayer({ url, onProgress, onComplete }) {
       )}
     </div>
   );
-}
+});
+
+VideoPlayer.displayName = 'VideoPlayer';
+
+export default VideoPlayer;
