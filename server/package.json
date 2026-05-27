@@ -19,7 +19,6 @@
   "dependencies": {
     "@bull-board/api": "^7.1.5",
     "@bull-board/express": "^7.1.5",
-    "@langchain/community": "^1.1.28",
     "@langchain/core": "^1.1.48",
     "@langchain/openai": "^1.4.7",
     "@sentry/node": "^10.53.1",
@@ -33,7 +32,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-mongo-sanitize": "^2.2.0",
-    "express-rate-limit": "^7.1.4",
+    "express-rate-limit": "^8.5.0",
     "firebase-admin": "^13.10.0",
     "helmet": "^7.1.0",
     "hpp": "^0.2.3",
@@ -52,10 +51,9 @@
     "qrcode": "^1.5.4",
     "rate-limit-redis": "^5.0.0",
     "razorpay": "^2.9.2",
-    "redis": "^4.6.10",
+    "redis": "^5.8.2",
     "socket.io": "^4.7.2",
     "speakeasy": "^2.0.0",
-    "stripe": "^22.1.1",
     "twilio": "^6.0.2",
     "winston": "^3.11.0"
   },
@@ -72,7 +70,7 @@
     "nodemon": "^3.0.1",
     "supertest": "^7.2.2",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3",
+    "typescript": "^5.9.2",
     "vitest": "^4.1.7"
   }
 }

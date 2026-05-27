@@ -4,3 +4,8 @@ build/
 .cache/
 coverage/
 *.log
+uploads/
+server/logs/*.log
+client/playwright-report/
+client/test-results/
+.sfdx/
