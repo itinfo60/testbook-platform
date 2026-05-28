@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default primary color scale — overridden at runtime by branding loader */
+:root {
+  --p-50:  239 246 255;
+  --p-100: 219 234 254;
+  --p-200: 191 219 254;
+  --p-300: 147 197 253;
+  --p-400: 96  165 250;
+  --p-500: 59  130 246;
+  --p-600: 37  99  235;
+  --p-700: 29  78  216;
+  --p-800: 30  64  175;
+  --p-900: 30  58  138;
+  --p-950: 23  37  84;
+}
+
 @layer base {
   * {
     margin: 0;

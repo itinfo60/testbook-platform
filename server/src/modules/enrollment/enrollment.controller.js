@@ -155,7 +155,7 @@ export const updateProgress = catchAsync(async (req, res) => {
   const enrollment = await Enrollment.findOne({
     user: req.userId,
     course: req.params.courseId,
-    status: 'active',
+    status: { $in: ['active', 'completed'] },
   });
 
   if (!enrollment) {
@@ -227,6 +227,39 @@ export const getTeacherStudents = catchAsync(async (req, res) => {
     .lean();
 
   ApiResponse.ok(res, { students: enrollments, total: enrollments.length });
+});
+
+export const getOrderHistory = catchAsync(async (req, res) => {
+  const { page = 1, limit = 20, status } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const filter = { user: req.userId };
+  if (status) filter.status = status;
+
+  const [enrollments, total] = await Promise.all([
+    Enrollment.find(filter)
+      .populate('course', 'title slug thumbnail price effectivePrice category')
+      .populate('test', 'title slug thumbnail price isFree')
+      .populate({
+        path: 'paymentId',
+        select:
+          'orderId paymentId amount currency netAmount discount tax provider coupon status refundId refundAmount refundedAt metadata createdAt',
+        populate: { path: 'coupon', select: 'code discountType discountValue' },
+      })
+      .populate('couponUsed', 'code discountType discountValue')
+      .sort('-enrolledAt')
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Enrollment.countDocuments(filter),
+  ]);
+
+  ApiResponse.ok(res, {
+    orders: enrollments,
+    total,
+    page: Number(page),
+    pages: Math.ceil(total / Number(limit)),
+  });
 });
 
 export const verifyPayment = catchAsync(async (req, res) => {

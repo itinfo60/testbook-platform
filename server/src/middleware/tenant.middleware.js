@@ -242,3 +242,24 @@ export const checkTeacherLimit = catchAsync(async (req, res, next) => {
   }
   next();
 });
+
+/**
+ * Middleware to enforce storage limit before file upload.
+ * Reads Content-Length from the request to estimate usage.
+ */
+export const checkStorageLimit = catchAsync(async (req, res, next) => {
+  if (!req.tenant) return next();
+
+  const incomingBytes = parseInt(req.headers['content-length'] || '0', 10);
+  const { storageUsed = 0, limits } = req.tenant;
+  const storageLimit = limits?.storageLimit || 10 * 1024 * 1024 * 1024; // 10 GB default
+
+  if (storageUsed + incomingBytes > storageLimit) {
+    const usedGB = (storageUsed / 1024 ** 3).toFixed(2);
+    const limitGB = (storageLimit / 1024 ** 3).toFixed(0);
+    throw ApiError.forbidden(
+      `Storage limit reached (${usedGB} GB used of ${limitGB} GB). Please delete old files or upgrade your plan.`
+    );
+  }
+  next();
+});

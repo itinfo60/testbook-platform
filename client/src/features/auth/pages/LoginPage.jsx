@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { HiMail, HiLockClosed, HiExclamationCircle } from 'react-icons/hi';
-import { login } from '@/features/auth/authSlice';
+import { login, verifyMfaLogin } from '@/features/auth/authSlice';
 import { Button } from '@/components/ui';
 
 const loginSchema = z.object({
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const from = location.state?.from?.pathname || '/dashboard';
   const [serverError, setServerError] = useState('');
   const [requiresMfa, setRequiresMfa] = useState(false);
+  const [mfaUserId, setMfaUserId] = useState('');
 
   const {
     register,
@@ -36,10 +37,20 @@ export default function LoginPage() {
 
   const onSubmit = async (data) => {
     setServerError('');
+
+    if (requiresMfa) {
+      const result = await dispatch(verifyMfaLogin({ userId: mfaUserId, token: data.mfaToken }));
+      if (verifyMfaLogin.rejected.match(result)) {
+        setServerError(result.payload || 'Invalid MFA code');
+      }
+      return;
+    }
+
     const result = await dispatch(login(data));
     if (login.rejected.match(result)) {
       setServerError(result.payload || 'Invalid email or password');
     } else if (result.payload?.requiresMfa) {
+      setMfaUserId(result.payload.userId);
       setRequiresMfa(true);
     }
   };

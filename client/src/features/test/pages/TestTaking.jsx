@@ -9,7 +9,7 @@ import TestNavigator from '../components/TestNavigator';
 import TestQuestion from '../components/TestQuestion';
 import toast from 'react-hot-toast';
 import { HiX, HiMenu } from 'react-icons/hi';
-import { testAPI } from '@/services/api';
+import api, { testAPI } from '@/services/api';
 
 const enterFullscreen = () => {
   const el = document.documentElement;
@@ -54,11 +54,23 @@ export default function TestTaking() {
   const questions = storedQuestions.length ? storedQuestions : attempt?.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
   const duration = attempt?.duration || 60;
+  const isTestActive = !!attempt && !result;
+
+  // Extract attempt related values early for hooks
+  const attemptId = attempt?.attempt?._id;
+  const startTime = attempt?.attempt?.startedAt;
+  const testTitle = attempt?.title || 'Test';
 
   // Start test
   useEffect(() => {
-    dispatch(startTest(id));
-  }, [dispatch, id]);
+    if (result || loading || attempt) return;
+    dispatch(startTest(id))
+      .unwrap()
+      .catch((err) => {
+        toast.error(err || 'Failed to start test', { duration: 5000 });
+        navigate(`/tests/${id}`);
+      });
+  }, [dispatch, id, result, loading, attempt, navigate]);
 
   // Enter fullscreen as soon as attempt is available
   useEffect(() => {
@@ -194,14 +206,8 @@ export default function TestTaking() {
           selectedOptions: Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions],
         }));
         if (payload.length === 0) return;
-        await fetch(`/api/v1/tests/auto-save/${attempt._id}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
-          },
-          body: JSON.stringify({ answers: payload }),
-        });
+        if (!attemptId) return;
+        await api.post(`/tests/auto-save/${attemptId}`, { answers: payload });
       } catch {
         // Silent — auto-save failures should never interrupt the test
       }
@@ -217,11 +223,6 @@ export default function TestTaking() {
       navigate(`/tests/${id}/result`, { replace: true });
     }
   }, [result, navigate, id]);
-
-  // Extract attempt related values early for hooks
-  const attemptId = attempt?.attempt?._id;
-  const startTime = attempt?.attempt?.startedAt;
-  const testTitle = attempt?.title || 'Test';
 
   const handleSubmit = useCallback(() => {
     setShowSubmitModal(false);

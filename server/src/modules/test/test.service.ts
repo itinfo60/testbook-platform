@@ -158,6 +158,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
 
     let attemptCount = 0;
     let isPurchased = test.isFree;
+    let activeAttempt = null;
 
     if (userId) {
       attemptCount = await TestAttempt.countDocuments({
@@ -165,6 +166,14 @@ export class TestService extends BaseService<ITest, TestRepository> {
         test: test._id,
         status: 'completed',
       });
+
+      activeAttempt = await TestAttempt.findOne({
+        user: new mongoose.Types.ObjectId(userId),
+        test: test._id,
+        status: 'in_progress',
+      })
+        .lean()
+        .exec();
 
       if (!test.isFree) {
         const enrollment = await Enrollment.findOne({
@@ -176,7 +185,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
       }
     }
 
-    return { test, attemptCount, isPurchased };
+    return { test, attemptCount, isPurchased, activeAttempt };
   }
 
   async startTest(testId: string, userId: string) {
@@ -197,8 +206,21 @@ export class TestService extends BaseService<ITest, TestRepository> {
       }
     }
 
-    // Check attempt limits
-    if (test.maxAttempts > 0) {
+    // Enforce strict limit on active sessions: max 1 active test attempt at a time across all tests
+    const activeAttemptAcrossTests = await TestAttempt.findOne({
+      user: new mongoose.Types.ObjectId(userId),
+      status: 'in_progress',
+    });
+
+    if (activeAttemptAcrossTests && activeAttemptAcrossTests.test.toString() !== testId) {
+      // Auto-submit the previous test attempt as abandoned/timed out instead of blocking
+      await this.submitAttemptDirect(activeAttemptAcrossTests, true);
+    }
+
+    // Check attempt limits only if we are starting a NEW attempt (i.e., we are not resuming this test)
+    const isResumingThisTest =
+      activeAttemptAcrossTests && activeAttemptAcrossTests.test.toString() === testId;
+    if (!isResumingThisTest && test.maxAttempts > 0) {
       const attemptsCount = await TestAttempt.countDocuments({
         user: new mongoose.Types.ObjectId(userId),
         test: test._id,
@@ -207,18 +229,6 @@ export class TestService extends BaseService<ITest, TestRepository> {
       if (attemptsCount >= test.maxAttempts) {
         throw ApiError.forbidden(`Maximum attempts (${test.maxAttempts}) reached for this test.`);
       }
-    }
-
-    // Enforce strict limit on active sessions: max 1 active test attempt at a time across all tests
-    const activeAttemptAcrossTests = await TestAttempt.findOne({
-      user: new mongoose.Types.ObjectId(userId),
-      status: 'in_progress',
-    });
-
-    if (activeAttemptAcrossTests && activeAttemptAcrossTests.test.toString() !== testId) {
-      throw ApiError.badRequest(
-        'You have another test attempt in progress. Please complete or submit that test first.'
-      );
     }
 
     let attempt = activeAttemptAcrossTests;
@@ -331,11 +341,15 @@ export class TestService extends BaseService<ITest, TestRepository> {
     const attempt = await TestAttempt.findOne({
       _id: new mongoose.Types.ObjectId(attemptId),
       user: new mongoose.Types.ObjectId(userId),
-      status: 'in_progress',
     });
 
     if (!attempt) {
-      throw ApiError.notFound('Active test attempt not found');
+      throw ApiError.notFound('Test attempt not found');
+    }
+
+    if (attempt.status !== 'in_progress') {
+      // Safely ignore if already submitted/timed out
+      return { savedAnswersCount: 0, savedPaletteCount: 0, alreadyCompleted: true };
     }
 
     // Redis Key
@@ -422,11 +436,14 @@ export class TestService extends BaseService<ITest, TestRepository> {
     const attempt = await TestAttempt.findOne({
       _id: new mongoose.Types.ObjectId(attemptId),
       user: new mongoose.Types.ObjectId(userId),
-      status: 'in_progress',
     });
 
     if (!attempt) {
-      throw ApiError.notFound('Active test attempt not found');
+      throw ApiError.notFound('Test attempt not found');
+    }
+
+    if (attempt.status !== 'in_progress') {
+      return { windowViolations: attempt.windowViolations, autoSubmitted: true };
     }
 
     attempt.windowViolations += 1;
@@ -578,11 +595,38 @@ export class TestService extends BaseService<ITest, TestRepository> {
     const attempt = await TestAttempt.findOne({
       _id: new mongoose.Types.ObjectId(attemptId),
       user: new mongoose.Types.ObjectId(userId),
-      status: 'in_progress',
     });
 
     if (!attempt) {
-      throw ApiError.notFound('Active test attempt not found');
+      throw ApiError.notFound('Test attempt not found');
+    }
+
+    if (attempt.status !== 'in_progress') {
+      const test = await Test.findById(attempt.test);
+      if (!test) throw ApiError.notFound('Test not found');
+
+      const correctCount = attempt.answers.filter((a) => a.isCorrect).length;
+      const incorrectCount = attempt.answers.filter(
+        (a) => !a.isCorrect && ((a.selectedOptions && a.selectedOptions.length > 0) || a.textAnswer)
+      ).length;
+      const unansweredCount = test.questions.length - correctCount - incorrectCount;
+      const elapsedSeconds = attempt.endTime
+        ? (attempt.endTime.getTime() - attempt.startedAt.getTime()) / 1000
+        : 0;
+
+      return {
+        attemptId: attempt._id,
+        score: attempt.score || 0,
+        totalMarks: test.totalMarks,
+        passed: (attempt.score || 0) >= test.passingMarks,
+        stats: {
+          correct: correctCount,
+          incorrect: incorrectCount,
+          unanswered: unansweredCount,
+          percentile: 0,
+        },
+        timeTaken: Math.round(elapsedSeconds),
+      };
     }
 
     const test = await Test.findById(attempt.test);
@@ -596,8 +640,29 @@ export class TestService extends BaseService<ITest, TestRepository> {
 
     if (elapsedSeconds > allowedSeconds) {
       // Mark as timed out and auto-submit the cached responses up to limit
-      await this.submitAttemptDirect(attempt, true);
-      throw ApiError.badRequest('Time limit exceeded. The test has been automatically submitted.');
+      const resultAttempt = await this.submitAttemptDirect(attempt, true);
+      const correctCount = resultAttempt.answers.filter((a) => a.isCorrect).length;
+      const incorrectCount = resultAttempt.answers.filter(
+        (a) => !a.isCorrect && ((a.selectedOptions && a.selectedOptions.length > 0) || a.textAnswer)
+      ).length;
+      const unansweredCount = test.questions.length - correctCount - incorrectCount;
+      const finalElapsedSeconds = resultAttempt.endTime
+        ? (resultAttempt.endTime.getTime() - resultAttempt.startedAt.getTime()) / 1000
+        : allowedSeconds;
+
+      return {
+        attemptId: resultAttempt._id,
+        score: resultAttempt.score || 0,
+        totalMarks: test.totalMarks,
+        passed: (resultAttempt.score || 0) >= test.passingMarks,
+        stats: {
+          correct: correctCount,
+          incorrect: incorrectCount,
+          unanswered: unansweredCount,
+          percentile: 0,
+        },
+        timeTaken: Math.round(finalElapsedSeconds),
+      };
     }
 
     // Update attempt's final answer sheets before evaluating

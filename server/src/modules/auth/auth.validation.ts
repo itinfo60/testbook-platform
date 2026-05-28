@@ -13,7 +13,7 @@ export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(50),
   email: z.string().email('Please enter a valid email').lowercase().trim(),
   password: passwordSchema,
-  role: z.enum(['student', 'teacher']).default('student'),
+  role: z.enum(['student', 'teacher', 'parent']).default('student'),
 });
 
 export const loginSchema = z.object({
@@ -52,6 +52,11 @@ export const updateProfileSchema = z.object({
 });
 
 export const mfaVerifySchema = z.object({
+  token: z.string().length(6, 'Verification token must be exactly 6 digits'),
+});
+
+export const mfaLoginSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
   token: z.string().length(6, 'Verification token must be exactly 6 digits'),
 });
 

@@ -39,7 +39,6 @@ export default function CourseLearning() {
   const sessionWatchTime = useRef(0);
   const lastHeartbeatTime = useRef(0);
   const [attachTimestamp, setAttachTimestamp] = useState(true);
-  const [claimingCertificate, setClaimingCertificate] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
@@ -173,24 +172,6 @@ export default function CourseLearning() {
     }
   };
 
-  const handleClaimCertificate = async () => {
-    setClaimingCertificate(true);
-    try {
-      const { data } = await enrollmentAPI.getCertificate(id);
-      const url = data?.data?.certificateUrl || data?.certificateUrl;
-      if (url) {
-        window.open(url, '_blank');
-        toast.success('Certificate claimed successfully!');
-      } else {
-        toast.error('Certificate URL not returned');
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to generate certificate');
-    } finally {
-      setClaimingCertificate(false);
-    }
-  };
-
   if (loading || !course) return <LoadingSpinner fullScreen />;
 
   const sections = course.sections || [];
@@ -217,8 +198,15 @@ export default function CourseLearning() {
     }
   };
 
+  const hasNext = () => {
+    if (!currentLesson) return false;
+    const flatLessons = sections.flatMap((s) => s.lessons.map((l) => ({ lesson: l, section: s })));
+    const idx = flatLessons.findIndex(({ lesson }) => lesson._id === currentLesson._id);
+    return idx < flatLessons.length - 1;
+  };
+
   const tabs = [
-    { key: 'content', label: 'Overview' },
+    { key: 'content', label: 'Description' },
     { key: 'notes', label: 'Notes', count: notes.length },
     { key: 'discussions', label: 'Discussions', count: discussions.length },
   ];
@@ -245,15 +233,6 @@ export default function CourseLearning() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {currentProgress?.status === 'completed' && (
-            <button
-              onClick={handleClaimCertificate}
-              disabled={claimingCertificate}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
-            >
-              🎓 {claimingCertificate ? 'Claiming...' : 'Get Certificate'}
-            </button>
-          )}
           <div className="text-xs text-dark-400 hidden sm:block">
             {totalCompleted}/{totalLessons} completed
           </div>
@@ -302,6 +281,7 @@ export default function CourseLearning() {
         {/* Main content */}
         <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0">
           <LessonContent
+            key={currentLesson?._id}
             lesson={currentLesson}
             sectionTitle={currentSection?.title}
             onComplete={handleLessonComplete}
@@ -309,16 +289,8 @@ export default function CourseLearning() {
             playerRef={playerRef}
             onProgress={handleVideoProgress}
             onVideoComplete={handleVideoComplete}
+            onNext={hasNext() ? goToNext : null}
           />
-
-          {/* Next lesson button */}
-          {currentLesson && (
-            <div className="mt-4 sm:mt-6 flex justify-end">
-              <button onClick={goToNext} className="btn-primary text-sm px-5">
-                Next Lesson →
-              </button>
-            </div>
-          )}
 
           {/* Tabs below */}
           <div className="mt-6 sm:mt-8">

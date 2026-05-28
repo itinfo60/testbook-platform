@@ -15,9 +15,8 @@ import discussionReducer from '@/features/discussion/discussionSlice';
 import noteReducer from '@/features/note/noteSlice';
 import categoryReducer from '@/features/category/categorySlice';
 import leaderboardReducer from '@/features/leaderboard/leaderboardSlice';
-import achievementReducer from '@/features/achievement/achievementSlice';
 import blogReducer from '@/features/blog/blogSlice';
-
+import brandingReducer from '@/features/institute/brandingSlice';
 
 export const store = configureStore({
   reducer: {
@@ -34,9 +33,8 @@ export const store = configureStore({
     notes: noteReducer,
     categories: categoryReducer,
     leaderboard: leaderboardReducer,
-    achievements: achievementReducer,
     blogs: blogReducer,
-
+    branding: brandingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

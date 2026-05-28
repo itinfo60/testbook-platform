@@ -12,6 +12,7 @@ router.get('/verify-certificate/:certificateId', verifyCertificatePublic);
 router.use(authenticate);
 
 router.post('/', enrollmentController.enrollInCourse);
+router.get('/orders', enrollmentController.getOrderHistory);
 router.get('/my', enrollmentController.getMyEnrollments);
 router.get('/my-tests', enrollmentController.getMyTestEnrollments);
 router.get('/teacher/students', enrollmentController.getTeacherStudents);

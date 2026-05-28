@@ -142,19 +142,22 @@ describe('TestEngine, Question & TestAttempt Services', () => {
         expect(startResult.attempt._id).toBeDefined();
       });
 
-      // 3. Start Test 2 - should be blocked
-      await expect(
-        runWithTenant(mockTenantId, false, async () => {
-          await testService.startTest(test2._id.toString(), studentId.toString());
-        })
-      ).rejects.toThrow(
-        'You have another test attempt in progress. Please complete or submit that test first.'
-      );
+      // 3. Start Test 2 - should auto-submit Test 1 attempt and succeed starting Test 2
+      await runWithTenant(mockTenantId, false, async () => {
+        const startResult2 = await testService.startTest(
+          test2._id.toString(),
+          studentId.toString()
+        );
+        expect(startResult2.attempt._id).toBeDefined();
 
-      // 4. Start Test 1 again - should resume without throwing
+        const attempt1 = await TestAttempt.findOne({ test: test1._id, user: studentId });
+        expect(attempt1?.status).toBe('timed_out');
+      });
+
+      // 4. Start Test 2 again - should resume without throwing
       await runWithTenant(mockTenantId, false, async () => {
         const resumeResult = await testService.startTest(
-          test1._id.toString(),
+          test2._id.toString(),
           studentId.toString()
         );
         expect(resumeResult.attempt.attemptNumber).toBe(1);
@@ -412,16 +415,13 @@ describe('TestEngine, Question & TestAttempt Services', () => {
         { $set: { startedAt: new Date(Date.now() - 5 * 60000) } }
       );
 
-      await expect(
-        runWithTenant(mockTenantId, false, async () => {
-          await testService.submitTest(attemptId, studentId.toString(), {
-            answers: [
-              { questionId: startResult.questions[0]._id.toString(), selectedOptions: [0] },
-            ],
-          });
-        })
-      ).rejects.toThrow('Time limit exceeded. The test has been automatically submitted.');
+      const submitResult = await runWithTenant(mockTenantId, false, async () => {
+        return testService.submitTest(attemptId, studentId.toString(), {
+          answers: [{ questionId: startResult.questions[0]._id.toString(), selectedOptions: [0] }],
+        });
+      });
 
+      expect(submitResult.attemptId.toString()).toBe(attemptId.toString());
       const attemptDB = await TestAttempt.findById(attemptId);
       expect(attemptDB?.status).toBe('timed_out');
     });

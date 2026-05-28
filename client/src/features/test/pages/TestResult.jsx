@@ -1,21 +1,70 @@
 import { useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useState, useEffect } from 'react';
 import Tabs from '@/components/common/Tabs';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 import TestResultSummary from '../components/TestResultSummary';
 import QuestionReview from '../components/QuestionReview';
+import { fetchLatestTestResult } from '../testSlice';
 
 export default function TestResult() {
   const { id } = useParams();
-  const { result, answers, questions: storedQuestions } = useSelector(state => state.tests);
+  const dispatch = useDispatch();
+  const {
+    result,
+    answers,
+    questions: storedQuestions,
+    loading,
+    error,
+  } = useSelector((state) => state.tests);
   const [activeTab, setActiveTab] = useState('summary');
 
-  const questions = storedQuestions.length ? storedQuestions : (result?.questions || result?.test?.questions || []);
+  useEffect(() => {
+    if (!result) {
+      dispatch(fetchLatestTestResult(id));
+    }
+  }, [id, result, dispatch]);
+
+  const questions = storedQuestions.length
+    ? storedQuestions
+    : result?.questions || result?.test?.questions || result?.attempt?.test?.questions || [];
+
+  const attempt = result?.attempt || result || {};
+  const attemptAnswers = attempt.answers || [];
+
+  // Reconstruct answers map if empty (e.g. on page refresh)
+  const resolvedAnswers =
+    Object.keys(answers || {}).length > 0
+      ? answers
+      : attemptAnswers.reduce((acc, curr) => {
+          if (curr.selectedOptions && curr.selectedOptions.length > 0) {
+            acc[curr.questionId] = curr.selectedOptions[0];
+          } else if (curr.textAnswer) {
+            acc[curr.questionId] = curr.textAnswer;
+          }
+          return acc;
+        }, {});
 
   const tabs = [
     { key: 'summary', label: 'Summary' },
     { key: 'review', label: 'Question Review', count: questions.length },
   ];
+
+  if (loading && !result) {
+    return <LoadingSpinner fullScreen />;
+  }
+
+  if (error && !result) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center bg-slate-950/20 rounded-2xl border border-dark-100 dark:border-dark-800">
+        <div className="text-red-500 text-xl font-bold mb-3">Error loading test result</div>
+        <p className="text-dark-500 mb-6 text-sm">{error}</p>
+        <button onClick={() => dispatch(fetchLatestTestResult(id))} className="btn-primary">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -35,7 +84,7 @@ export default function TestResult() {
                 key={q._id || i}
                 question={q}
                 index={i}
-                userAnswer={answers[q._id || q.id || i]}
+                userAnswer={resolvedAnswers[q._id || q.id || i]}
               />
             ))
           )}

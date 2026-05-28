@@ -24,7 +24,9 @@ export default function EnrollmentList() {
     dispatch(fetchEnrollments({ page, limit: 10, search: debouncedSearch, status: statusFilter }));
   }, [dispatch, page, debouncedSearch, statusFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleExport = () => {
     dispatch(exportEnrollments({ search: debouncedSearch, status: statusFilter }));
@@ -47,7 +49,7 @@ export default function EnrollmentList() {
       render: (val) => truncate(val?.title || 'N/A', 35),
     },
     {
-      key: 'progress',
+      key: 'progressPercentage',
       label: 'Progress',
       render: (val) => (
         <div className="flex items-center gap-2">
@@ -74,7 +76,7 @@ export default function EnrollmentList() {
     {
       key: 'completedAt',
       label: 'Completed',
-      render: (val) => val ? formatDate(val) : '-',
+      render: (val) => (val ? formatDate(val) : '-'),
     },
   ];
 
@@ -83,7 +85,9 @@ export default function EnrollmentList() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Enrollments</h2>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">Track student enrollment and progress</p>
+          <p className="mt-1 text-gray-500 dark:text-gray-400">
+            Track student enrollment and progress
+          </p>
         </div>
         <button onClick={handleExport} disabled={exporting} className="btn-secondary gap-2">
           <Download className="w-4 h-4" /> {exporting ? 'Exporting...' : 'Export CSV'}
@@ -91,7 +95,14 @@ export default function EnrollmentList() {
       </div>
 
       <div className="flex gap-3">
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="input-field w-40 py-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="input-field w-40 py-2"
+        >
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="completed">Completed</option>
@@ -107,7 +118,10 @@ export default function EnrollmentList() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search enrollments..."
         emptyMessage="No enrollments found"
         emptyIcon={GraduationCap}

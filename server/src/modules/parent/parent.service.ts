@@ -52,7 +52,8 @@ export class ParentService {
 
   async getStudentProgress(parentId: string, studentId: string): Promise<any> {
     const parent = await User.findById(parentId);
-    if (!parent || !parent.linkedStudents.includes(studentId as any)) {
+    const isLinked = parent?.linkedStudents?.some((id: any) => id.toString() === studentId);
+    if (!parent || !isLinked) {
       throw ApiError.forbidden('You do not have access to this student');
     }
 
@@ -69,12 +70,14 @@ export class ParentService {
 
   async getTeachersForStudent(parentId: string, studentId: string): Promise<any[]> {
     const parent = await User.findById(parentId);
-    if (!parent || !parent.linkedStudents.includes(studentId as any)) {
+    const isLinked = parent?.linkedStudents?.some((id: any) => id.toString() === studentId);
+    if (!parent || !isLinked) {
       throw ApiError.forbidden('You do not have access to this student');
     }
 
-    // Find student enrolled courses
     const enrollments = await Enrollment.find({ user: studentId, course: { $exists: true } });
+    if (!enrollments.length) return [];
+
     const courseIds = enrollments.map((e) => e.course);
 
     const courses = await Course.find({ _id: { $in: courseIds } })
@@ -84,7 +87,7 @@ export class ParentService {
     const teachersMap = new Map();
     for (const c of courses) {
       if (c.teacher) {
-        teachersMap.set(c.teacher._id.toString(), c.teacher);
+        teachersMap.set((c.teacher as any)._id.toString(), c.teacher);
       }
     }
 

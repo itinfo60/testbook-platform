@@ -201,6 +201,7 @@ export class PaymentController extends BaseController {
       user: new mongoose.Types.ObjectId(req.userId),
       amountPaid: amount,
       paymentId: payment._id,
+      status: 'active',
     };
     if (courseId) enrollmentData.course = new mongoose.Types.ObjectId(courseId);
     if (testId) enrollmentData.test = new mongoose.Types.ObjectId(testId);

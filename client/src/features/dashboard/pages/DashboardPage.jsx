@@ -1,31 +1,62 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { HiBookOpen, HiClipboardList, HiAcademicCap, HiTrendingUp, HiArrowRight } from 'react-icons/hi';
+import {
+  HiBookOpen,
+  HiClipboardList,
+  HiAcademicCap,
+  HiTrendingUp,
+  HiArrowRight,
+} from 'react-icons/hi';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchMyEnrollments } from '@/features/enrollment/enrollmentSlice';
-import { fetchMyBadges } from '@/features/achievement/achievementSlice';
 import DashboardSkeleton from '@/components/skeleton/DashboardSkeleton';
 import ProgressBar from '@/components/common/ProgressBar';
 
 export default function Dashboard() {
   const dispatch = useDispatch();
   const { user } = useAuth();
-  const { enrollments, loading } = useSelector(state => state.enrollments);
-  const { myBadges } = useSelector(state => state.achievements);
+  const { enrollments, loading } = useSelector((state) => state.enrollments);
 
   useEffect(() => {
     dispatch(fetchMyEnrollments());
-    dispatch(fetchMyBadges());
   }, [dispatch]);
 
   if (loading) return <DashboardSkeleton />;
 
+  const completedEnrollments = enrollments.filter(
+    (e) => e.status === 'completed' || (e.progressPercentage ?? e.progress ?? 0) >= 100
+  );
+
   const stats = [
-    { icon: HiBookOpen, label: 'Enrolled Courses', value: enrollments.length, color: 'text-primary-600 bg-primary-50 dark:bg-primary-900/30', link: '/my-courses' },
-    { icon: HiClipboardList, label: 'Tests Taken', value: user?.testsAttempted || 0, color: 'text-accent-600 bg-accent-50 dark:bg-accent-900/30', link: '/my-test-attempts' },
-    { icon: HiAcademicCap, label: 'Badges Earned', value: myBadges.length, color: 'text-secondary-600 bg-secondary-50 dark:bg-secondary-900/30', link: '/achievements' },
-    { icon: HiTrendingUp, label: 'Current Streak', value: user?.streak || 0, color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30', link: '/leaderboard' },
+    {
+      icon: HiBookOpen,
+      label: 'Enrolled Courses',
+      value: enrollments.length,
+      color: 'text-primary-600 bg-primary-50 dark:bg-primary-900/30',
+      link: '/my-courses',
+    },
+    {
+      icon: HiClipboardList,
+      label: 'Tests Taken',
+      value: user?.testsAttempted || 0,
+      color: 'text-accent-600 bg-accent-50 dark:bg-accent-900/30',
+      link: '/my-test-attempts',
+    },
+    {
+      icon: HiAcademicCap,
+      label: 'Certificates',
+      value: completedEnrollments.length,
+      color: 'text-secondary-600 bg-secondary-50 dark:bg-secondary-900/30',
+      link: '/achievements',
+    },
+    {
+      icon: HiTrendingUp,
+      label: 'Current Streak',
+      value: user?.streak || 0,
+      color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
+      link: '/leaderboard',
+    },
   ];
 
   return (
@@ -40,9 +71,11 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map(stat => (
+        {stats.map((stat) => (
           <Link key={stat.label} to={stat.link} className="card-hover p-5">
-            <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}>
+            <div
+              className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}
+            >
               <stat.icon className="h-5 w-5" />
             </div>
             <div className="text-2xl font-bold text-dark-900 dark:text-white">{stat.value}</div>
@@ -55,8 +88,13 @@ export default function Dashboard() {
         {/* Continue Learning */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-dark-900 dark:text-white">Continue Learning</h2>
-            <Link to="/my-courses" className="text-sm text-primary-600 dark:text-primary-400 flex items-center gap-1">
+            <h2 className="text-lg font-semibold text-dark-900 dark:text-white">
+              Continue Learning
+            </h2>
+            <Link
+              to="/my-courses"
+              className="text-sm text-primary-600 dark:text-primary-400 flex items-center gap-1"
+            >
               View All <HiArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -66,15 +104,19 @@ export default function Dashboard() {
               <div className="text-4xl mb-3">📚</div>
               <h3 className="font-semibold text-dark-900 dark:text-white mb-1">No courses yet</h3>
               <p className="text-dark-500 text-sm mb-4">Start learning by enrolling in a course</p>
-              <Link to="/courses" className="btn-primary text-sm">Browse Courses</Link>
+              <Link to="/courses" className="btn-primary text-sm">
+                Browse Courses
+              </Link>
             </div>
           ) : (
             <div className="space-y-3">
-              {enrollments.slice(0, 4).map(enrollment => {
+              {enrollments.slice(0, 4).map((enrollment) => {
                 const course = enrollment.course || {};
                 const progress = enrollment.progressPercentage || 0;
-                const thumbnailUrl = course.thumbnail?.url || (typeof course.thumbnail === 'string' ? course.thumbnail : null);
-                
+                const thumbnailUrl =
+                  course.thumbnail?.url ||
+                  (typeof course.thumbnail === 'string' ? course.thumbnail : null);
+
                 return (
                   <Link
                     key={enrollment._id}
@@ -85,11 +127,15 @@ export default function Dashboard() {
                       {thumbnailUrl ? (
                         <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl">📘</div>
+                        <div className="w-full h-full flex items-center justify-center text-2xl">
+                          📘
+                        </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-dark-900 dark:text-white truncate">{course.title}</h3>
+                      <h3 className="font-medium text-dark-900 dark:text-white truncate">
+                        {course.title}
+                      </h3>
                       <ProgressBar value={progress} size="sm" className="mt-2" />
                     </div>
                     <HiArrowRight className="h-4 w-4 text-dark-400 flex-shrink-0" />
@@ -100,29 +146,46 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Achievements */}
+        {/* Certificates */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-dark-900 dark:text-white">Recent Badges</h2>
-            <Link to="/achievements" className="text-sm text-primary-600 dark:text-primary-400 flex items-center gap-1">
+            <h2 className="text-lg font-semibold text-dark-900 dark:text-white">My Certificates</h2>
+            <Link
+              to="/achievements"
+              className="text-sm text-primary-600 dark:text-primary-400 flex items-center gap-1"
+            >
               View All <HiArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
           <div className="card p-5">
-            {myBadges.length === 0 ? (
+            {completedEnrollments.length === 0 ? (
               <div className="text-center py-6">
-                <div className="text-3xl mb-2">🏅</div>
-                <p className="text-sm text-dark-400">Complete courses and tests to earn badges!</p>
+                <div className="text-3xl mb-2">🎓</div>
+                <p className="text-sm text-dark-400">
+                  Complete a course to earn your first certificate
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {myBadges.slice(0, 6).map((badge, i) => (
-                  <div key={badge._id || i} className="text-center">
-                    <div className="text-3xl mb-1">{badge.icon || '🏅'}</div>
-                    <p className="text-xs text-dark-500 truncate">{badge.name || badge.badge?.name}</p>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {completedEnrollments.slice(0, 4).map((enrollment) => {
+                  const course = enrollment.course || {};
+                  return (
+                    <div key={enrollment._id} className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-base flex-shrink-0">
+                        🎓
+                      </div>
+                      <p className="text-sm text-dark-700 dark:text-dark-300 line-clamp-1 flex-1">
+                        {course.title}
+                      </p>
+                    </div>
+                  );
+                })}
+                {completedEnrollments.length > 4 && (
+                  <p className="text-xs text-dark-400 text-center pt-1">
+                    +{completedEnrollments.length - 4} more
+                  </p>
+                )}
               </div>
             )}
           </div>

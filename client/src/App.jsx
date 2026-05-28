@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, memo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ScrollManager from '@/components/ScrollManager';
 import { useDispatch } from 'react-redux';
@@ -6,6 +6,7 @@ import { io } from 'socket.io-client';
 
 // Auth & Store
 import { useAuth } from '@/hooks/useAuth';
+import useBranding from '@/hooks/useBranding';
 import { getProfile } from '@/features/auth/authSlice';
 import { addNotification } from '@/features/notification/notificationSlice';
 
@@ -74,11 +75,16 @@ const TeacherStudents = lazy(() => import('@/features/teacher/pages/TeacherStude
 const TeacherRevenue = lazy(() => import('@/features/teacher/pages/TeacherRevenue'));
 const TeacherDiscussions = lazy(() => import('@/features/teacher/pages/TeacherDiscussions'));
 const TeacherAttendance = lazy(() => import('@/features/teacher/pages/TeacherAttendance'));
+const TeacherLiveClasses = lazy(() => import('@/features/liveclass/pages/TeacherLiveClasses'));
 
 // AI
 const AIQuestionGenerator = lazy(() => import('@/features/ai/pages/AIQuestionGenerator'));
 const AIDoubtSolver = lazy(() => import('@/features/ai/pages/AIDoubtSolver'));
 const AIStudyPlan = lazy(() => import('@/features/ai/pages/AIStudyPlan'));
+const AIQuizGenerator = lazy(() => import('@/features/ai/pages/AIQuizGenerator'));
+
+// Library
+const LibraryPage = lazy(() => import('@/features/library/pages/LibraryPage'));
 
 // Live Classes
 const LiveClassList = lazy(() => import('@/features/liveclass/pages/LiveClassList'));
@@ -98,7 +104,7 @@ const AffiliateDashboard = lazy(() => import('@/features/affiliate/pages/Affilia
 const ParentDashboard = lazy(() => import('@/features/parent/pages/ParentDashboard'));
 const ParentMessages = lazy(() => import('@/features/parent/pages/ParentMessages'));
 
-const PageLoader = () => (
+const FullScreenLoader = () => (
   <div className="h-screen bg-slate-950 flex items-center justify-center">
     <div className="h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
   </div>
@@ -109,6 +115,7 @@ let socket = null;
 export default function App() {
   const dispatch = useDispatch();
   const { isAuthenticated, token, initialized } = useAuth();
+  useBranding();
 
   useEffect(() => {
     if (token) {
@@ -145,299 +152,325 @@ export default function App() {
   return (
     <>
       <ScrollManager />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Auth Routes */}
-          <Route element={<AuthLayout />}>
-            <Route
-              path="/login"
-              element={
-                <GuestRoute>
-                  <LoginPage />
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <GuestRoute>
-                  <RegisterPage />
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/forgot-password"
-              element={
-                <GuestRoute>
-                  <ForgotPasswordPage />
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/reset-password/:token"
-              element={
-                <GuestRoute>
-                  <ResetPasswordPage />
-                </GuestRoute>
-              }
-            />
-            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          </Route>
-
-          {/* Main Layout Routes */}
-          <Route element={<MainLayout />}>
-            {/* Public */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/courses" element={<CourseCatalog />} />
-            <Route path="/courses/:id" element={<CourseDetail />} />
-            <Route path="/tests" element={<TestCatalog />} />
-            <Route path="/tests/:id" element={<TestDetail />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/verify-certificate" element={<CertificateVerify />} />
-            <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            <Route path="/blog" element={<BlogList />} />
-            <Route path="/blog/:slug" element={<BlogDetail />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/affiliate/validate/:code" element={<AffiliateDashboard />} />
-
-            {/* Protected Student */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/my-courses"
-              element={
-                <ProtectedRoute>
-                  <MyCourses />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/courses/:id/learn"
-              element={
-                <ProtectedRoute>
-                  <CourseLearning />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/my-test-attempts"
-              element={
-                <ProtectedRoute>
-                  <MyTestAttempts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/quiz/:id"
-              element={
-                <ProtectedRoute>
-                  <QuizPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/achievements"
-              element={
-                <ProtectedRoute>
-                  <AchievementsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/wishlist"
-              element={
-                <ProtectedRoute>
-                  <Wishlist />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkout/:id"
-              element={
-                <ProtectedRoute>
-                  <Checkout />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkout/success"
-              element={
-                <ProtectedRoute>
-                  <CheckoutSuccess />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <OrderHistory />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <ProfileSettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <NotificationsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/affiliate"
-              element={
-                <ProtectedRoute>
-                  <AffiliateDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* AI */}
-            <Route
-              path="/ai/questions"
-              element={
-                <ProtectedRoute roles={['teacher', 'admin']}>
-                  <AIQuestionGenerator />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai/doubt-solver"
-              element={
-                <ProtectedRoute>
-                  <AIDoubtSolver />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai/study-plan"
-              element={
-                <ProtectedRoute>
-                  <AIStudyPlan />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Live Classes */}
-            <Route
-              path="/live-classes"
-              element={
-                <ProtectedRoute>
-                  <LiveClassList />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Parent Routes */}
-            <Route
-              path="/parent"
-              element={
-                <ProtectedRoute roles={['parent', 'admin']}>
-                  <ParentDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/messages"
-              element={
-                <ProtectedRoute roles={['parent', 'teacher', 'admin']}>
-                  <ParentMessages />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Teacher Routes */}
-            <Route
-              path="/teacher"
-              element={
-                <ProtectedRoute roles={['teacher', 'admin']}>
-                  <TeacherLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<TeacherDashboard />} />
-              <Route path="courses" element={<TeacherCourses />} />
-              <Route path="courses/new" element={<TeacherCourseForm />} />
-              <Route path="courses/:id/edit" element={<TeacherCourseForm />} />
-              <Route path="tests" element={<TeacherTests />} />
-              <Route path="tests/new" element={<TeacherTestForm />} />
-              <Route path="tests/:id/edit" element={<TeacherTestForm />} />
-              <Route path="tests/:id/analytics" element={<TeacherTestAnalytics />} />
-              <Route path="quizzes" element={<TeacherQuizzes />} />
-              <Route path="quizzes/new" element={<TeacherQuizForm />} />
-              <Route path="quizzes/:id/edit" element={<TeacherQuizForm />} />
-              <Route path="students" element={<TeacherStudents />} />
-              <Route path="revenue" element={<TeacherRevenue />} />
-              <Route path="discussions" element={<TeacherDiscussions />} />
-              <Route path="attendance" element={<TeacherAttendance />} />
-            </Route>
-
-            {/* 404 */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-
-          {/* Institute Branding */}
+      <Routes>
+        {/* Auth Routes */}
+        <Route element={<AuthLayout />}>
           <Route
-            path="/institute/branding"
+            path="/login"
             element={
-              <ProtectedRoute roles={['admin', 'super_admin']}>
+              <GuestRoute>
+                <LoginPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <GuestRoute>
+                <RegisterPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <GuestRoute>
+                <ForgotPasswordPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/reset-password/:token"
+            element={
+              <GuestRoute>
+                <ResetPasswordPage />
+              </GuestRoute>
+            }
+          />
+          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        </Route>
+
+        {/* Main Layout Routes */}
+        <Route element={<MainLayout />}>
+          {/* Public */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/courses" element={<CourseCatalog />} />
+          <Route path="/courses/:id" element={<CourseDetail />} />
+          <Route path="/tests" element={<TestCatalog />} />
+          <Route path="/tests/:id" element={<TestDetail />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/verify-certificate" element={<CertificateVerify />} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route path="/blog" element={<BlogList />} />
+          <Route path="/blog/:slug" element={<BlogDetail />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/affiliate/validate/:code" element={<AffiliateDashboard />} />
+
+          {/* Protected Student */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-courses"
+            element={
+              <ProtectedRoute>
+                <MyCourses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/courses/:id/learn"
+            element={
+              <ProtectedRoute>
+                <CourseLearning />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-test-attempts"
+            element={
+              <ProtectedRoute>
+                <MyTestAttempts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz/:id"
+            element={
+              <ProtectedRoute>
+                <QuizPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/achievements"
+            element={
+              <ProtectedRoute>
+                <AchievementsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wishlist"
+            element={
+              <ProtectedRoute>
+                <Wishlist />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/:id"
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/success"
+            element={
+              <ProtectedRoute>
+                <CheckoutSuccess />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <OrderHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <ProfileSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/affiliate"
+            element={
+              <ProtectedRoute>
+                <AffiliateDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* AI */}
+          <Route
+            path="/ai/questions"
+            element={
+              <ProtectedRoute roles={['teacher', 'admin']}>
+                <AIQuestionGenerator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/doubt-solver"
+            element={
+              <ProtectedRoute>
+                <AIDoubtSolver />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/study-plan"
+            element={
+              <ProtectedRoute>
+                <AIStudyPlan />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai/quiz-generator"
+            element={
+              <ProtectedRoute roles={['teacher', 'admin']}>
+                <AIQuizGenerator />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Library */}
+          <Route
+            path="/library"
+            element={
+              <ProtectedRoute>
+                <LibraryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Live Classes */}
+          <Route
+            path="/live-classes"
+            element={
+              <ProtectedRoute>
+                <LiveClassList />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Parent Routes */}
+          <Route
+            path="/parent"
+            element={
+              <ProtectedRoute roles={['parent', 'admin']}>
+                <ParentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute roles={['parent', 'teacher', 'admin']}>
+                <ParentMessages />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Teacher Routes */}
+          <Route
+            path="/teacher"
+            element={
+              <ProtectedRoute roles={['teacher', 'admin']}>
+                <TeacherLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<TeacherDashboard />} />
+            <Route path="courses" element={<TeacherCourses />} />
+            <Route path="courses/new" element={<TeacherCourseForm />} />
+            <Route path="courses/:id/edit" element={<TeacherCourseForm />} />
+            <Route path="tests" element={<TeacherTests />} />
+            <Route path="tests/new" element={<TeacherTestForm />} />
+            <Route path="tests/:id/edit" element={<TeacherTestForm />} />
+            <Route path="tests/:id/analytics" element={<TeacherTestAnalytics />} />
+            <Route path="quizzes" element={<TeacherQuizzes />} />
+            <Route path="quizzes/new" element={<TeacherQuizForm />} />
+            <Route path="quizzes/:id/edit" element={<TeacherQuizForm />} />
+            <Route path="students" element={<TeacherStudents />} />
+            <Route path="revenue" element={<TeacherRevenue />} />
+            <Route path="discussions" element={<TeacherDiscussions />} />
+            <Route path="attendance" element={<TeacherAttendance />} />
+            <Route path="live-classes" element={<TeacherLiveClasses />} />
+          </Route>
+
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+
+        {/* Institute Branding */}
+        <Route
+          path="/institute/branding"
+          element={
+            <ProtectedRoute roles={['admin', 'super_admin']}>
+              <Suspense fallback={<FullScreenLoader />}>
                 <BrandingSettings />
-              </ProtectedRoute>
-            }
-          />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Full-screen Live Class Room */}
-          <Route
-            path="/live-classes/:id/room"
-            element={
-              <ProtectedRoute>
+        {/* Full-screen Live Class Room */}
+        <Route
+          path="/live-classes/:id/room"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<FullScreenLoader />}>
                 <LiveClassRoom />
-              </ProtectedRoute>
-            }
-          />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Full-screen Test Taking */}
-          <Route
-            path="/tests/:id/take"
-            element={
-              <ProtectedRoute>
+        {/* Full-screen Test Taking */}
+        <Route
+          path="/tests/:id/take"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<FullScreenLoader />}>
                 <TestTaking />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tests/:id/result"
-            element={
-              <ProtectedRoute>
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tests/:id/result"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<FullScreenLoader />}>
                 <TestResult />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Suspense>
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </>
   );
 }

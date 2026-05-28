@@ -77,6 +77,12 @@ const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
 
+  livekit: {
+    apiKey: process.env.LIVEKIT_API_KEY,
+    apiSecret: process.env.LIVEKIT_API_SECRET,
+    url: process.env.LIVEKIT_URL,
+  },
+
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   adminUrl: process.env.ADMIN_URL || 'http://localhost:5174',
 

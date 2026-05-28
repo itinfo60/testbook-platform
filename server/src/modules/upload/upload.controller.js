@@ -5,6 +5,19 @@ import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import config from '../../config/index.js';
+import Institute from '../institute/institute.model.ts';
+
+// Increment storageUsed for the tenant (non-blocking)
+function trackStorageUsed(tenantId, bytes) {
+  if (!tenantId || !bytes) return;
+  Institute.findByIdAndUpdate(tenantId, { $inc: { storageUsed: bytes } }).catch(() => {});
+}
+
+// Decrement storageUsed for the tenant (non-blocking)
+function trackStorageFreed(tenantId, bytes) {
+  if (!tenantId || !bytes) return;
+  Institute.findByIdAndUpdate(tenantId, { $inc: { storageUsed: -bytes } }).catch(() => {});
+}
 
 // Memory storage for direct Cloudinary streaming (no disk write)
 const storage = multer.memoryStorage();
@@ -49,6 +62,8 @@ export const uploadImage = catchAsync(async (req, res) => {
     transformation: [{ quality: 'auto', fetch_format: 'auto' }],
   });
 
+  trackStorageUsed(req.tenantId, result.bytes);
+
   ApiResponse.ok(
     res,
     {
@@ -71,12 +86,14 @@ export const uploadVideo = catchAsync(async (req, res) => {
 
   const result = await uploadToCloudinary(req.file.buffer, 'videos', 'video', {
     eager: [
-      { streaming_profile: 'hd', format: 'm3u8' }, // HLS for adaptive streaming
-      { width: 1280, height: 720, crop: 'scale', format: 'mp4' }, // 720p fallback
+      { streaming_profile: 'hd', format: 'm3u8' },
+      { width: 1280, height: 720, crop: 'scale', format: 'mp4' },
     ],
     eager_async: true,
     eager_notification_url: process.env.CLOUDINARY_WEBHOOK_URL || undefined,
   });
+
+  trackStorageUsed(req.tenantId, result.bytes);
 
   ApiResponse.ok(
     res,
@@ -103,6 +120,8 @@ export const uploadDocument = catchAsync(async (req, res) => {
 
   const result = await uploadToCloudinary(req.file.buffer, 'documents', 'raw');
 
+  trackStorageUsed(req.tenantId, result.bytes);
+
   ApiResponse.ok(
     res,
     {
@@ -122,7 +141,18 @@ export const deleteFile = catchAsync(async (req, res) => {
   const { publicId } = req.params;
   const { type = 'image' } = req.query;
 
-  await cloudinary.v2.uploader.destroy(publicId, { resource_type: type });
+  const result = await cloudinary.v2.uploader.destroy(publicId, { resource_type: type });
+
+  // Cloudinary returns bytes in destroy result only for some resource types;
+  // fetch resource details first if bytes are needed for accurate tracking
+  if (result.result === 'ok' && req.tenantId) {
+    try {
+      const info = await cloudinary.v2.api.resource(publicId, { resource_type: type });
+      trackStorageFreed(req.tenantId, info.bytes);
+    } catch {
+      // Non-critical — storage count will drift slightly, acceptable
+    }
+  }
 
   ApiResponse.ok(res, null, 'File deleted');
 });

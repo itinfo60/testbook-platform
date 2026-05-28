@@ -1,13 +1,13 @@
 import './instrument.js'; // Sentry must load first
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { store } from '@/store/store';
 import { ThemeProvider } from '@/context/ThemeContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import App from './App';
 import './index.css';
 
@@ -26,34 +26,57 @@ const queryClient = new QueryClient({
 });
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <BrowserRouter>
-          <ThemeProvider>
+  <QueryClientProvider client={queryClient}>
+    <Provider store={store}>
+      <BrowserRouter>
+        <ThemeProvider>
+          <ErrorBoundary>
             <App />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  borderRadius: '12px',
-                  background: '#1e293b',
-                  color: '#f1f5f9',
-                  fontSize: '14px',
-                },
-                success: {
-                  iconTheme: { primary: '#22c55e', secondary: '#fff' },
-                },
-                error: {
-                  iconTheme: { primary: '#ef4444', secondary: '#fff' },
-                },
-              }}
-            />
-          </ThemeProvider>
-        </BrowserRouter>
-      </Provider>
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
-  </React.StrictMode>
+          </ErrorBoundary>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 5000,
+              style: {
+                borderRadius: '12px',
+                background: '#1e293b',
+                color: '#f1f5f9',
+                fontSize: '14px',
+              },
+              success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
+              error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+            }}
+          >
+            {(t) => (
+              <ToastBar toast={t}>
+                {({ icon, message }) => (
+                  <>
+                    {icon}
+                    {message}
+                    <button
+                      onClick={() => toast.dismiss(t.id)}
+                      style={{
+                        marginLeft: 8,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#94a3b8',
+                        fontSize: 16,
+                        lineHeight: 1,
+                        padding: '0 2px',
+                      }}
+                      aria-label="Dismiss"
+                    >
+                      ✕
+                    </button>
+                  </>
+                )}
+              </ToastBar>
+            )}
+          </Toaster>
+        </ThemeProvider>
+      </BrowserRouter>
+    </Provider>
+    {/* {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />} */}
+  </QueryClientProvider>
 );

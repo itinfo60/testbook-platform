@@ -11,13 +11,28 @@ import {
   changePasswordSchema,
   updateProfileSchema,
   mfaVerifySchema,
+  mfaLoginSchema,
 } from './auth.validation.js';
 import { authLimiter } from '../../middleware/rateLimiter.js';
+import { checkStudentLimit, checkTeacherLimit } from '../../middleware/tenant.middleware.js';
 
 const router = Router();
 const controller = new AuthController();
 
-router.post('/register', authLimiter, validate(registerSchema), controller.register);
+// Apply limit check only when registering as student or teacher (not admin/parent)
+const checkRoleLimit = (req: any, res: any, next: any) => {
+  if (req.body.role === 'teacher') return checkTeacherLimit(req, res, next);
+  if (!req.body.role || req.body.role === 'student') return checkStudentLimit(req, res, next);
+  return next();
+};
+
+router.post(
+  '/register',
+  authLimiter,
+  validate(registerSchema),
+  checkRoleLimit,
+  controller.register
+);
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
 router.get('/check-email', controller.checkEmail);
 router.post('/logout', authenticate, controller.logout);
@@ -46,7 +61,7 @@ router.delete('/fcm-token', authenticate, controller.removeFcmToken);
 // MFA Setup & Activation
 router.post('/mfa/setup', authenticate, controller.setupMfa);
 router.post('/mfa/verify', authenticate, validate(mfaVerifySchema), controller.verifyMfa);
-router.post('/mfa/login', validate(mfaVerifySchema), controller.verifyMfaLogin);
+router.post('/mfa/login', validate(mfaLoginSchema), controller.verifyMfaLogin);
 router.post('/mfa/disable', authenticate, controller.disableMfa);
 
 // Google OAuth

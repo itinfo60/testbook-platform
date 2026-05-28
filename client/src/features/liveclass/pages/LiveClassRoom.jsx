@@ -1,6 +1,17 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import {
+  LiveKitRoom,
+  useLocalParticipant,
+  useRemoteParticipants,
+  useTracks,
+  VideoTrack,
+  RoomAudioRenderer,
+  useTrackToggle,
+  useDisconnectButton,
+} from '@livekit/components-react';
+import { Track } from 'livekit-client';
 import {
   HiMicrophone,
   HiOutlineMicrophone,
@@ -10,243 +21,165 @@ import {
   HiX,
   HiDesktopComputer,
   HiEyeOff,
+  HiUserGroup,
 } from 'react-icons/hi';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 
-const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-];
+// ── Controls using LiveKit hooks ─────────────────────────────────────────────
+function MicButton() {
+  const { buttonProps, enabled } = useTrackToggle({ source: Track.Source.Microphone });
+  return (
+    <button
+      {...buttonProps}
+      className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${enabled ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'}`}
+    >
+      {enabled ? <HiMicrophone className="h-5 w-5" /> : <HiOutlineMicrophone className="h-5 w-5" />}
+    </button>
+  );
+}
 
-export default function LiveClassRoom() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user, token } = useSelector((s) => s.auth);
+function CameraButton() {
+  const { buttonProps, enabled } = useTrackToggle({ source: Track.Source.Camera });
+  return (
+    <button
+      {...buttonProps}
+      className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${enabled ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'}`}
+    >
+      {enabled ? <HiVideoCamera className="h-5 w-5" /> : <HiEyeOff className="h-5 w-5" />}
+    </button>
+  );
+}
 
-  const [liveClass, setLiveClass] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
-  const [screenSharing, setScreenSharing] = useState(false);
+function ScreenShareButton() {
+  const { buttonProps, enabled } = useTrackToggle({ source: Track.Source.ScreenShare });
+  return (
+    <button
+      {...buttonProps}
+      className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${enabled ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+      title={enabled ? 'Stop sharing' : 'Share screen'}
+    >
+      <HiDesktopComputer className="h-5 w-5" />
+    </button>
+  );
+}
+
+function LeaveButton({ onLeave }) {
+  const { buttonProps } = useDisconnectButton({});
+  return (
+    <button
+      {...buttonProps}
+      onClick={() => {
+        buttonProps.onClick?.();
+        onLeave();
+      }}
+      className="h-12 w-24 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 transition-colors"
+    >
+      <HiPhone className="h-5 w-5" /> Leave
+    </button>
+  );
+}
+
+// ── Participant video grid ────────────────────────────────────────────────────
+function VideoGrid({ user }) {
+  const localParticipant = useLocalParticipant();
+  const remoteParticipants = useRemoteParticipants();
+  const cameraTracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], {
+    onlySubscribed: true,
+  });
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 auto-rows-fr overflow-y-auto p-4">
+      {/* Local participant */}
+      <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700">
+        {cameraTracks
+          .filter((t) => t.participant.identity === localParticipant.localParticipant?.identity)
+          .slice(0, 1)
+          .map((t) => (
+            <VideoTrack
+              key={t.publication.trackSid}
+              trackRef={t}
+              className="w-full h-full object-cover"
+            />
+          ))}
+        {!localParticipant.isCameraEnabled && (
+          <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
+            <HiEyeOff className="h-8 w-8 text-slate-500" />
+          </div>
+        )}
+        <div className="absolute bottom-2 left-2 bg-slate-900/80 rounded-lg px-2 py-0.5 text-xs text-white">
+          {user?.name} (You)
+        </div>
+      </div>
+
+      {/* Remote participants */}
+      {remoteParticipants.map((participant) => {
+        const track = cameraTracks.find((t) => t.participant.identity === participant.identity);
+        return (
+          <div
+            key={participant.identity}
+            className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700"
+          >
+            {track ? (
+              <VideoTrack trackRef={track} className="w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
+                <HiEyeOff className="h-8 w-8 text-slate-500" />
+              </div>
+            )}
+            <div className="absolute bottom-2 left-2 bg-slate-900/80 rounded-lg px-2 py-0.5 text-xs text-white">
+              {participant.name || participant.identity}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main inner classroom component (inside LiveKitRoom context) ───────────────
+function ClassroomInner({ liveClassId, liveClass, user, token, onLeave }) {
+  const remoteParticipants = useRemoteParticipants();
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [participants, setParticipants] = useState([]);
   const [handRaised, setHandRaised] = useState(false);
-
   const socketRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const screenStreamRef = useRef(null);
-  const peersRef = useRef({}); // socketId -> RTCPeerConnection
-  const remoteVideosRef = useRef({}); // socketId -> <video> element
-
-  const createPeer = useCallback((remoteSockId, stream) => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    peersRef.current[remoteSockId] = pc;
-
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        socketRef.current.emit('webrtc_ice_candidate', {
-          to: remoteSockId,
-          candidate: e.candidate,
-        });
-      }
-    };
-
-    pc.ontrack = (e) => {
-      const [remoteStream] = e.streams;
-      if (remoteVideosRef.current[remoteSockId]) {
-        remoteVideosRef.current[remoteSockId].srcObject = remoteStream;
-      }
-    };
-
-    return pc;
-  }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    const init = async () => {
-      try {
-        const { data } = await api.get(`/live-classes/${id}`);
-        if (!mounted) return;
-        setLiveClass(data.data?.liveClass);
-
-        // Join attendance
-        await api.post(`/live-classes/${id}/join`);
-
-        // Get local media
-        const stream = await navigator.mediaDevices
-          .getUserMedia({ video: true, audio: true })
-          .catch(() => {
-            toast.error('Camera/microphone not available — joining audio-only');
-            return navigator.mediaDevices.getUserMedia({ audio: true });
-          });
-
-        localStreamRef.current = stream;
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-        // Connect socket
-        const socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
-          auth: { token },
-          transports: ['websocket', 'polling'],
-        });
-        socketRef.current = socket;
-
-        socket.on('connect', () => {
-          socket.emit('join_liveclass', { liveClassId: id });
-        });
-
-        // A new peer joined — we send them an offer
-        socket.on('peer_joined', async ({ userId: peerId, socketId: remoteId }) => {
-          if (!mounted) return;
-          setParticipants((p) => [
-            ...p.filter((x) => x.socketId !== remoteId),
-            { userId: peerId, socketId: remoteId },
-          ]);
-          const pc = createPeer(remoteId, stream);
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit('webrtc_offer', { to: remoteId, offer, liveClassId: id });
-        });
-
-        socket.on('peer_left', ({ socketId: remoteId }) => {
-          if (!mounted) return;
-          setParticipants((p) => p.filter((x) => x.socketId !== remoteId));
-          if (peersRef.current[remoteId]) {
-            peersRef.current[remoteId].close();
-            delete peersRef.current[remoteId];
-          }
-        });
-
-        socket.on('webrtc_offer', async ({ from, offer }) => {
-          const pc = createPeer(from, stream);
-          await pc.setRemoteDescription(new RTCSessionDescription(offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          socket.emit('webrtc_answer', { to: from, answer });
-        });
-
-        socket.on('webrtc_answer', async ({ from, answer }) => {
-          const pc = peersRef.current[from];
-          if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        });
-
-        socket.on('webrtc_ice_candidate', async ({ from, candidate }) => {
-          const pc = peersRef.current[from];
-          if (pc && candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        });
-
-        socket.on('liveclass_chat', (msg) => {
-          if (mounted) setMessages((m) => [...m, msg]);
-        });
-
-        socket.on('live_class_ended', () => {
-          toast.error('The class has ended.');
-          navigate(-1);
-        });
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Failed to join class');
-        navigate(-1);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    init();
-
-    return () => {
-      mounted = false;
-      socketRef.current?.disconnect();
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-      Object.values(peersRef.current).forEach((pc) => pc.close());
-    };
-  }, [id, token, navigate, createPeer]);
-
-  const toggleMic = () => {
-    const audioTracks = localStreamRef.current?.getAudioTracks();
-    audioTracks?.forEach((t) => {
-      t.enabled = !t.enabled;
+    const socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
     });
-    setMicOn((m) => !m);
-  };
+    socketRef.current = socket;
 
-  const toggleCam = () => {
-    const videoTracks = localStreamRef.current?.getVideoTracks();
-    videoTracks?.forEach((t) => {
-      t.enabled = !t.enabled;
+    socket.on('connect', () => {
+      socket.emit('join_liveclass', { liveClassId });
     });
-    setCamOn((c) => !c);
-  };
+    socket.on('liveclass_chat', (msg) => {
+      setMessages((m) => [...m, msg]);
+    });
+    socket.on('live_class_ended', () => {
+      toast.error('The class has ended.');
+      onLeave();
+    });
+
+    return () => socket.disconnect();
+  }, [liveClassId, token, onLeave]);
 
   const sendChat = (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    socketRef.current?.emit('liveclass_chat', { liveClassId: id, message: chatInput.trim() });
+    socketRef.current?.emit('liveclass_chat', { liveClassId, message: chatInput.trim() });
     setChatInput('');
   };
 
-  const toggleScreenShare = async () => {
-    if (screenSharing) {
-      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-      screenStreamRef.current = null;
-      setScreenSharing(false);
-      socketRef.current?.emit('screen_share_stop', { liveClassId: id });
-      // Restore camera track in all peer connections
-      const videoTrack = localStreamRef.current?.getVideoTracks()[0];
-      if (videoTrack) {
-        Object.values(peersRef.current).forEach((pc) => {
-          const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
-          sender?.replaceTrack(videoTrack);
-        });
-      }
-      if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
-    } else {
-      try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: false,
-        });
-        screenStreamRef.current = screenStream;
-        const screenTrack = screenStream.getVideoTracks()[0];
-        setScreenSharing(true);
-        socketRef.current?.emit('screen_share_start', { liveClassId: id });
-        // Replace video track in all peer connections
-        Object.values(peersRef.current).forEach((pc) => {
-          const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
-          sender?.replaceTrack(screenTrack);
-        });
-        if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
-        screenTrack.onended = () => toggleScreenShare();
-      } catch {
-        toast.error('Screen share cancelled or not supported');
-      }
-    }
-  };
-
   const toggleHandRaise = () => {
-    const newState = !handRaised;
-    setHandRaised(newState);
-    socketRef.current?.emit(newState ? 'raise_hand' : 'lower_hand', { liveClassId: id });
+    const next = !handRaised;
+    setHandRaised(next);
+    socketRef.current?.emit(next ? 'raise_hand' : 'lower_hand', { liveClassId });
   };
-
-  const leaveClass = () => {
-    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-    socketRef.current?.emit('leave_liveclass', { liveClassId: id });
-    navigate(-1);
-  };
-
-  if (loading)
-    return (
-      <div className="h-screen bg-slate-950 flex items-center justify-center">
-        <div className="h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
 
   return (
     <div className="h-screen bg-slate-950 flex flex-col">
@@ -257,50 +190,16 @@ export default function LiveClassRoom() {
           <span className="text-white font-semibold text-sm">LIVE</span>
         </div>
         <h1 className="text-white font-medium text-sm flex-1 truncate">{liveClass?.title}</h1>
-        <span className="text-slate-400 text-xs">{participants.length + 1} participants</span>
+        <span className="text-slate-400 text-xs flex items-center gap-1">
+          <HiUserGroup className="h-4 w-4" />
+          {remoteParticipants.length + 1} participants
+        </span>
       </div>
 
+      {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Video grid */}
-        <div className="flex-1 p-4 grid grid-cols-2 md:grid-cols-3 gap-3 auto-rows-fr overflow-y-auto">
-          {/* Local video */}
-          <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 bg-slate-900/80 rounded-lg px-2 py-0.5 text-xs text-white">
-              {user?.name} (You)
-            </div>
-            {!camOn && (
-              <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
-                <HiEyeOff className="h-8 w-8 text-slate-500" />
-              </div>
-            )}
-          </div>
-
-          {/* Remote videos */}
-          {participants.map((p) => (
-            <div
-              key={p.socketId}
-              className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700"
-            >
-              <video
-                ref={(el) => {
-                  remoteVideosRef.current[p.socketId] = el;
-                }}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-2 left-2 bg-slate-900/80 rounded-lg px-2 py-0.5 text-xs text-white">
-                Participant
-              </div>
-            </div>
-          ))}
+        <div className="flex-1 overflow-hidden">
+          <VideoGrid user={user} />
         </div>
 
         {/* Chat panel */}
@@ -319,7 +218,7 @@ export default function LiveClassRoom() {
               {messages.map((m, i) => (
                 <div key={i} className="bg-slate-800 rounded-xl p-2.5">
                   <p className="text-xs text-primary-400 font-medium mb-1">
-                    {m.userId === user?._id ? 'You' : 'Participant'}
+                    {m.userId === user?._id ? 'You' : m.name || 'Participant'}
                   </p>
                   <p className="text-sm text-slate-200">{m.message}</p>
                 </div>
@@ -348,40 +247,15 @@ export default function LiveClassRoom() {
         )}
       </div>
 
-      {/* Controls bar */}
+      {/* Controls */}
       <div className="h-20 bg-slate-900 border-t border-slate-800 flex items-center justify-center gap-4">
-        <button
-          onClick={toggleMic}
-          className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${micOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'}`}
-          title={micOn ? 'Mute' : 'Unmute'}
-        >
-          {micOn ? (
-            <HiMicrophone className="h-5 w-5" />
-          ) : (
-            <HiOutlineMicrophone className="h-5 w-5" />
-          )}
-        </button>
-
-        <button
-          onClick={toggleCam}
-          className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${camOn ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'}`}
-          title={camOn ? 'Turn off camera' : 'Turn on camera'}
-        >
-          {camOn ? <HiVideoCamera className="h-5 w-5" /> : <HiEyeOff className="h-5 w-5" />}
-        </button>
-
-        <button
-          onClick={toggleScreenShare}
-          className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${screenSharing ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
-          title={screenSharing ? 'Stop sharing' : 'Share screen'}
-        >
-          <HiDesktopComputer className="h-5 w-5" />
-        </button>
+        <MicButton />
+        <CameraButton />
+        <ScreenShareButton />
 
         <button
           onClick={toggleHandRaise}
           className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors text-lg ${handRaised ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
-          title={handRaised ? 'Lower hand' : 'Raise hand'}
         >
           ✋
         </button>
@@ -389,18 +263,99 @@ export default function LiveClassRoom() {
         <button
           onClick={() => setChatOpen((c) => !c)}
           className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${chatOpen ? 'bg-primary-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
-          title="Toggle chat"
         >
           <HiChat className="h-5 w-5" />
         </button>
 
-        <button
-          onClick={leaveClass}
-          className="h-12 w-24 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 transition-colors"
-        >
-          <HiPhone className="h-5 w-5" /> Leave
-        </button>
+        <LeaveButton onLeave={onLeave} />
       </div>
+
+      {/* LiveKit audio renderer — must be inside LiveKitRoom */}
+      <RoomAudioRenderer />
     </div>
+  );
+}
+
+// ── Root component — fetches token then mounts LiveKitRoom ───────────────────
+export default function LiveClassRoom() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user, token } = useSelector((s) => s.auth);
+
+  const [liveClass, setLiveClass] = useState(null);
+  const [livekitToken, setLivekitToken] = useState('');
+  const [livekitUrl, setLivekitUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [classRes, tokenRes] = await Promise.all([
+          api.get(`/live-classes/${id}`),
+          api.get(`/live-classes/${id}/token`),
+        ]);
+        if (!mounted) return;
+        setLiveClass(classRes.data.data?.liveClass);
+        setLivekitToken(tokenRes.data.data?.token);
+        setLivekitUrl(tokenRes.data.data?.livekitUrl);
+        await api.post(`/live-classes/${id}/join`);
+      } catch (err) {
+        if (!mounted) return;
+        toast.error(err.response?.data?.message || 'Failed to join class');
+        navigate(-1);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [id, navigate]);
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center">
+        <div className="h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!livekitToken || !livekitUrl) {
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center text-white">
+          <p className="text-lg font-semibold mb-2">Live video not configured</p>
+          <p className="text-slate-400 text-sm">Contact your administrator to set up LiveKit.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-4 px-4 py-2 bg-slate-700 rounded-lg text-sm hover:bg-slate-600"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <LiveKitRoom
+      token={livekitToken}
+      serverUrl={livekitUrl}
+      connect
+      audio
+      video
+      onDisconnected={() => navigate(-1)}
+      onError={(err) => toast.error(`Connection error: ${err.message}`)}
+      style={{ height: '100vh' }}
+    >
+      <ClassroomInner
+        liveClassId={id}
+        liveClass={liveClass}
+        user={user}
+        token={token}
+        onLeave={() => navigate(-1)}
+      />
+    </LiveKitRoom>
   );
 }

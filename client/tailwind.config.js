@@ -6,17 +6,17 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: 'rgb(var(--p-50)  / <alpha-value>)',
+          100: 'rgb(var(--p-100) / <alpha-value>)',
+          200: 'rgb(var(--p-200) / <alpha-value>)',
+          300: 'rgb(var(--p-300) / <alpha-value>)',
+          400: 'rgb(var(--p-400) / <alpha-value>)',
+          500: 'rgb(var(--p-500) / <alpha-value>)',
+          600: 'rgb(var(--p-600) / <alpha-value>)',
+          700: 'rgb(var(--p-700) / <alpha-value>)',
+          800: 'rgb(var(--p-800) / <alpha-value>)',
+          900: 'rgb(var(--p-900) / <alpha-value>)',
+          950: 'rgb(var(--p-950) / <alpha-value>)',
         },
         secondary: {
           50: '#f0fdf4',
@@ -68,7 +68,7 @@ export default {
         'spin-slow': 'spin 3s linear infinite',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
         'bounce-soft': 'bounceSoft 1s ease-in-out infinite',
-        'shimmer': 'shimmer 2s linear infinite',
+        shimmer: 'shimmer 2s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -101,10 +101,10 @@ export default {
         },
       },
       boxShadow: {
-        'card': '0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.06)',
+        card: '0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.06)',
         'card-hover': '0 8px 24px -4px rgba(0, 0, 0, 0.12), 0 12px 32px -8px rgba(0, 0, 0, 0.08)',
-        'nav': '0 1px 3px 0 rgba(0, 0, 0, 0.06)',
-        'modal': '0 24px 48px -12px rgba(0, 0, 0, 0.18)',
+        nav: '0 1px 3px 0 rgba(0, 0, 0, 0.06)',
+        modal: '0 24px 48px -12px rgba(0, 0, 0, 0.18)',
       },
     },
   },

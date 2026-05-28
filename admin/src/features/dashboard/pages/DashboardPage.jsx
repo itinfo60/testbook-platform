@@ -34,6 +34,7 @@ export default function Dashboard() {
   const overview = s.overview || {};
   const revenueData = s.revenue || {};
   const growthData = s.growth || {};
+  const limits = s.limits || null;
 
   const roleMap = s.roleDistribution || {};
 
@@ -147,6 +148,68 @@ export default function Dashboard() {
               <StatsCard key={card.title} {...card} />
             ))}
           </div>
+
+          {/* Plan Limits */}
+          {limits && (
+            <div className="card p-5">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                Plan Usage
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: 'Students',
+                    used: limits.students.used,
+                    max: limits.students.max,
+                    color: '#6366f1',
+                  },
+                  {
+                    label: 'Teachers',
+                    used: limits.teachers.used,
+                    max: limits.teachers.max,
+                    color: '#10b981',
+                  },
+                  {
+                    label: 'Storage',
+                    used: parseFloat(limits.storage.usedGB),
+                    max: parseFloat(limits.storage.maxGB),
+                    unit: 'GB',
+                    color: '#f59e0b',
+                  },
+                ].map(({ label, used, max, unit = '', color }) => {
+                  const pct = Math.min(Math.round((used / max) * 100), 100);
+                  const danger = pct >= 90;
+                  const warn = pct >= 70 && pct < 90;
+                  return (
+                    <div key={label}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-600 dark:text-gray-400 font-medium">
+                          {label}
+                        </span>
+                        <span
+                          className={`font-semibold ${danger ? 'text-red-500' : warn ? 'text-amber-500' : 'text-gray-600 dark:text-gray-300'}`}
+                        >
+                          {used}
+                          {unit} / {max}
+                          {unit}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: danger ? '#ef4444' : warn ? '#f59e0b' : color,
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">{pct}% used</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

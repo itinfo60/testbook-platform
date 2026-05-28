@@ -11,6 +11,8 @@ import {
   TrendingUp,
   FolderOpen,
   Megaphone,
+  Palette,
+  Video,
   X,
   ChevronLeft,
 } from 'lucide-react';
@@ -31,6 +33,8 @@ const navItems = [
   { label: 'Coupons', path: '/coupons', icon: Tag },
   { label: 'Announcements', path: '/announcements', icon: Megaphone },
   { label: 'Digital Library', path: '/library', icon: FolderOpen },
+  { label: 'Live Classes', path: '/live-classes', icon: Video },
+  { label: 'Branding', path: '/branding', icon: Palette },
 ];
 
 export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {

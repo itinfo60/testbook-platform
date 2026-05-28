@@ -10,6 +10,7 @@ import {
   Notification,
   Coupon,
 } from '../../models/index.js';
+import Institute from '../institute/institute.model.ts';
 import ApiResponse from '../../utils/ApiResponse.js';
 import ApiError from '../../utils/ApiError.js';
 import catchAsync from '../../utils/catchAsync.js';
@@ -132,6 +133,18 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     return Math.round(((current - previous) / previous) * 100);
   };
 
+  // Institute limits for the current tenant
+  const institute = req.tenantId
+    ? await Institute.findById(req.tenantId).select('limits storageUsed name').lean()
+    : null;
+
+  const [studentCount, teacherCount] = institute
+    ? await Promise.all([
+        User.countDocuments({ role: 'student' }),
+        User.countDocuments({ role: 'teacher' }),
+      ])
+    : [0, 0];
+
   const data = {
     overview: {
       totalUsers,
@@ -162,6 +175,18 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     }, {}),
     monthlyTrends,
     recent: { users: recentUsers, enrollments: recentEnrollments },
+    limits: institute
+      ? {
+          students: { used: studentCount, max: institute.limits?.studentLimit || 100 },
+          teachers: { used: teacherCount, max: institute.limits?.teacherLimit || 5 },
+          storage: {
+            used: institute.storageUsed || 0,
+            max: institute.limits?.storageLimit || 10 * 1024 ** 3,
+            usedGB: ((institute.storageUsed || 0) / 1024 ** 3).toFixed(2),
+            maxGB: ((institute.limits?.storageLimit || 10 * 1024 ** 3) / 1024 ** 3).toFixed(0),
+          },
+        }
+      : null,
   };
 
   await redis.set('admin:dashboard', data, 300); // 5 min cache

@@ -43,7 +43,7 @@ export default function ParentMessages() {
 
   // Setup Socket Connection
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('token');
     if (token) {
       const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
       socketRef.current = io(socketUrl, {
@@ -97,9 +97,9 @@ export default function ParentMessages() {
     }
   };
 
-  // Load teachers when student changes
+  // Load teachers when student changes (parents only)
   useEffect(() => {
-    if (selectedStudent) {
+    if (selectedStudent && isParent) {
       fetchTeachers(selectedStudent._id);
     }
   }, [selectedStudent]);

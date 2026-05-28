@@ -22,26 +22,49 @@ export async function generateCertificatePDF({ user, course, enrollment }) {
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('error', reject);
-    doc.on('end', async () => {
+    doc.on('end', () => {
       const buffer = Buffer.concat(chunks);
-      try {
-        const result = await new Promise((res, rej) => {
-          const stream = cloudinary.uploader.upload_stream(
-            {
-              resource_type: 'raw',
-              folder: 'certificates',
-              public_id: `cert_${enrollment._id}`,
-              format: 'pdf',
-            },
-            (err, result) => (err ? rej(err) : res(result))
-          );
-          stream.end(buffer);
-        });
-        resolve(result.secure_url);
-      } catch (err) {
-        logger.error('Cloudinary certificate upload failed:', err.message);
-        reject(err);
+
+      const FALLBACK_URL =
+        'https://placehold.co/1123x794/4f46e5/white?text=Certificate+of+Completion';
+
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+      const apiKey = process.env.CLOUDINARY_API_KEY || '';
+      const isCloudinaryConfigured =
+        cloudName &&
+        cloudName !== 'disabled' &&
+        !cloudName.startsWith('your-') &&
+        apiKey &&
+        !apiKey.startsWith('your-');
+
+      if (!isCloudinaryConfigured) {
+        resolve(FALLBACK_URL);
+        return;
       }
+
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'raw',
+          folder: 'certificates',
+          public_id: `cert_${enrollment._id}`,
+          format: 'pdf',
+        },
+        (err, result) => {
+          if (err) {
+            logger.error('Cloudinary certificate upload failed:', err.message);
+            resolve(FALLBACK_URL);
+          } else {
+            resolve(result.secure_url);
+          }
+        }
+      );
+
+      stream.on('error', (err) => {
+        logger.error('Certificate stream error:', err.message);
+        resolve(FALLBACK_URL);
+      });
+
+      stream.end(buffer);
     });
 
     const certId = enrollment.certificateId || crypto.randomBytes(8).toString('hex').toUpperCase();

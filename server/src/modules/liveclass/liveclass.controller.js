@@ -1,9 +1,12 @@
 import crypto from 'crypto';
+import { AccessToken } from 'livekit-server-sdk';
 import LiveClass from './liveclass.model.js';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
+import config from '../../config/index.js';
 import { notificationQueue, reminderQueue } from '../../queues/index.js';
+import User from '../user/user.model.ts';
 
 // ===== TEACHER =====
 
@@ -130,13 +133,40 @@ export const endLiveClass = catchAsync(async (req, res) => {
   ApiResponse.ok(res, { liveClass }, 'Live class ended');
 });
 
+// ===== ADMIN =====
+
+export const adminGetAllClasses = catchAsync(async (req, res) => {
+  const { status, page = 1, limit = 20 } = req.query;
+  const filter = status ? { status } : {};
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [classes, total] = await Promise.all([
+    LiveClass.find(filter)
+      .populate('teacher', 'name avatar')
+      .populate('course', 'title thumbnail')
+      .sort('-scheduledAt')
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    LiveClass.countDocuments(filter),
+  ]);
+
+  ApiResponse.ok(res, {
+    classes,
+    total,
+    page: Number(page),
+    pages: Math.ceil(total / Number(limit)),
+  });
+});
+
 // ===== STUDENT =====
 
 export const getUpcomingClasses = catchAsync(async (req, res) => {
   const { courseId } = req.query;
+  const now = new Date();
+  // Show classes that are live (regardless of scheduledAt) OR scheduled in the future
   const filter = {
-    status: { $in: ['scheduled', 'live'] },
-    scheduledAt: { $gte: new Date() },
+    $or: [{ status: 'live' }, { status: 'scheduled', scheduledAt: { $gte: now } }],
   };
   if (courseId) filter.course = courseId;
 
@@ -183,4 +213,60 @@ export const getLiveClassById = catchAsync(async (req, res) => {
   if (!liveClass) throw ApiError.notFound('Live class not found');
 
   ApiResponse.ok(res, { liveClass });
+});
+
+export const getLiveKitToken = catchAsync(async (req, res) => {
+  const { apiKey, apiSecret, url: livekitUrl } = config.livekit;
+
+  if (!apiKey || !apiSecret) {
+    throw ApiError.serviceUnavailable(
+      'Live class video is not configured. Please contact support.'
+    );
+  }
+
+  const liveClass = await LiveClass.findById(req.params.id);
+  if (!liveClass) throw ApiError.notFound('Live class not found');
+  if (liveClass.status === 'ended') throw ApiError.badRequest('This class has ended');
+  if (liveClass.status === 'cancelled') throw ApiError.badRequest('This class was cancelled');
+
+  const user = await User.findById(req.userId).select('name role').lean();
+  if (!user) throw ApiError.unauthorized();
+
+  const isTeacher = liveClass.teacher.toString() === req.userId;
+  const roomName = liveClass.roomId;
+  const participantName = user.name;
+
+  const token = new AccessToken(apiKey, apiSecret, {
+    identity: req.userId,
+    name: participantName,
+    ttl: '4h',
+  });
+
+  token.addGrant({
+    roomJoin: true,
+    room: roomName,
+    canPublish: true,
+    canSubscribe: true,
+    canPublishData: true,
+    roomAdmin: isTeacher,
+  });
+
+  // Record attendance
+  const existing = liveClass.attendance.find((a) => a.user.toString() === req.userId);
+  if (!existing) {
+    liveClass.attendance.push({ user: req.userId, joinedAt: new Date() });
+    await liveClass.save();
+  }
+
+  ApiResponse.ok(
+    res,
+    {
+      token: await token.toJwt(),
+      roomName,
+      livekitUrl: livekitUrl || 'wss://your-livekit-server.com',
+      isTeacher,
+      participantName,
+    },
+    'Token generated'
+  );
 });

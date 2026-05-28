@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { HiAcademicCap } from 'react-icons/hi';
 export default function AuthLayout() {
@@ -14,7 +15,15 @@ export default function AuthLayout() {
             </span>
           </Link>
         </div>
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <div className="h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { HiExternalLink, HiDownload, HiPlay, HiCheckCircle, HiDocumentText } from 'react-icons/hi';
 import VideoPlayer from './VideoPlayer';
 
 function TextContent({ content }) {
@@ -53,6 +55,7 @@ export default function LessonContent({
   playerRef,
   onProgress,
   onVideoComplete,
+  onNext,
 }) {
   const [completing, setCompleting] = useState(false);
 
@@ -84,36 +87,6 @@ export default function LessonContent({
 
   return (
     <div className="space-y-6">
-      {/* Lesson header */}
-      <div>
-        {sectionTitle && (
-          <p className="text-xs text-primary-500 font-semibold uppercase tracking-wider mb-1">
-            {sectionTitle}
-          </p>
-        )}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h2 className="text-xl font-bold text-dark-900 dark:text-white">{lesson.title}</h2>
-            <div className="flex items-center gap-3 mt-1 text-sm text-dark-400">
-              <span className="capitalize">{lesson.type}</span>
-              {lesson.duration > 0 && <span>· {formatDuration(lesson.duration)}</span>}
-            </div>
-          </div>
-          <button
-            onClick={handleComplete}
-            disabled={isCompleted || completing}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0 ${
-              isCompleted
-                ? 'bg-secondary-100 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 cursor-default'
-                : 'btn-success'
-            }`}
-          >
-            <HiCheckCircle className="h-4 w-4" />
-            {isCompleted ? 'Completed' : completing ? 'Saving...' : 'Mark Complete'}
-          </button>
-        </div>
-      </div>
-
       {/* Main content by type */}
       {lesson.type === 'video' && (
         <VideoPlayer
@@ -140,17 +113,42 @@ export default function LessonContent({
         </div>
       )}
 
-      {/* Description (for video type) */}
-      {lesson.type === 'video' && lesson.content && (
-        <div className="card p-5">
-          <h4 className="text-sm font-semibold text-dark-700 dark:text-dark-300 mb-2 flex items-center gap-2">
-            <HiDocumentText className="h-4 w-4" /> Description
-          </h4>
-          <p className="text-sm text-dark-600 dark:text-dark-400 leading-relaxed whitespace-pre-wrap">
-            {lesson.content}
+      {/* Lesson header */}
+      <div>
+        {sectionTitle && (
+          <p className="text-xs text-primary-500 font-semibold uppercase tracking-wider mb-1">
+            {sectionTitle}
           </p>
+        )}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-xl font-bold text-dark-900 dark:text-white">{lesson.title}</h2>
+            <div className="flex items-center gap-3 mt-1 text-sm text-dark-400">
+              <span className="capitalize">{lesson.type}</span>
+              {lesson.duration > 0 && <span>· {formatDuration(lesson.duration)}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleComplete}
+              disabled={isCompleted || completing}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0 ${
+                isCompleted
+                  ? 'bg-secondary-100 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 cursor-default'
+                  : 'btn-success'
+              }`}
+            >
+              <HiCheckCircle className="h-4 w-4" />
+              {isCompleted ? 'Completed' : completing ? 'Saving...' : 'Mark Complete'}
+            </button>
+            {onNext && (
+              <button onClick={onNext} className="btn-primary text-sm px-5 flex-shrink-0">
+                Next Lesson →
+              </button>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Resources */}
       {lesson.resources?.length > 0 && (

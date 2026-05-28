@@ -5,18 +5,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { createTest, updateTest, fetchTestById, clearCurrentTest } from '@/features/test/testSlice';
+import { examCategoryAPI, testAPI } from '@/services/api';
 import toast from 'react-hot-toast';
-
-const CATEGORIES = [
-  { _id: '69d233db5fb0e25b31713a53', name: 'Banking' },
-  { _id: '69d233db5fb0e25b31713a59', name: 'Defence' },
-  { _id: '69d233db5fb0e25b31713a5a', name: 'Programming' },
-  { _id: '69d233db5fb0e25b31713a55', name: 'Railways' },
-  { _id: '69d233db5fb0e25b31713a54', name: 'SSC' },
-  { _id: '69d233db5fb0e25b31713a57', name: 'State PSC' },
-  { _id: '69d233db5fb0e25b31713a58', name: 'Teaching' },
-  { _id: '69d233db5fb0e25b31713a56', name: 'UPSC' },
-];
 
 const normalizeQuestion = (q) => {
   // options may be [{text, isCorrect, _id}] objects or plain strings
@@ -68,6 +58,7 @@ export default function TeacherTestForm() {
     difficulty: 'medium',
     questions: [],
   });
+  const [categories, setCategories] = useState([]);
   const [showBankModal, setShowBankModal] = useState(false);
   const [pastTests, setPastTests] = useState([]);
   const [loadingBank, setLoadingBank] = useState(false);
@@ -75,6 +66,10 @@ export default function TeacherTestForm() {
   useEffect(() => {
     dispatch(clearCurrentTest());
     if (isEdit) dispatch(fetchTestById(id));
+    examCategoryAPI
+      .getAll()
+      .then((res) => setCategories(res.data?.data?.categories || []))
+      .catch(() => {});
   }, [dispatch, id, isEdit]);
 
   useEffect(() => {
@@ -156,17 +151,9 @@ export default function TeacherTestForm() {
     if (pastTests.length === 0) {
       setLoadingBank(true);
       try {
-        // We fetch the teacher's tests to extract their past questions
-        const token = localStorage.getItem('token');
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL || '/api/v1'}/tests/teacher/my-tests`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        const data = await res.json();
+        const { data } = await testAPI.getTeacherTests();
         setPastTests(data.data?.tests || []);
-      } catch (err) {
+      } catch {
         toast.error('Failed to load past questions');
       } finally {
         setLoadingBank(false);
@@ -220,7 +207,7 @@ export default function TeacherTestForm() {
                 className="input-field"
               >
                 <option value="">Select category</option>
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <option key={c._id} value={c._id}>
                     {c.name}
                   </option>

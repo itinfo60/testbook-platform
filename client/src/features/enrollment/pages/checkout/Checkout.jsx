@@ -77,7 +77,12 @@ export default function Checkout() {
         state: { courseId: id, itemName: item.title, free: true, isTest: false },
       });
     } catch (err) {
-      toast.error(err || 'Enrollment failed');
+      if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
+        toast.success('You are already enrolled in this course!');
+        navigate(`/courses/${id}/learn`);
+      } else {
+        toast.error(err || 'Enrollment failed');
+      }
     }
   };
 
@@ -99,7 +104,12 @@ export default function Checkout() {
           : { courseId: id, itemName: item.title, isTest: false },
       });
     } catch (err) {
-      toast.error(err || 'Payment failed');
+      if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
+        toast.success(`You are already enrolled in this ${isTest ? 'test' : 'course'}!`);
+        navigate(isTest ? `/tests/${id}/take` : `/courses/${id}/learn`);
+      } else {
+        toast.error(err || 'Payment failed');
+      }
     }
   };
 

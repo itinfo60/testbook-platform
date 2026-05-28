@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { getProfile } from '@/store/authSlice';
 import Layout from '@/components/Layout';
 import LoginPage from '@/pages/LoginPage';
@@ -59,9 +59,37 @@ export default function App() {
       <Toaster
         position="top-right"
         toastOptions={{
+          duration: 5000,
           style: { background: '#1f2937', color: '#fff', border: '1px solid #374151' },
         }}
-      />
+      >
+        {(t) => (
+          <ToastBar toast={t}>
+            {({ icon, message }) => (
+              <>
+                {icon}
+                {message}
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  style={{
+                    marginLeft: 8,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#9ca3af',
+                    fontSize: 16,
+                    lineHeight: 1,
+                    padding: '0 2px',
+                  }}
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </>
+            )}
+          </ToastBar>
+        )}
+      </Toaster>
     </>
   );
 }

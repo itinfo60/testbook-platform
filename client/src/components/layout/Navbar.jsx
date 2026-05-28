@@ -1,7 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiUser, HiAcademicCap, HiBookOpen, HiClipboardList, HiHeart, HiCog, HiChartBar, HiSearch, HiBell, HiLogout, HiMenu, HiX } from 'react-icons/hi';
+import {
+  HiUser,
+  HiAcademicCap,
+  HiBookOpen,
+  HiClipboardList,
+  HiHeart,
+  HiCog,
+  HiChartBar,
+  HiSearch,
+  HiBell,
+  HiLogout,
+  HiMenu,
+  HiX,
+  HiChat,
+  HiUserGroup,
+  HiVideoCamera,
+  HiLightningBolt,
+  HiShoppingBag,
+  HiSparkles,
+  HiLibrary,
+  HiLink,
+} from 'react-icons/hi';
 import { logoutUser } from '@/features/auth/authSlice';
 import { fetchUnreadCount } from '@/features/notification/notificationSlice';
 import DarkModeToggle from '@/components/DarkModeToggle';
@@ -10,8 +31,9 @@ export default function Navbar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useSelector(state => state.auth);
-  const { unreadCount } = useSelector(state => state.notifications);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { unreadCount } = useSelector((state) => state.notifications);
+  const { logoUrl, name: instituteName } = useSelector((state) => state.branding);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -34,7 +56,7 @@ export default function Navbar() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const handleClick = e => {
+    const handleClick = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
     };
@@ -42,7 +64,7 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleSearch = e => {
+  const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/courses?search=${encodeURIComponent(searchQuery.trim())}`);
@@ -58,19 +80,32 @@ export default function Navbar() {
   const navLinks = [
     { label: 'Courses', path: '/courses' },
     { label: 'Tests', path: '/tests' },
+    { label: 'Live Classes', path: '/live-classes' },
     { label: 'Blog', path: '/blog' },
     { label: 'Leaderboard', path: '/leaderboard' },
   ];
 
-
-  const userLinks = [
-    { icon: HiUser, label: 'Dashboard', path: '/dashboard' },
-    { icon: HiBookOpen, label: 'My Courses', path: '/my-courses' },
-    { icon: HiClipboardList, label: 'My Tests', path: '/my-test-attempts' },
-    { icon: HiHeart, label: 'Wishlist', path: '/wishlist' },
-    { icon: HiAcademicCap, label: 'Achievements', path: '/achievements' },
-    { icon: HiCog, label: 'Settings', path: '/settings' },
-  ];
+  const userLinks =
+    user?.role === 'parent'
+      ? [
+          { icon: HiUserGroup, label: 'Parent Portal', path: '/parent' },
+          { icon: HiChat, label: 'Messages', path: '/messages' },
+          { icon: HiCog, label: 'Settings', path: '/settings' },
+        ]
+      : [
+          { icon: HiUser, label: 'Dashboard', path: '/dashboard' },
+          { icon: HiBookOpen, label: 'My Courses', path: '/my-courses' },
+          { icon: HiClipboardList, label: 'My Tests', path: '/my-test-attempts' },
+          { icon: HiVideoCamera, label: 'Live Classes', path: '/live-classes' },
+          { icon: HiSparkles, label: 'AI Doubt Solver', path: '/ai/doubt-solver' },
+          { icon: HiLightningBolt, label: 'AI Study Plan', path: '/ai/study-plan' },
+          { icon: HiHeart, label: 'Wishlist', path: '/wishlist' },
+          { icon: HiAcademicCap, label: 'Achievements', path: '/achievements' },
+          { icon: HiLibrary, label: 'Library', path: '/library' },
+          { icon: HiShoppingBag, label: 'My Orders', path: '/orders' },
+          { icon: HiLink, label: 'Affiliate', path: '/affiliate' },
+          { icon: HiCog, label: 'Settings', path: '/settings' },
+        ];
 
   if (user?.role === 'teacher') {
     userLinks.splice(1, 0, { icon: HiChartBar, label: 'Teacher Dashboard', path: '/teacher' });
@@ -83,17 +118,28 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="h-9 w-9 bg-primary-600 rounded-xl flex items-center justify-center">
-                <HiAcademicCap className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold font-display text-dark-900 dark:text-white">
-                Learn<span className="text-primary-600">Hub</span>
-              </span>
+              {logoUrl ? (
+                <img src={logoUrl} alt={instituteName || 'Logo'} className="h-9 object-contain" />
+              ) : (
+                <>
+                  <div className="h-9 w-9 bg-primary-600 rounded-xl flex items-center justify-center">
+                    <HiAcademicCap className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-xl font-bold font-display text-dark-900 dark:text-white">
+                    {instituteName || (
+                      <>
+                        {`Learn`}
+                        <span className="text-primary-600">Hub</span>
+                      </>
+                    )}
+                  </span>
+                </>
+              )}
             </Link>
 
             {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center gap-1">
-              {navLinks.map(link => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -116,7 +162,7 @@ export default function Navbar() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search courses, tests..."
                 className="w-full pl-9 pr-4 py-2 bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
               />
@@ -162,12 +208,16 @@ export default function Navbar() {
                   {userMenuOpen && (
                     <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-dark-800 rounded-2xl shadow-modal border border-dark-100 dark:border-dark-700 py-2 animate-slide-down">
                       <div className="px-4 py-3 border-b border-dark-100 dark:border-dark-700">
-                        <p className="text-sm font-semibold text-dark-900 dark:text-white truncate">{user?.name}</p>
+                        <p className="text-sm font-semibold text-dark-900 dark:text-white truncate">
+                          {user?.name}
+                        </p>
                         <p className="text-xs text-dark-500 truncate">{user?.email}</p>
-                        <span className="inline-block mt-1 badge-primary capitalize">{user?.role}</span>
+                        <span className="inline-block mt-1 badge-primary capitalize">
+                          {user?.role}
+                        </span>
                       </div>
                       <div className="py-1">
-                        {userLinks.map(link => (
+                        {userLinks.map((link) => (
                           <Link
                             key={link.path}
                             to={link.path}
@@ -193,8 +243,12 @@ export default function Navbar() {
               </>
             ) : (
               <div className="hidden sm:flex items-center gap-2">
-                <Link to="/login" className="btn-ghost text-sm">Sign In</Link>
-                <Link to="/register" className="btn-primary text-sm">Get Started</Link>
+                <Link to="/login" className="btn-ghost text-sm">
+                  Sign In
+                </Link>
+                <Link to="/register" className="btn-primary text-sm">
+                  Get Started
+                </Link>
               </div>
             )}
 
@@ -218,12 +272,12 @@ export default function Navbar() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
                 className="input-field pl-9 text-sm"
               />
             </form>
-            {navLinks.map(link => (
+            {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
@@ -234,8 +288,12 @@ export default function Navbar() {
             ))}
             {!isAuthenticated && (
               <div className="flex gap-2 mt-3 pt-3 border-t dark:border-dark-700">
-                <Link to="/login" className="btn-outline flex-1 text-sm justify-center">Sign In</Link>
-                <Link to="/register" className="btn-primary flex-1 text-sm justify-center">Get Started</Link>
+                <Link to="/login" className="btn-outline flex-1 text-sm justify-center">
+                  Sign In
+                </Link>
+                <Link to="/register" className="btn-primary flex-1 text-sm justify-center">
+                  Get Started
+                </Link>
               </div>
             )}
           </div>

@@ -151,6 +151,7 @@ export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   logout: () => api.post('/auth/logout'),
   refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
+  changePassword: (data) => api.post('/auth/change-password', data),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, data) => api.post('/auth/reset-password', { token, ...data }),
   verifyEmail: (token) => api.get(`/auth/verify-email/${token}`),
@@ -158,6 +159,7 @@ export const authAPI = {
   updateProfile: (data) => api.put('/auth/profile', data),
   setupMfa: () => api.post('/auth/mfa/setup'),
   verifyMfa: (token) => api.post('/auth/mfa/verify', { token }),
+  verifyMfaLogin: (data) => api.post('/auth/mfa/login', data),
   disableMfa: (token) => api.post('/auth/mfa/disable', { token }),
   checkEmail: (email) => api.get('/auth/check-email', { params: { email } }),
 };
@@ -191,8 +193,17 @@ export const courseAPI = {
 };
 
 export const enrollmentAPI = {
+  enroll: (data) => api.post('/enrollments', data),
+  getMyEnrollments: () => api.get('/enrollments/my'),
+  getMyTestEnrollments: () => api.get('/enrollments/my-tests'),
+  getProgress: (courseId) => api.get(`/enrollments/progress/${courseId}`),
+  updateProgress: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
+  completeLesson: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
+  getCertificate: (courseId) => api.get(`/enrollments/certificate/${courseId}`),
   verifyPayment: (id) => api.patch(`/enrollments/${id}/verify`),
   getTeacherStudents: () => api.get('/enrollments/teacher/students'),
+  checkEnrollment: (courseId) => api.get(`/enrollments/check/${courseId}`),
+  getOrderHistory: (params) => api.get('/enrollments/orders', { params }),
 };
 
 export const reviewAPI = {
@@ -212,7 +223,8 @@ export const testAPI = {
   logViolation: (attemptId) => api.post(`/tests/violation/${attemptId}`),
   getAnalytics: (id) => api.get(`/tests/${id}/analytics`),
   getTeacherTests: () => api.get('/tests/teacher/my-tests'),
-  getMyAttempts: () => api.get('/tests/my/attempts'),
+  getMyAttempts: (params) => api.get('/tests/my/attempts', { params }),
+  getAttemptResult: (attemptId) => api.get(`/tests/result/${attemptId}`),
 };
 
 export const quizAPI = {
@@ -272,11 +284,6 @@ export const noteAPI = {
   delete: (id) => api.delete(`/notes/${id}`),
 };
 
-export const badgeAPI = {
-  getAll: () => api.get('/badges'),
-  getMyBadges: () => api.get('/badges/my-badges'),
-};
-
 export const leaderboardAPI = {
   get: (params) => api.get('/leaderboard', { params }),
 };
@@ -315,6 +322,7 @@ export const liveClassAPI = {
   end: (id, data) => api.post(`/live-classes/${id}/end`, data),
   join: (id) => api.post(`/live-classes/${id}/join`),
   update: (id, data) => api.put(`/live-classes/${id}`, data),
+  getToken: (id) => api.get(`/live-classes/${id}/token`),
 };
 
 export const instituteAPI = {

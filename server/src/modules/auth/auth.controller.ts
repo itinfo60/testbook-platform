@@ -55,7 +55,6 @@ export class AuthController extends BaseController {
   login = this.catchAsync(async (req: CustomRequest, res: Response) => {
     const userAgent = req.headers['user-agent'] || 'unknown';
     const result = await this.authService.login(req.body, req.tenantId || null, userAgent);
-    console.log('Login result:', result);
 
     if ('requiresMfa' in result && result.requiresMfa) {
       return this.ok(
@@ -198,7 +197,7 @@ export class AuthController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized();
     }
-    await this.authService.disableMfa(req.userId, req.body.password);
+    await this.authService.disableMfa(req.userId, req.body.token);
     return this.ok(res, null, 'MFA disabled');
   });
 

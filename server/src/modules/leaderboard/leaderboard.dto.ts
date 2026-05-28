@@ -19,6 +19,6 @@ export interface ILeaderboardEntry {
 
 export interface ILeaderboardResponse {
   leaderboard: ILeaderboardEntry[];
-  userRank: number | null;
+  userRank: { rank: number; points: number } | null;
   period: string;
 }

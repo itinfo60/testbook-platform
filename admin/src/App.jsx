@@ -34,6 +34,8 @@ import ExamCategoryForm from '@/features/examcategory/pages/ExamCategoryForm';
 import CouponList from '@/features/coupon/pages/CouponList';
 import CouponForm from '@/features/coupon/pages/CouponForm';
 import AnnouncementCenter from '@/features/notification/pages/AnnouncementCenter';
+import BrandingSettings from '@/features/institute/pages/BrandingSettings';
+import LiveClassesPage from '@/features/liveclass/pages/LiveClassesPage';
 
 export default function App() {
   const dispatch = useDispatch();
@@ -90,6 +92,8 @@ export default function App() {
           <Route path="coupons/:id/edit" element={<CouponForm />} />
           <Route path="announcements" element={<AnnouncementCenter />} />
           <Route path="library" element={<LibraryAdmin />} />
+          <Route path="branding" element={<BrandingSettings />} />
+          <Route path="live-classes" element={<LiveClassesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>

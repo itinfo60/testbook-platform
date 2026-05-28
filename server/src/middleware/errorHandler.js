@@ -85,20 +85,27 @@ export const errorHandler = (err, req, res, _next) => {
     message = 'File too large';
   }
 
-  // Log error + capture 500s in Sentry
+  const logCtx = {
+    requestId: req.id,
+    url: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userId: req.userId || null,
+    tenantId: req.tenantId || null,
+  };
+
   if (statusCode >= 500) {
-    Sentry.captureException(err, { extra: { url: req.originalUrl, method: req.method } });
-    logger.error(`${statusCode} - ${message}`, {
-      url: req.originalUrl,
-      method: req.method,
-      ip: req.ip,
-      stack: err.stack,
+    Sentry.withScope((scope) => {
+      scope.setTag('requestId', req.id);
+      scope.setUser({ id: req.userId });
+      scope.setExtra('url', req.originalUrl);
+      scope.setExtra('method', req.method);
+      scope.setExtra('tenantId', req.tenantId);
+      Sentry.captureException(err);
     });
-  } else {
-    logger.warn(`${statusCode} - ${message}`, {
-      url: req.originalUrl,
-      method: req.method,
-    });
+    logger.error(`${statusCode} - ${message}`, { ...logCtx, stack: err.stack });
+  } else if (statusCode >= 400) {
+    logger.warn(`${statusCode} - ${message}`, logCtx);
   }
 
   const response = {

@@ -552,15 +552,20 @@ export class AuthService {
     return { backupCodes };
   }
 
-  async disableMfa(userId: string, password: string): Promise<void> {
-    const user = await runWithTenant(null, true, () => User.findById(userId).select('+password'));
+  async disableMfa(userId: string, token: string): Promise<void> {
+    const user = await runWithTenant(null, true, () => User.findById(userId).select('+mfaSecret'));
 
     if (!user) throw ApiError.notFound('User not found');
+    if (!user.mfaEnabled || !user.mfaSecret) throw ApiError.badRequest('MFA is not enabled');
 
-    const isValid = await user.comparePassword(password);
-    if (!isValid) {
-      throw ApiError.unauthorized('Invalid password');
-    }
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!verified) throw ApiError.unauthorized('Invalid authenticator code');
 
     user.mfaEnabled = false;
     user.mfaSecret = undefined;
