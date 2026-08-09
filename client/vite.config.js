@@ -61,7 +61,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false,
         configure: (proxy) => {
@@ -69,12 +69,12 @@ export default defineConfig({
             console.log('Proxy error:', err.message);
           });
           proxy.on('proxyReq', (proxyReq, req) => {
-            console.log('Proxying:', req.method, req.url, '→ http://localhost:5000' + req.url);
+            console.log('Proxying:', req.method, req.url, '→ http://127.0.0.1:5000' + req.url);
           });
         },
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: 'http://127.0.0.1:5000',
         ws: true,
         changeOrigin: true,
       },
