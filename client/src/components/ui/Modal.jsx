@@ -23,7 +23,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', s
   }, [isOpen]);
 
   useEffect(() => {
-    const handleEsc = e => {
+    const handleEsc = (e) => {
       if (e.key === 'Escape') onClose();
     };
     if (isOpen) window.addEventListener('keydown', handleEsc);
@@ -39,7 +39,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', s
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={e => e.target === overlayRef.current && onClose()}
+          onClick={(e) => e.target === overlayRef.current && onClose()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={title ? 'modal-title' : undefined}
         >
           <motion.div
             className={`${sizes[size]} w-full bg-white dark:bg-dark-800 rounded-2xl shadow-modal overflow-hidden`}
@@ -50,9 +53,19 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', s
           >
             {(title || showClose) && (
               <div className="flex items-center justify-between px-6 py-4 border-b border-dark-100 dark:border-dark-700">
-                {title && <h3 className="text-lg font-semibold text-dark-900 dark:text-white">{title}</h3>}
+                {title && (
+                  <h3
+                    id="modal-title"
+                    className="text-lg font-semibold text-dark-900 dark:text-white"
+                  >
+                    {title}
+                  </h3>
+                )}
                 {showClose && (
-                  <button onClick={onClose} className="p-1 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors">
+                  <button
+                    onClick={onClose}
+                    className="p-1 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                  >
                     <HiX className="h-5 w-5 text-dark-500" />
                   </button>
                 )}

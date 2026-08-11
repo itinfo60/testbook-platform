@@ -88,14 +88,37 @@ export default function LessonContent({
   return (
     <div className="space-y-6">
       {/* Main content by type */}
-      {lesson.type === 'video' && (
+      {lesson.dripLocked ? (
+        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-8 text-center border border-amber-200 dark:border-amber-800 flex flex-col items-center justify-center min-h-[400px]">
+          <span className="text-4xl mb-4">⏳</span>
+          <h3 className="text-xl font-bold text-amber-800 dark:text-amber-500 mb-2">
+            Lesson Locked
+          </h3>
+          <p className="text-amber-700 dark:text-amber-400 max-w-md">
+            This lesson is subject to a drip schedule and is not yet available. Please check back
+            later.
+          </p>
+        </div>
+      ) : !lesson.isFree && !lesson.videoUrl && !lesson.content && lesson.type !== 'quiz' ? (
+        <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-8 text-center border border-red-200 dark:border-red-800 flex flex-col items-center justify-center min-h-[400px]">
+          <span className="text-4xl mb-4">🔒</span>
+          <h3 className="text-xl font-bold text-red-800 dark:text-red-500 mb-2">Premium Content</h3>
+          <p className="text-red-700 dark:text-red-400 max-w-md mb-6">
+            You do not have access to this lesson. Please enroll in the course to unlock full
+            access.
+          </p>
+          <a href={`/courses/${lesson.courseSlug || ''}`} className="btn-primary">
+            Enroll Now
+          </a>
+        </div>
+      ) : lesson.type === 'video' ? (
         <VideoPlayer
           ref={playerRef}
           url={lesson.videoUrl}
           onProgress={onProgress}
           onComplete={onVideoComplete}
         />
-      )}
+      ) : null}
 
       {lesson.type === 'text' && (
         <div className="card p-6">

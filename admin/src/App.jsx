@@ -33,6 +33,8 @@ import ExamCategoryList from '@/features/examcategory/pages/ExamCategoryList';
 import ExamCategoryForm from '@/features/examcategory/pages/ExamCategoryForm';
 import CouponList from '@/features/coupon/pages/CouponList';
 import CouponForm from '@/features/coupon/pages/CouponForm';
+import BlogList from '@/features/blog/pages/BlogList';
+import BlogForm from '@/features/blog/pages/BlogForm';
 import AnnouncementCenter from '@/features/notification/pages/AnnouncementCenter';
 import BrandingSettings from '@/features/institute/pages/BrandingSettings';
 import LiveClassesPage from '@/features/liveclass/pages/LiveClassesPage';
@@ -90,6 +92,10 @@ export default function App() {
           <Route path="coupons" element={<CouponList />} />
           <Route path="coupons/create" element={<CouponForm />} />
           <Route path="coupons/:id/edit" element={<CouponForm />} />
+          <Route path="blogs" element={<BlogList />} />
+          <Route path="blogs/create" element={<BlogForm />} />
+          <Route path="blogs/:id/edit" element={<BlogForm />} />
+          <Route path="job-alerts" element={<BlogList />} />
           <Route path="announcements" element={<AnnouncementCenter />} />
           <Route path="library" element={<LibraryAdmin />} />
           <Route path="branding" element={<BrandingSettings />} />

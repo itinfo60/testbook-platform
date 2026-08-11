@@ -33,6 +33,8 @@ const navItems = [
   { label: 'Coupons', path: '/coupons', icon: Tag },
   { label: 'Announcements', path: '/announcements', icon: Megaphone },
   { label: 'Digital Library', path: '/library', icon: FolderOpen },
+  { label: 'Blogs & Articles', path: '/blogs', icon: FileText },
+  { label: 'Job Alerts', path: '/job-alerts', icon: Megaphone },
   { label: 'Live Classes', path: '/live-classes', icon: Video },
   { label: 'Branding', path: '/branding', icon: Palette },
 ];

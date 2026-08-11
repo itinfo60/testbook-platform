@@ -67,7 +67,7 @@ export default function Navbar() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/courses?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery('');
     }
   };
@@ -78,11 +78,11 @@ export default function Navbar() {
   };
 
   const navLinks = [
+    { label: 'Exams', path: '/exams' },
     { label: 'Courses', path: '/courses' },
-    { label: 'Tests', path: '/tests' },
-    { label: 'Live Classes', path: '/live-classes' },
-    { label: 'Blog', path: '/blog' },
-    { label: 'Leaderboard', path: '/leaderboard' },
+    { label: 'Free Zone', path: '/free-resources' },
+    { label: 'Test Series', path: '/tests' },
+    { label: 'Job Alerts & Blog', path: '/blog' },
   ];
 
   const userLinks =
@@ -128,8 +128,8 @@ export default function Navbar() {
                   <span className="text-xl font-bold font-display text-dark-900 dark:text-white">
                     {instituteName || (
                       <>
-                        {`Learn`}
-                        <span className="text-primary-600">Hub</span>
+                        {`Edu`}
+                        <span className="text-amber-500">Portal</span>
                       </>
                     )}
                   </span>

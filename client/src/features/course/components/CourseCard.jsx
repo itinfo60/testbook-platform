@@ -41,14 +41,28 @@ export default function CourseCard({ course }) {
       {/* Thumbnail */}
       <div className="relative h-40 sm:h-44 bg-dark-100 dark:bg-dark-700 overflow-hidden">
         {displayThumbnail ? (
-          <img src={displayThumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-            <HiBookOpen className="h-10 w-10 sm:h-12 sm:w-12 text-white/50" />
-          </div>
-        )}
+          <img
+            src={displayThumbnail}
+            alt={title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentNode
+                .querySelector('.fallback-icon')
+                ?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <div
+          className={`fallback-icon w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center absolute inset-0 ${displayThumbnail ? 'hidden' : ''}`}
+        >
+          <HiBookOpen className="h-10 w-10 sm:h-12 sm:w-12 text-white/50" />
+        </div>
         {level && (
-          <span className={`absolute top-2 sm:top-3 left-2 sm:left-3 badge ${levelColors[level] || levelColors.beginner} text-xs`}>
+          <span
+            className={`absolute top-2 sm:top-3 left-2 sm:left-3 badge ${levelColors[level] || levelColors.beginner} text-xs`}
+          >
             {level}
           </span>
         )}

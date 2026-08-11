@@ -15,6 +15,8 @@ export default function LibraryAdmin() {
     file: null,
   });
 
+  const [categories, setCategories] = useState([]);
+
   const fetchResources = async () => {
     try {
       const res = await api.get('/library', { params: filters });
@@ -24,8 +26,18 @@ export default function LibraryAdmin() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/categories');
+      setCategories(res.data?.categories || res.data?.data?.categories || []);
+    } catch (err) {
+      console.error('Failed to fetch categories', err);
+    }
+  };
+
   useEffect(() => {
     fetchResources();
+    fetchCategories();
   }, [filters]);
 
   const handleFileChange = (e) => {
@@ -81,13 +93,18 @@ export default function LibraryAdmin() {
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
         />
-        <input
-          type="text"
-          placeholder="Category"
+        <select
           className="input-field"
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
-        />
+        >
+          <option value="">Select Exam Category</option>
+          {categories.map((c) => (
+            <option key={c._id} value={c._id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <input
           type="text"
           placeholder="Tags (comma separated)"

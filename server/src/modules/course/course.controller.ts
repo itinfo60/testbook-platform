@@ -32,8 +32,8 @@ export class CourseController extends BaseController {
   });
 
   getCourseById = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const course = await this.courseService.getCourseById(req.params.id);
-    return this.ok(res, { course });
+    const result = await this.courseService.getCourseById(req.params.id, req.userId || null);
+    return this.ok(res, result);
   });
 
   createCourse = this.catchAsync(async (req: CustomRequest, res: Response) => {

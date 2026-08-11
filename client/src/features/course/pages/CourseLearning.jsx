@@ -207,42 +207,51 @@ export default function CourseLearning() {
 
   const tabs = [
     { key: 'content', label: 'Description' },
-    { key: 'notes', label: 'Notes', count: notes.length },
-    { key: 'discussions', label: 'Discussions', count: discussions.length },
+    { key: 'notes', label: 'My Notes', count: notes.length },
+    { key: 'discussions', label: 'Doubt & Discussion', count: discussions.length },
   ];
 
   return (
-    <div className="min-h-screen bg-dark-50 dark:bg-dark-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-dark-950 flex flex-col">
       {/* Top bar */}
-      <div className="sticky top-0 z-20 bg-white dark:bg-dark-900 border-b border-dark-100 dark:border-dark-800 px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
-        <Link
-          to="/my-courses"
-          className="flex items-center gap-2 text-dark-500 hover:text-dark-900 dark:hover:text-white text-sm transition-colors flex-shrink-0"
-        >
-          <HiArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">My Courses</span>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-dark-900 dark:text-white truncate">
-            {course.title}
-          </p>
-          {currentLesson && (
-            <p className="text-xs text-dark-400 truncate">
-              {currentSection?.title} · {currentLesson.title}
+      <div className="sticky top-0 z-30 bg-white dark:bg-dark-900 border-b border-slate-200 dark:border-dark-800 px-3 sm:px-6 py-3.5 flex items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <Link
+            to="/my-courses"
+            className="flex items-center justify-center h-10 w-10 rounded-full bg-slate-100 dark:bg-dark-800 hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/30 dark:hover:text-amber-500 text-slate-500 transition-colors flex-shrink-0"
+          >
+            <HiArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-dark-800 mx-2"></div>
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <p className="text-sm font-bold text-dark-900 dark:text-white truncate">
+              {course.title}
             </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="text-xs text-dark-400 hidden sm:block">
-            {totalCompleted}/{totalLessons} completed
+            {currentLesson && (
+              <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 truncate uppercase tracking-wider mt-0.5">
+                {currentSection?.title} <span className="text-slate-400 mx-1">•</span>{' '}
+                {currentLesson.title}
+              </p>
+            )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Course Progress
+            </span>
+            <span className="text-sm font-extrabold text-green-600">
+              {totalCompleted} / {totalLessons}
+            </span>
+          </div>
+
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dark-200 dark:border-dark-700 text-xs text-dark-600 dark:text-dark-300 bg-white dark:bg-dark-800"
+            className="lg:hidden flex items-center justify-center h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600"
           >
-            <HiMenu className="h-4 w-4" />
-            <span>Contents</span>
+            <HiMenu className="h-5 w-5" />
           </button>
         </div>
       </div>
@@ -311,39 +320,52 @@ export default function CourseLearning() {
             )}
 
             {activeTab === 'notes' && (
-              <div className="space-y-4">
-                <form onSubmit={handleAddNote} className="card p-4">
+              <div className="space-y-6">
+                <form
+                  onSubmit={handleAddNote}
+                  className="bg-amber-50 dark:bg-amber-900/10 p-4 sm:p-6 rounded-2xl border border-amber-200 dark:border-amber-900/30"
+                >
+                  <h4 className="font-bold text-sm text-amber-800 dark:text-amber-500 mb-3 flex items-center gap-2">
+                    <span className="text-lg">✍️</span> Take a Note
+                  </h4>
                   <textarea
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
                     placeholder={
-                      currentLesson ? `Add a note for "${currentLesson.title}"...` : 'Add a note...'
+                      currentLesson
+                        ? `Jot down important points for "${currentLesson.title}"...`
+                        : 'Add a note...'
                     }
-                    className="input-field mb-3 min-h-[90px] resize-none"
+                    className="w-full bg-white dark:bg-dark-900 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none resize-none min-h-[100px] mb-3"
                   />
                   {currentLesson?.type === 'video' && (
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-4 bg-white dark:bg-dark-900 w-fit px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-900/30">
                       <input
                         type="checkbox"
                         id="attachTimestamp"
                         checked={attachTimestamp}
                         onChange={(e) => setAttachTimestamp(e.target.checked)}
-                        className="rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
                       />
                       <label
                         htmlFor="attachTimestamp"
-                        className="text-xs text-dark-600 dark:text-dark-400"
+                        className="text-xs font-bold text-slate-600 dark:text-slate-400 cursor-pointer"
                       >
                         Attach video timestamp at{' '}
-                        {(() => {
-                          const m = Math.floor(videoTime / 60);
-                          const s = Math.floor(videoTime % 60);
-                          return `${m}:${s < 10 ? '0' : ''}${s}`;
-                        })()}
+                        <span className="text-amber-600">
+                          {(() => {
+                            const m = Math.floor(videoTime / 60);
+                            const s = Math.floor(videoTime % 60);
+                            return `${m}:${s < 10 ? '0' : ''}${s}`;
+                          })()}
+                        </span>
                       </label>
                     </div>
                   )}
-                  <button type="submit" className="btn-primary text-sm">
+                  <button
+                    type="submit"
+                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm shadow-sm"
+                  >
                     Save Note
                   </button>
                 </form>

@@ -258,4 +258,15 @@ export const notificationsAPI = {
   getAll: (params) => api.get(`/notifications${qs(params)}`),
 };
 
+// ══════════════════════════════════════════════
+// BLOGS
+// ══════════════════════════════════════════════
+export const blogsAPI = {
+  getAll: (params) => api.get(`/blogs${qs(params)}`),
+  getById: (id) => api.get(`/blogs/${id}`),
+  create: (data) => api.post('/blogs', data),
+  update: (id, data) => api.put(`/blogs/${id}`, data),
+  delete: (id) => api.delete(`/blogs/${id}`),
+};
+
 export default api;

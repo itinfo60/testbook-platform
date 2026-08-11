@@ -39,8 +39,20 @@ const CertificateVerify = lazy(() => import('@/features/auth/pages/verify/Certif
 const UnauthorizedPage = lazy(() => import('@/features/auth/pages/UnauthorizedPage'));
 const BlogList = lazy(() => import('@/features/blog/pages/BlogList'));
 const BlogDetail = lazy(() => import('@/features/blog/pages/BlogDetail'));
+const JobAlertList = lazy(() => import('@/features/blog/pages/JobAlertList'));
 const PricingPage = lazy(() => import('@/features/subscription/pages/PricingPage'));
 const NotFoundPage = lazy(() => import('@/features/home/pages/NotFoundPage'));
+
+// EduPortal Public Pages
+const ExamsCatalog = lazy(() => import('@/features/exams/pages/ExamsCatalog'));
+const ExamDetail = lazy(() => import('@/features/exams/pages/ExamDetail'));
+const SearchResultsPage = lazy(() => import('@/features/search/pages/SearchResultsPage'));
+const FreeResourcesPage = lazy(() => import('@/features/free-zone/pages/FreeResourcesPage'));
+const AboutPage = lazy(() => import('@/features/about/pages/AboutPage'));
+const FacultyPage = lazy(() => import('@/features/faculty/pages/FacultyPage'));
+const SuccessStoriesPage = lazy(() => import('@/features/success/pages/SuccessStoriesPage'));
+const HelpCenterPage = lazy(() => import('@/features/support/pages/HelpCenterPage'));
+const LegalPage = lazy(() => import('@/features/legal/pages/LegalPage'));
 
 // Student Protected
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
@@ -204,7 +216,17 @@ export default function App() {
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogDetail />} />
+          <Route path="/jobs" element={<Navigate to="/blog?type=job_alert" replace />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/exams" element={<ExamsCatalog />} />
+          <Route path="/exams/:slug" element={<ExamDetail />} />
+          <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/free-resources" element={<FreeResourcesPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/faculty" element={<FacultyPage />} />
+          <Route path="/success-stories" element={<SuccessStoriesPage />} />
+          <Route path="/help" element={<HelpCenterPage />} />
+          <Route path="/legal/:type" element={<LegalPage />} />
           <Route path="/affiliate/validate/:code" element={<AffiliateDashboard />} />
 
           {/* Protected Student */}

@@ -93,7 +93,7 @@ export class CourseService {
     return result;
   }
 
-  async getCourseById(id: string): Promise<ICourse> {
+  async getCourseById(id: string, userId: string | null): Promise<any> {
     const course = await this.courseRepository.findById(id, null, {
       populate: [
         { path: 'teacher', select: 'name avatar' },
@@ -105,7 +105,58 @@ export class CourseService {
       throw ApiError.notFound('Course not found');
     }
 
-    return course;
+    const reviews = await Review.find({ course: course._id, isApproved: true })
+      .populate('user', 'name avatar')
+      .sort('-createdAt')
+      .limit(10)
+      .lean();
+
+    let isEnrolled = false;
+    let enrollment: any = null;
+
+    if (userId) {
+      enrollment = await Enrollment.findOne({
+        user: userId,
+        course: course._id,
+        status: { $in: ['active', 'completed'] },
+      });
+      isEnrolled = !!enrollment;
+    }
+
+    const now = Date.now();
+    const courseObj = course.toObject();
+
+    courseObj.sections = courseObj.sections.map((section: any) => ({
+      ...section,
+      lessons: section.lessons.map((lesson: any) => {
+        if (!isEnrolled) {
+          return {
+            _id: lesson._id,
+            title: lesson.title,
+            type: lesson.type,
+            duration: lesson.duration,
+            isFree: lesson.isFree,
+            dripDays: lesson.dripDays,
+            content: lesson.isFree ? lesson.content : undefined,
+            videoUrl: lesson.isFree ? lesson.videoUrl : undefined,
+          };
+        }
+
+        const dripLocked =
+          lesson.dripDays > 0 &&
+          enrollment &&
+          now < new Date(enrollment.enrolledAt).getTime() + lesson.dripDays * 86400000;
+
+        return {
+          ...lesson,
+          dripLocked,
+          content: dripLocked ? undefined : lesson.content,
+          videoUrl: dripLocked ? undefined : lesson.videoUrl,
+        };
+      }),
+    }));
+
+    return { course: courseObj, reviews, isEnrolled };
   }
 
   async createCourse(input: CreateCourseInput, teacherId: string): Promise<ICourse> {

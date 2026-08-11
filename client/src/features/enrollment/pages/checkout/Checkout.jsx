@@ -51,7 +51,11 @@ export default function Checkout() {
   const item = isTest ? test : course;
   const effectivePrice = item.effectivePrice ?? item.price ?? 0;
   const isFree = isTest ? item.isFree || effectivePrice === 0 : effectivePrice === 0;
-  const finalPrice = Math.max(0, effectivePrice - discount);
+
+  // Base calculations
+  const priceBeforeDiscount = Math.max(0, effectivePrice - discount);
+  const gstAmount = priceBeforeDiscount > 0 ? Math.round(priceBeforeDiscount * 0.18) : 0;
+  const finalPrice = priceBeforeDiscount + gstAmount;
 
   const handleApplyCoupon = () => {
     if (!couponCode.trim()) return;
@@ -114,67 +118,74 @@ export default function Checkout() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <h1 className="section-title mb-6 sm:mb-8">Checkout</h1>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <h1 className="text-2xl sm:text-3xl font-extrabold text-dark-900 dark:text-white font-display tracking-tight mb-8">
+        Secure Checkout
+      </h1>
 
       {/* Course card */}
-      <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="flex gap-3 sm:gap-4">
-          <div
-            className="h-16 w-22 sm:h-20 sm:w-28 rounded-lg bg-dark-100 dark:bg-dark-700 flex-shrink-0 overflow-hidden"
-            style={{ minWidth: '5.5rem' }}
-          >
-            {item.thumbnail?.url || item.thumbnail ? (
-              <img
-                src={item.thumbnail?.url || item.thumbnail}
-                alt={item.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl">📘</div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-dark-900 dark:text-white line-clamp-2">
-              {item.title}
-            </h3>
-            <p className="text-sm text-dark-500 mt-1">{item.teacher?.name}</p>
-            <PriceTag
-              price={effectivePrice}
-              originalPrice={item.discountPrice > 0 ? item.price : undefined}
-              size="sm"
-              className="mt-2"
+      <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 mb-6 border border-slate-200 dark:border-dark-800 shadow-sm flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start text-center sm:text-left">
+        <div className="h-24 w-36 sm:h-28 sm:w-40 rounded-2xl bg-slate-100 dark:bg-dark-800 flex-shrink-0 overflow-hidden relative shadow-sm">
+          {item.thumbnail?.url || item.thumbnail ? (
+            <img
+              src={item.thumbnail?.url || item.thumbnail}
+              alt={item.title}
+              className="w-full h-full object-cover"
             />
-          </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-4xl">📘</div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-dark-900 dark:text-white line-clamp-2 text-lg sm:text-xl">
+            {item.title}
+          </h3>
+          <p className="text-sm font-bold text-amber-600 dark:text-amber-500 mt-1 uppercase tracking-wider">
+            {item.teacher?.name || 'EduPortal Faculty'}
+          </p>
+          <PriceTag
+            price={effectivePrice}
+            originalPrice={item.discountPrice > 0 ? item.price : undefined}
+            size="md"
+            className="mt-3 justify-center sm:justify-start"
+          />
         </div>
       </div>
 
       {/* Coupon — only for paid courses/tests */}
       {!isFree && (
-        <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
-          <h3 className="font-semibold text-dark-900 dark:text-white mb-3">Have a coupon?</h3>
-          <div className="flex gap-2">
-            <Input
+        <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 mb-6 border border-slate-200 dark:border-dark-800 shadow-sm">
+          <h3 className="font-bold text-dark-900 dark:text-white mb-4 text-sm uppercase tracking-wider">
+            Have a coupon?
+          </h3>
+          <div className="flex gap-3">
+            <input
+              type="text"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               placeholder="Enter coupon code"
-              className="flex-1"
+              className="flex-1 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none uppercase"
             />
-            <Button variant="outline" onClick={handleApplyCoupon} loading={loading}>
+            <button
+              className="bg-slate-900 dark:bg-white text-white dark:text-dark-900 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-sm text-sm"
+              onClick={handleApplyCoupon}
+              disabled={loading}
+            >
               Apply
-            </Button>
+            </button>
           </div>
           {coupon && (
-            <div className="mt-3 flex items-center justify-between p-3 bg-secondary-50 dark:bg-secondary-900/20 rounded-lg">
-              <span className="text-sm text-secondary-700 dark:text-secondary-400 font-medium">
-                Coupon applied! You save ₹{discount}
+            <div className="mt-4 flex items-center justify-between p-3.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-xl">
+              <span className="text-sm text-green-700 dark:text-green-400 font-bold flex items-center gap-2">
+                <HiCheckCircle className="h-5 w-5" /> Coupon applied! You save ₹{discount}
               </span>
               <button
                 onClick={() => {
                   dispatch(clearCoupon());
                   setCouponCode('');
                 }}
-                className="text-xs text-dark-400 hover:text-red-500"
+                className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider"
               >
                 Remove
               </button>
@@ -184,25 +195,35 @@ export default function Checkout() {
       )}
 
       {/* Order Summary */}
-      <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
-        <h3 className="font-semibold text-dark-900 dark:text-white mb-4">Order Summary</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-dark-500">{isTest ? 'Test Price' : 'Course Price'}</span>
-            <span className="text-dark-900 dark:text-white">
+      <div className="bg-slate-50 dark:bg-dark-800 rounded-2xl p-6 sm:p-8 mb-6 border border-slate-200 dark:border-dark-700 shadow-inner">
+        <h3 className="font-bold text-dark-900 dark:text-white mb-6 text-sm uppercase tracking-wider">
+          Order Summary
+        </h3>
+        <div className="space-y-4 text-sm font-medium">
+          <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+            <span>{isTest ? 'Test Price' : 'Course Price'}</span>
+            <span className="text-dark-900 dark:text-white font-bold">
               {effectivePrice > 0 ? `₹${effectivePrice.toLocaleString('en-IN')}` : 'Free'}
             </span>
           </div>
           {discount > 0 && (
-            <div className="flex justify-between text-secondary-600">
+            <div className="flex justify-between items-center text-green-600">
               <span>Coupon Discount</span>
-              <span>-₹{discount.toLocaleString('en-IN')}</span>
+              <span className="font-bold">-₹{discount.toLocaleString('en-IN')}</span>
             </div>
           )}
-          <div className="border-t border-dark-100 dark:border-dark-700 pt-2 mt-2">
-            <div className="flex justify-between text-lg font-bold">
-              <span className="text-dark-900 dark:text-white">Total</span>
-              <span className="text-primary-600 dark:text-primary-400">
+          {!isFree && (
+            <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+              <span>GST (18%)</span>
+              <span className="font-bold text-dark-900 dark:text-white">
+                +₹{gstAmount.toLocaleString('en-IN')}
+              </span>
+            </div>
+          )}
+          <div className="border-t border-slate-200 dark:border-dark-700 pt-4 mt-2">
+            <div className="flex justify-between items-center text-xl font-extrabold">
+              <span className="text-dark-900 dark:text-white">Total Amount</span>
+              <span className="text-amber-600 dark:text-amber-500">
                 {isFree || finalPrice === 0 ? 'Free' : `₹${finalPrice.toLocaleString('en-IN')}`}
               </span>
             </div>
@@ -249,23 +270,20 @@ export default function Checkout() {
         </div>
       )}
 
-      <Button
-        variant="primary"
-        size="lg"
-        className="w-full"
+      <button
+        className={`w-full text-white font-bold py-4 rounded-xl shadow-md transition-all text-lg flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : !isFree && finalPrice > 0 && !confirmed ? 'bg-slate-300 dark:bg-dark-700 text-slate-500' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-[0.98]'}`}
         onClick={isFree || finalPrice === 0 ? handleFreeEnroll : handlePaidEnroll}
-        loading={loading}
-        disabled={!isFree && finalPrice > 0 && !confirmed}
+        disabled={loading || (!isFree && finalPrice > 0 && !confirmed)}
       >
         {isFree || finalPrice === 0 ? (
           'Enroll for Free'
         ) : (
-          <span className="flex items-center justify-center gap-2">
-            <HiLockClosed className="h-4 w-4" />
-            Pay ₹{finalPrice.toLocaleString('en-IN')}
-          </span>
+          <>
+            <HiLockClosed className="h-5 w-5" />
+            Pay Securely ₹{finalPrice.toLocaleString('en-IN')}
+          </>
         )}
-      </Button>
+      </button>
 
       {!isFree && finalPrice > 0 && !confirmed && (
         <p className="text-xs text-dark-400 text-center mt-2">

@@ -66,6 +66,7 @@ import libraryRoutes from './modules/library/library.routes.js';
 import affiliateRoutes from './modules/affiliate/affiliate.routes.js';
 import parentRoutes from './modules/parent/parent.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
+import searchRoutes from './modules/search/search.routes.js';
 import { auditLog } from './middleware/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -237,6 +238,8 @@ app.use(`${API_PREFIX}/library`, requireTenant, libraryRoutes);
 app.use(`${API_PREFIX}/affiliate`, requireTenant, affiliateRoutes);
 app.use(`${API_PREFIX}/parent`, requireTenant, parentRoutes);
 app.use(`${API_PREFIX}/attendance`, requireTenant, attendanceRoutes);
+app.use(`${API_PREFIX}/uploads`, requireTenant, uploadRoutes);
+app.use(`${API_PREFIX}/search`, optionalTenant, searchRoutes);
 
 // ===== AUDIT LOG =====
 app.use(`${API_PREFIX}`, auditLog);

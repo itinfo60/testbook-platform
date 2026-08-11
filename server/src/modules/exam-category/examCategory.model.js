@@ -28,6 +28,22 @@ const examCategorySchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true, index: true },
     courseCount: { type: Number, default: 0 },
     testCount: { type: Number, default: 0 },
+
+    // Exam metadata for the /exams/:slug detail page
+    syllabus: { type: String, default: '' }, // Markdown/HTML
+    examPattern: { type: String, default: '' }, // Markdown/HTML
+    eligibility: { type: String, default: '' }, // Markdown/HTML
+    selectionProcess: { type: String, default: '' }, // Markdown/HTML
+    importantDates: [
+      {
+        label: { type: String }, // e.g. "Application Start", "Exam Date"
+        date: { type: Date },
+        description: { type: String, default: '' },
+      },
+    ],
+    latestStatus: { type: String, default: '' }, // e.g. "Notification Released"
+    officialWebsite: { type: String, default: '' },
+    conductingBody: { type: String, default: '' }, // e.g. "RPSC", "RSMSSB"
   },
   {
     timestamps: true,

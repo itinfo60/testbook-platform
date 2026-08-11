@@ -85,10 +85,14 @@ export default function RevenueDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Revenue Analytics</h2>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">Financial overview and trends</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight">
+            Revenue Analytics
+          </h2>
+          <p className="mt-1 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Financial overview and trends
+          </p>
         </div>
         <select
           value={period}
@@ -132,8 +136,8 @@ export default function RevenueDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">
             Revenue Trend
           </h3>
           <ResponsiveContainer width="100%" height={320}>
@@ -143,25 +147,28 @@ export default function RevenueDashboard() {
               <YAxis stroke="#9ca3af" fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'var(--toast-bg, #fff)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
+                  boxShadow:
+                    '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  color: '#1f2937',
                 }}
               />
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#6366f1"
-                fill="#6366f1"
-                fillOpacity={0.1}
-                strokeWidth={2}
+                stroke="#f59e0b"
+                fill="#fcd34d"
+                fillOpacity={0.2}
+                strokeWidth={3}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">
             Orders per Month
           </h3>
           <ResponsiveContainer width="100%" height={320}>
@@ -171,20 +178,29 @@ export default function RevenueDashboard() {
               <YAxis stroke="#9ca3af" fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'var(--toast-bg, #fff)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
+                  boxShadow:
+                    '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  color: '#1f2937',
                 }}
               />
               <Legend />
-              <Bar dataKey="orders" name="Orders" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="orders"
+                name="Orders"
+                fill="#10b981"
+                radius={[6, 6, 0, 0]}
+                barSize={30}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">
           Top Performing Courses
         </h3>
         {!d.topCourses || d.topCourses.length === 0 ? (

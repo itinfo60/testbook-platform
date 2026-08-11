@@ -5,7 +5,8 @@ import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 export interface ILibraryResource {
   title: string;
   description?: string;
-  category?: string;
+  category?: mongoose.Types.ObjectId;
+  resourceType?: string;
   tags?: string[];
   fileUrl: string;
   fileType: string;
@@ -19,7 +20,25 @@ const librarySchema = new Schema<ILibraryResource>(
   {
     title: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
-    category: { type: String, default: '' },
+    category: { type: Schema.Types.ObjectId, ref: 'ExamCategory', default: null },
+    resourceType: {
+      type: String,
+      enum: [
+        'syllabus',
+        'exam_pattern',
+        'pyq',
+        'solved_pyq',
+        'notes',
+        'mind_map',
+        'short_trick',
+        'current_affairs',
+        'video',
+        'quiz',
+        'other',
+      ],
+      default: 'other',
+      index: true,
+    },
     tags: [{ type: String }],
     fileUrl: { type: String, required: true },
     fileType: { type: String, required: true },

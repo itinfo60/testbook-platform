@@ -36,10 +36,15 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div className={cn('card w-full overflow-hidden animate-slide-in', sizeMap[size])}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+          <h3 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+            {title}
+          </h3>
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

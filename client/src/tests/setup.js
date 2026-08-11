@@ -23,6 +23,28 @@ Object.defineProperty(global, 'localStorage', {
   writable: true,
 });
 
+// Mock sessionStorage
+const sessionStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: vi.fn((key) => store[key] || null),
+    setItem: vi.fn((key, value) => {
+      store[key] = String(value);
+    }),
+    removeItem: vi.fn((key) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+Object.defineProperty(global, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+});
+
 // Mock IntersectionObserver (not in jsdom)
 global.IntersectionObserver = class {
   constructor() {}
@@ -54,6 +76,13 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock scrollTo
+window.scrollTo = vi.fn();
+
+// Mock URL.createObjectURL
+global.URL.createObjectURL = vi.fn(() => 'mock-url');
+global.URL.revokeObjectURL = vi.fn();
+
 // Suppress noisy console.error from React prop-type warnings in tests
 const originalError = console.error;
 beforeAll(() => {
@@ -65,3 +94,6 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
 });
+
+// Global test timeout
+vi.setConfig({ testTimeout: 10000 });

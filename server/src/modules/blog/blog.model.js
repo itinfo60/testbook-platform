@@ -35,6 +35,18 @@ const blogSchema = new mongoose.Schema(
       publicId: { type: String, default: '' },
     },
     tags: [{ type: String, trim: true }],
+    type: {
+      type: String,
+      enum: ['article', 'job_alert', 'current_affairs'],
+      default: 'article',
+      index: true,
+    },
+    examCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ExamCategory',
+      index: true,
+      default: null,
+    },
     status: {
       type: String,
       enum: ['draft', 'published'],
@@ -47,6 +59,19 @@ const blogSchema = new mongoose.Schema(
     },
     publishedAt: {
       type: Date,
+    },
+
+    // Job Alert specific fields (only relevant when type === 'job_alert')
+    jobAlert: {
+      organization: { type: String, default: '' },
+      notificationDate: { type: Date },
+      applicationStart: { type: Date },
+      applicationEnd: { type: Date },
+      examDate: { type: Date },
+      admitCardDate: { type: Date },
+      resultDate: { type: Date },
+      officialNotificationUrl: { type: String, default: '' },
+      totalVacancies: { type: Number, default: 0 },
     },
   },
   {

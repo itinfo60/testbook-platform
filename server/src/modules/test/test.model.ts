@@ -4,28 +4,7 @@ import tenantPlugin from '../../models/plugins/tenantPlugin.js';
 import { ITest, IQuestion, IOption } from './test.dto.js';
 import { generateSlug } from '../../utils/helpers.js';
 
-const optionSchema = new Schema<IOption>({
-  text: { type: String, required: true },
-  isCorrect: { type: Boolean, required: true },
-});
-
-const questionSchema = new Schema<IQuestion>({
-  question: { type: String, required: true },
-  type: {
-    type: String,
-    enum: ['mcq', 'msq', 'true_false', 'fill_blank', 'subjective'],
-    default: 'mcq',
-  },
-  options: [optionSchema],
-  correctAnswer: { type: String, default: '' },
-  marks: { type: Number, required: true, min: 0 },
-  negativeMarks: { type: Number, default: 0, min: 0 },
-  explanation: { type: String, default: '' },
-  difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
-  tags: [String],
-  sectionName: { type: String, default: 'General' },
-  order: { type: Number, default: 0 },
-});
+// Removed embedded schemas in favor of Question model
 
 const testSchema = new Schema<ITest>(
   {
@@ -54,7 +33,12 @@ const testSchema = new Schema<ITest>(
       index: true,
     },
 
-    questions: [questionSchema],
+    questions: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Question',
+      },
+    ],
 
     duration: { type: Number, required: true, min: 1 }, // minutes
     totalMarks: { type: Number, required: true, min: 1 },

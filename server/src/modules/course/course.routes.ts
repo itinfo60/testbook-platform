@@ -17,7 +17,7 @@ router.get(
 );
 router.get('/featured', controller.getFeaturedCourses);
 router.get('/slug/:slug', optionalAuth, controller.getCourseBySlug);
-router.get('/:id', controller.getCourseById);
+router.get('/:id', optionalAuth, controller.getCourseById);
 
 // Teacher/Admin routes
 router.get(

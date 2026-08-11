@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import ExamCategory from './examCategory.model.js';
 import Course from '../course/course.model.js';
 import Test from '../test/test.model.js';
@@ -14,7 +15,11 @@ export const getCategories = catchAsync(async (req, res) => {
 
   const [categories, courseCounts, testCounts] = await Promise.all([
     ExamCategory.find({ isActive: true, parent: null })
-      .populate({ path: 'subcategories', match: { isActive: true }, select: 'name slug icon courseCount testCount' })
+      .populate({
+        path: 'subcategories',
+        match: { isActive: true },
+        select: 'name slug icon courseCount testCount',
+      })
       .sort('order name')
       .lean(),
     Course.aggregate([
@@ -27,13 +32,13 @@ export const getCategories = catchAsync(async (req, res) => {
     ]),
   ]);
 
-  const courseCountMap = Object.fromEntries(courseCounts.map(c => [c._id.toString(), c.count]));
-  const testCountMap   = Object.fromEntries(testCounts.map(c  => [c._id.toString(), c.count]));
+  const courseCountMap = Object.fromEntries(courseCounts.map((c) => [c._id.toString(), c.count]));
+  const testCountMap = Object.fromEntries(testCounts.map((c) => [c._id.toString(), c.count]));
 
-  const enriched = categories.map(cat => ({
+  const enriched = categories.map((cat) => ({
     ...cat,
     courseCount: courseCountMap[cat._id.toString()] ?? cat.courseCount ?? 0,
-    testCount:   testCountMap[cat._id.toString()]   ?? cat.testCount   ?? 0,
+    testCount: testCountMap[cat._id.toString()] ?? cat.testCount ?? 0,
   }));
 
   const data = { categories: enriched };
@@ -43,13 +48,20 @@ export const getCategories = catchAsync(async (req, res) => {
 });
 
 export const getCategoryBySlug = catchAsync(async (req, res) => {
-  const category = await ExamCategory.findOne({ slug: req.params.slug, isActive: true })
+  const param = req.params.slug ? req.params.slug.trim() : '';
+  const isId = mongoose.Types.ObjectId.isValid(param);
+
+  const query = isId
+    ? { $or: [{ _id: param }, { slug: new RegExp(`^${param}$`, 'i') }] }
+    : { slug: new RegExp(`^${param}$`, 'i') };
+
+  const category = await ExamCategory.findOne(query)
     .populate({ path: 'subcategories', match: { isActive: true } })
     .lean();
 
   if (!category) throw ApiError.notFound('Category not found');
 
-  const [courses, tests] = await Promise.all([
+  const [courses, tests, blogs, resources] = await Promise.all([
     Course.find({ category: category._id, isPublished: true })
       .populate('teacher', 'name avatar')
       .select('-sections')
@@ -62,9 +74,19 @@ export const getCategoryBySlug = catchAsync(async (req, res) => {
       .sort('-totalAttempts')
       .limit(12)
       .lean(),
+    import('../blog/blog.model.js').then((m) =>
+      m.default
+        .find({ examCategory: category._id, status: 'published' })
+        .sort('-publishedAt')
+        .limit(10)
+        .lean()
+    ),
+    import('../library/library.model.js').then((m) =>
+      m.default.find({ category: category._id }).sort('-createdAt').limit(10).lean()
+    ),
   ]);
 
-  ApiResponse.ok(res, { category, courses, tests });
+  ApiResponse.ok(res, { category, courses, tests, blogs, resources });
 });
 
 export const createCategory = catchAsync(async (req, res) => {
@@ -104,7 +126,9 @@ export const deleteCategory = catchAsync(async (req, res) => {
   ]);
 
   if (courseCount > 0 || testCount > 0) {
-    throw ApiError.badRequest(`Cannot delete: ${courseCount} courses and ${testCount} tests use this category`);
+    throw ApiError.badRequest(
+      `Cannot delete: ${courseCount} courses and ${testCount} tests use this category`
+    );
   }
 
   await ExamCategory.findByIdAndDelete(req.params.id);
