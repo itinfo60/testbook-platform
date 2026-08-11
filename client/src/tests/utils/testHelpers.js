@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
@@ -80,13 +80,13 @@ export async function waitForElement(selector, options = {}) {
   }, options);
 }
 
-export async function clickAndWait(element, options = {}) {
+export async function clickAndWait(element) {
   const user = userEvent.setup();
   await user.click(element);
   await waitFor(() => {}, { timeout: 100 });
 }
 
-export async function typeAndWait(element, text, options = {}) {
+export async function typeAndWait(element, text) {
   const user = userEvent.setup();
   await user.type(element, text);
   await waitFor(() => {}, { timeout: 100 });

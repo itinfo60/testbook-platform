@@ -177,7 +177,6 @@ describe('TestQuestion', () => {
     });
 
     it('shows selected state for chosen option', async () => {
-      const user = userEvent.setup();
       const store = createTestStore({
         answers: { q1: 1 }, // Pre-selected answer B (index 1)
       });
