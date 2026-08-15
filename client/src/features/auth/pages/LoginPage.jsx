@@ -66,17 +66,29 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="card p-6 sm:p-8 animate-fade-in">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Welcome Back</h1>
-        <p className="text-dark-500 mt-1">Sign in to continue learning</p>
+    <div className="bg-white dark:bg-dark-900 shadow-2xl rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-dark-800 animate-fade-in relative overflow-hidden">
+      {/* Decorative gradient blur */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
+
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-extrabold text-dark-900 dark:text-white font-display">
+          Welcome Back
+        </h1>
+        <p className="text-slate-500 mt-2 font-medium">Sign in to continue learning</p>
       </div>
 
       <a
         href={`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/google`}
-        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-dark-200 dark:border-dark-700 hover:bg-dark-50 dark:hover:bg-dark-700 rounded-xl text-sm font-medium transition-colors mb-4"
+        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-750 hover:shadow-md rounded-2xl text-sm font-bold transition-all mb-6 group"
       >
-        <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          viewBox="0 0 24 24"
+          width="22"
+          height="22"
+          xmlns="http://www.w3.org/2000/svg"
+          className="group-hover:scale-110 transition-transform"
+        >
           <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
             <path
               fill="#4285F4"
@@ -96,15 +108,15 @@ export default function LoginPage() {
             />
           </g>
         </svg>
-        <span className="text-dark-700 dark:text-dark-300">Continue with Google</span>
+        <span className="text-dark-900 dark:text-white">Continue with Google</span>
       </a>
 
-      <div className="relative mb-4">
+      <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-dark-200 dark:border-dark-700"></div>
+          <div className="w-full border-t border-slate-200 dark:border-dark-700"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white dark:bg-dark-900 text-dark-500">
+          <span className="px-3 bg-white dark:bg-dark-900 text-slate-500 font-medium">
             Or sign in with email
           </span>
         </div>
@@ -112,36 +124,38 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+          <label className="block text-sm font-bold text-dark-700 dark:text-dark-300 mb-1.5">
             Email
           </label>
           <div className="relative">
-            <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
+            <HiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
               {...register('email')}
               type="email"
               placeholder="Enter your email"
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-dark-800 border border-dark-300 dark:border-dark-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white"
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-dark-900 dark:text-white transition-all shadow-sm"
             />
           </div>
-          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-red-500 text-xs mt-1 font-medium">{errors.email.message}</p>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+          <label className="block text-sm font-bold text-dark-700 dark:text-dark-300 mb-1.5">
             Password
           </label>
           <div className="relative">
-            <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
+            <HiLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
               {...register('password')}
               type="password"
               placeholder="Enter your password"
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-dark-800 border border-dark-300 dark:border-dark-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white"
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-dark-900 dark:text-white transition-all shadow-sm"
             />
           </div>
           {errors.password && (
-            <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{errors.password.message}</p>
           )}
         </div>
 
@@ -166,23 +180,30 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <label className="flex items-center gap-2 cursor-pointer group">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-dark-300 text-primary-600 focus:ring-primary-500"
+              className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
             />
-            <span className="text-sm text-dark-500">Remember me</span>
+            <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
+              Remember me
+            </span>
           </label>
           <Link
             to="/forgot-password"
-            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium whitespace-nowrap"
+            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-bold whitespace-nowrap transition-colors"
           >
             Forgot Password?
           </Link>
         </div>
 
-        <Button type="submit" variant="primary" className="w-full" loading={isSubmitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full !py-3.5 !rounded-2xl text-base shadow-lg shadow-primary-500/20"
+          loading={isSubmitting}
+        >
           Sign In
         </Button>
       </form>

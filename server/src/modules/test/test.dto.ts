@@ -30,11 +30,14 @@ export interface ITest extends Document {
   instructions: string;
   teacher: Types.ObjectId;
   category: Types.ObjectId;
+  testSeries?: Types.ObjectId;
+  testNumber?: number;
   questions: IQuestion[];
   duration: number; // in minutes
   totalMarks: number;
   passingMarks: number;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
+  testType?: 'full_length' | 'subject_wise' | 'topic_wise' | 'pyq';
   questionsCount: number;
   maxAttempts: number; // 0 = unlimited
   totalAttempts: number;

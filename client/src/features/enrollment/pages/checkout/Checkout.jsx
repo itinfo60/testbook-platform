@@ -11,6 +11,7 @@ import {
   clearPaymentState,
   clearCoupon,
 } from '@/features/payment/paymentSlice';
+import api from '@/services/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import PriceTag from '@/components/common/PriceTag';
 import { Button, Input } from '@/components/ui';
@@ -25,14 +26,28 @@ export default function Checkout() {
   const { coupon, discount, loading } = useSelector((state) => state.payments);
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') || 'course';
-  const isTest = type === 'test';
+  const isTest = type === 'test' || type === 'test_series';
 
+  const [testSeriesItem, setTestSeriesItem] = useState(null);
+  const [seriesLoading, setSeriesLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
     if (isTest) {
-      dispatch(fetchTestById(id));
+      setSeriesLoading(true);
+      // Try fetching as TestSeries first if type=test_series, or fallback
+      api
+        .get(`/test-series/${id}`)
+        .then((res) => {
+          const data = res.data?.data?.testSeries || res.data?.testSeries;
+          if (data) setTestSeriesItem(data);
+          else dispatch(fetchTestById(id));
+        })
+        .catch(() => {
+          dispatch(fetchTestById(id));
+        })
+        .finally(() => setSeriesLoading(false));
     } else {
       dispatch(fetchCourseById(id));
     }
@@ -41,16 +56,17 @@ export default function Checkout() {
 
   if (
     (courseLoading && !isTest) ||
-    (testLoading && isTest) ||
+    (seriesLoading && isTest) ||
+    (!testSeriesItem && testLoading && isTest) ||
     (!course && !isTest) ||
-    (!test && isTest)
+    (!testSeriesItem && !test && isTest)
   ) {
     return <LoadingSpinner fullScreen />;
   }
 
-  const item = isTest ? test : course;
-  const effectivePrice = item.effectivePrice ?? item.price ?? 0;
-  const isFree = isTest ? item.isFree || effectivePrice === 0 : effectivePrice === 0;
+  const item = testSeriesItem || (isTest ? test : course);
+  const effectivePrice = item?.effectivePrice ?? item?.price ?? 0;
+  const isFree = isTest ? item?.isFree || effectivePrice === 0 : effectivePrice === 0;
 
   // Base calculations
   const priceBeforeDiscount = Math.max(0, effectivePrice - discount);

@@ -96,7 +96,7 @@ blogSchema.pre('save', function (next) {
 
 // Plugins
 blogSchema.plugin(paginatePlugin);
-blogSchema.plugin(tenantPlugin);
+blogSchema.plugin(tenantPlugin, { skipTenant: true });
 blogSchema.plugin(softDeletePlugin);
 
 const Blog = mongoose.model('Blog', blogSchema);

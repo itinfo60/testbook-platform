@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   HiAcademicCap,
   HiSearch,
@@ -16,6 +16,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 export default function ExamsCatalog() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [categories, setCategories] = useState([]);
   const [featuredCourses, setFeaturedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,34 +55,48 @@ export default function ExamsCatalog() {
     fetchData();
   }, []);
 
-  const filteredCategories = categories.filter((cat) => {
+  useEffect(() => {
+    if (location.state?.filterGroup) {
+      setSelectedGroup(location.state.filterGroup);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Extract all subcategory exam items from categories
+  const allExamItems = categories.flatMap((cat) => {
+    if (cat.subcategories && cat.subcategories.length > 0) {
+      return cat.subcategories.map((sub) => ({ ...sub, parentCategory: cat }));
+    }
+    return [{ ...cat, parentCategory: cat }];
+  });
+
+  const filteredExams = allExamItems.filter((exam) => {
     const matchesSearch =
-      cat.name?.toLowerCase().includes(search.toLowerCase()) ||
-      cat.description?.toLowerCase().includes(search.toLowerCase());
+      !search ||
+      exam.name?.toLowerCase().includes(search.toLowerCase()) ||
+      exam.description?.toLowerCase().includes(search.toLowerCase());
     return matchesSearch;
   });
 
-  // Categorize
-  const rajasthanExams = filteredCategories.filter((cat) => {
-    const slug = cat.slug || '';
-    return [
-      'ras',
-      'rpsc-eo-ro',
-      'rpsc-si',
-      'rpsc-1st-2nd-grade',
-      'rajasthan-cet',
-      'patwari',
-      'vdo',
-    ].some((s) => slug.includes(s));
-  });
-
-  const polSciExams = filteredCategories.filter((cat) => {
-    const slug = cat.slug || '';
+  // Categorize by Parent Category Slug or Subcategory Slugs
+  const rajasthanExams = filteredExams.filter((exam) => {
+    const pSlug = exam.parentCategory?.slug || '';
+    const slug = exam.slug || '';
     return (
-      ['political-science', 'uphesc', 'mppsc', 'pgt'].some((s) => slug.includes(s)) ||
-      !rajasthanExams.includes(cat)
+      pSlug === 'rajasthan-exams' ||
+      [
+        'ras',
+        'rpsc-eo-ro',
+        'rpsc-si',
+        'rpsc-1st-2nd-grade',
+        'rajasthan-cet',
+        'patwari',
+        'vdo',
+      ].some((s) => slug.includes(s))
     );
   });
+
+  const polSciExams = filteredExams.filter((exam) => !rajasthanExams.includes(exam));
 
   const renderCategoryCard = (cat) => (
     <div
@@ -135,13 +150,10 @@ export default function ExamsCatalog() {
       <div className="max-w-7xl mx-auto">
         {/* Header Banner */}
         <div className="text-center max-w-3xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider text-xs bg-amber-50 dark:bg-amber-950 px-3 py-1 rounded-full mb-3">
-            <HiAcademicCap className="h-4 w-4" /> Targeted Exam Directory
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-display">Explore Exam Portals</h1>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-display">Explore Exams</h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base mt-2">
-            Select your target competitive exam to access syllabus, previous year papers,
-            specialized target batches, and mock test series.
+            Select your target competitive exam to access syllabus & pattern, previous year papers,
+            specialized courses, mock test series & PYQs.
           </p>
 
           {/* Search Input */}
@@ -187,7 +199,7 @@ export default function ExamsCatalog() {
 
         {error && <div className="text-center py-20 text-red-500 font-semibold">{error}</div>}
 
-        {!loading && !error && filteredCategories.length === 0 && (
+        {!loading && !error && filteredExams.length === 0 && (
           <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
             <div className="text-5xl mb-4">🔍</div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
@@ -200,7 +212,7 @@ export default function ExamsCatalog() {
         )}
 
         {/* Exams Content Sections */}
-        {!loading && !error && filteredCategories.length > 0 && (
+        {!loading && !error && filteredExams.length > 0 && (
           <div className="space-y-16">
             {/* 🟢 Rajasthan Specific Exams */}
             {(selectedGroup === 'all' || selectedGroup === 'rajasthan') &&

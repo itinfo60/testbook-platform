@@ -34,7 +34,10 @@ export class TestService extends BaseService<ITest, TestRepository> {
     const questions = data.questions.map((q, idx) => ({
       ...q,
       _id: new mongoose.Types.ObjectId(),
-      order: q.order || idx,
+      order: q.order ?? idx,
+      sectionName: q.sectionName || 'General',
+      marks: Number(q.marks) || 1,
+      negativeMarks: Number(q.negativeMarks) || 0,
     }));
     return this.repository.create({
       ...data,
@@ -468,7 +471,9 @@ export class TestService extends BaseService<ITest, TestRepository> {
 
     // Retrieve answers from cache in case some were not flushed
     const redisKey = `tenant:test-attempt:${attempt._id.toString()}:answers`;
-    const cachedData = await redis.get(redisKey);
+    const cachedDataRaw = await redis.get(redisKey);
+    const cachedData =
+      typeof cachedDataRaw === 'string' ? JSON.parse(cachedDataRaw) : cachedDataRaw;
     let finalAnswers = attempt.answers;
 
     if (cachedData && cachedData.answers) {
@@ -525,14 +530,18 @@ export class TestService extends BaseService<ITest, TestRepository> {
       }
 
       if (question.type !== 'subjective') {
+        const qMarks = Number(question.marks) || 0;
+        const qNegMarks = Number(question.negativeMarks) || 0;
         if (isCorrect) {
-          marksObtained = question.marks;
+          marksObtained = qMarks;
         } else if (
           (answer.selectedOptions && answer.selectedOptions.length > 0) ||
           answer.textAnswer
         ) {
-          marksObtained = -question.negativeMarks;
+          marksObtained = -qNegMarks;
         }
+      } else {
+        marksObtained = 0;
       }
 
       totalScore += marksObtained;

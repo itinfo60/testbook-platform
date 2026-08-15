@@ -32,11 +32,35 @@ const testSchema = new Schema<ITest>(
       required: true,
       index: true,
     },
+    testSeries: {
+      type: Schema.Types.ObjectId,
+      ref: 'TestSeries',
+      default: null,
+      index: true,
+    },
+    testNumber: { type: Number, default: 1 },
 
     questions: [
       {
-        type: Schema.Types.ObjectId,
-        ref: 'Question',
+        _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+        question: { type: String, required: true },
+        type: {
+          type: String,
+          enum: ['mcq', 'msq', 'true_false', 'fill_blank', 'subjective'],
+          default: 'mcq',
+        },
+        options: [
+          {
+            text: { type: String, required: true },
+            isCorrect: { type: Boolean, default: false },
+          },
+        ],
+        correctAnswer: { type: String, default: '' },
+        marks: { type: Number, default: 1 },
+        negativeMarks: { type: Number, default: 0 },
+        explanation: { type: String, default: '' },
+        sectionName: { type: String, default: 'General' },
+        order: { type: Number, default: 0 },
       },
     ],
 
@@ -47,6 +71,12 @@ const testSchema = new Schema<ITest>(
       type: String,
       enum: ['beginner', 'intermediate', 'advanced'],
       default: 'intermediate',
+      index: true,
+    },
+    testType: {
+      type: String,
+      enum: ['full_length', 'subject_wise', 'topic_wise', 'pyq'],
+      default: 'full_length',
       index: true,
     },
 

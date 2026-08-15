@@ -31,8 +31,13 @@ export default function tenantPlugin(schema, options = {}) {
     }
 
     const tenantId = getTenantId();
-    if (tenantId) {
-      this.where({ tenantId });
+    if (
+      tenantId &&
+      tenantId !== 'null' &&
+      tenantId !== 'undefined' &&
+      mongoose.Types.ObjectId.isValid(tenantId)
+    ) {
+      this.where({ tenantId: new mongoose.Types.ObjectId(tenantId) });
     }
     next();
   };

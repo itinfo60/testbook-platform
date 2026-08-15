@@ -3,6 +3,7 @@ import { TenantRepository } from '../../core/tenant.repository.js';
 import { ICourse } from './course.model.js';
 import Course from './course.model.js';
 import { CourseQueryInput } from './course.validation.js';
+import ExamCategory from '../exam-category/examCategory.model.js';
 
 export class CourseRepository extends TenantRepository<ICourse> {
   constructor(model: Model<ICourse> = Course as Model<ICourse>) {
@@ -13,7 +14,12 @@ export class CourseRepository extends TenantRepository<ICourse> {
     const filter: any = {};
 
     if (query.category) {
-      filter.category = query.category;
+      const subcats = await ExamCategory.find({ parent: query.category }).distinct('_id');
+      if (subcats.length > 0) {
+        filter.category = { $in: [query.category, ...subcats] };
+      } else {
+        filter.category = query.category;
+      }
     }
 
     if (query.level) {

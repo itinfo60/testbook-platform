@@ -1,6 +1,14 @@
 import { Link } from 'react-router-dom';
-import { HiCheckCircle, HiXCircle, HiMinusCircle } from 'react-icons/hi';
-export default function TestResultSummary({ result }) {
+import {
+  HiCheckCircle,
+  HiXCircle,
+  HiMinusCircle,
+  HiAcademicCap,
+  HiRefresh,
+  HiArrowRight,
+} from 'react-icons/hi';
+
+export default function TestResultSummary({ result, onViewSolutions, testId }) {
   // Support both nested and flat result structure
   const attempt = result?.attempt || result || {};
   const score = attempt.score;
@@ -9,6 +17,8 @@ export default function TestResultSummary({ result }) {
   const timeTaken = attempt.timeTaken;
   const attemptId = attempt.attemptId || attempt._id;
   const rank = attempt.rank || result?.rank;
+  const resolvedTestId =
+    testId || attempt.test?._id || attempt.test || result?.test?._id || result?.test;
 
   // If stats aren't provided (e.g. when fetching a past attempt), compute them from answers
   let stats = result?.stats || {};
@@ -235,18 +245,34 @@ export default function TestResultSummary({ result }) {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {onViewSolutions && (
+          <button
+            onClick={onViewSolutions}
+            className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all flex items-center gap-2 text-sm cursor-pointer"
+          >
+            <HiAcademicCap className="h-4 w-4" /> View Detailed Solutions
+          </button>
+        )}
+        {resolvedTestId && (
+          <Link
+            to={`/tests/${resolvedTestId}`}
+            className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center gap-2 text-sm"
+          >
+            <HiRefresh className="h-4 w-4" /> Reattempt Test
+          </Link>
+        )}
         <Link
           to="/tests"
-          className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-800 font-bold py-3 px-8 rounded-xl transition-colors shadow-sm text-center"
+          className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-800 font-bold py-3 px-6 rounded-xl transition-colors shadow-sm text-center text-sm"
         >
-          Back to Tests
+          Browse Tests
         </Link>
         <Link
           to="/leaderboard"
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-colors text-center"
+          className="bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-6 rounded-xl transition-colors text-center text-sm"
         >
-          View Leaderboard
+          Leaderboard
         </Link>
       </div>
     </div>

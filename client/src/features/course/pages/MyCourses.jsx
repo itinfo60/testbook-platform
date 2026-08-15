@@ -20,7 +20,7 @@ export default function MyCourses() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-dark-900 dark:text-white font-display">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-dark-900 dark:text-white font-display mb-2">
             My Enrollments
           </h1>
           <p className="text-slate-500 mt-1 font-medium text-sm">
@@ -55,23 +55,28 @@ export default function MyCourses() {
               <Link
                 key={enrollment._id}
                 to={`/courses/${course._id}/learn`}
-                className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden group flex flex-col"
+                className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden group flex flex-col relative"
               >
-                <div className="h-44 bg-slate-100 dark:bg-dark-800 overflow-hidden relative">
+                <div className="h-48 bg-slate-100 dark:bg-dark-800 overflow-hidden relative">
                   {course.thumbnail?.url || course.thumbnail ? (
                     <img
                       src={course.thumbnail?.url || course.thumbnail}
                       alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-dark-800 text-slate-300 text-5xl">
                       <HiAcademicCap />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center z-10">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider bg-black/40 backdrop-blur-sm px-2 py-1 rounded-md">
+                      {progress === 100 ? 'Completed' : 'In Progress'}
+                    </span>
+                  </div>
                 </div>
-                <div className="p-5 flex-1 flex flex-col justify-between">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="font-bold text-dark-900 dark:text-white line-clamp-2 mb-4 group-hover:text-amber-500 transition-colors">
                       {course.title}

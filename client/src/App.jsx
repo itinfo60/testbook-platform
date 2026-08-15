@@ -33,6 +33,8 @@ const HomePage = lazy(() => import('@/features/home/pages/HomePage'));
 const CourseCatalog = lazy(() => import('@/features/course/pages/CourseCatalog'));
 const CourseDetail = lazy(() => import('@/features/course/pages/CourseDetail'));
 const TestCatalog = lazy(() => import('@/features/test/pages/TestCatalog'));
+const TestSeriesCatalog = lazy(() => import('@/features/test/pages/TestSeriesCatalog'));
+const TestSeriesDetail = lazy(() => import('@/features/test/pages/TestSeriesDetail'));
 const TestDetail = lazy(() => import('@/features/test/pages/TestDetail'));
 const LeaderboardPage = lazy(() => import('@/features/leaderboard/pages/LeaderboardPage'));
 const CertificateVerify = lazy(() => import('@/features/auth/pages/verify/CertificateVerify'));
@@ -209,8 +211,10 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CourseCatalog />} />
           <Route path="/courses/:id" element={<CourseDetail />} />
-          <Route path="/tests" element={<TestCatalog />} />
+          <Route path="/tests" element={<TestSeriesCatalog />} />
           <Route path="/tests/:id" element={<TestDetail />} />
+          <Route path="/test-series" element={<TestSeriesCatalog />} />
+          <Route path="/test-series/:seriesSlug" element={<TestSeriesDetail />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/verify-certificate" element={<CertificateVerify />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />

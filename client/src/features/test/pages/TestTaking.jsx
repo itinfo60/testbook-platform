@@ -3,12 +3,20 @@ import { Button, Modal } from '@/components/ui';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { startTest, submitTest } from '@/features/test/testSlice';
+import { startTest, submitTest, setAnswer, setCurrentQuestion } from '@/features/test/testSlice';
 import TestTimer from '../components/TestTimer';
 import TestNavigator from '../components/TestNavigator';
 import TestQuestion from '../components/TestQuestion';
 import toast from 'react-hot-toast';
-import { HiX, HiMenu } from 'react-icons/hi';
+import {
+  HiX,
+  HiMenu,
+  HiCheckCircle,
+  HiBookmark,
+  HiExclamationCircle,
+  HiQuestionMarkCircle,
+  HiShieldCheck,
+} from 'react-icons/hi';
 import api, { testAPI } from '@/services/api';
 
 const enterFullscreen = () => {
@@ -39,15 +47,18 @@ export default function TestTaking() {
     attempt,
     questions: storedQuestions,
     answers,
+    markedForReview,
     currentQuestionIndex,
     loading,
     result,
   } = useSelector((state) => state.tests);
+
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const isExitingRef = useRef(false); // true when we intentionally exit fullscreen
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const isExitingRef = useRef(false);
   const webcamRef = useRef(null);
   const [webcamStream, setWebcamStream] = useState(null);
 
@@ -56,12 +67,11 @@ export default function TestTaking() {
   const duration = attempt?.duration || 60;
   const isTestActive = !!attempt && !result;
 
-  // Extract attempt related values early for hooks
-  const attemptId = attempt?.attempt?._id;
-  const startTime = attempt?.attempt?.startedAt;
-  const testTitle = attempt?.title || 'Test';
+  const attemptId = attempt?.attempt?._id || attempt?._id;
+  const startTime = attempt?.attempt?.startedAt || attempt?.startedAt;
+  const testTitle = attempt?.title || attempt?.test?.title || 'Test';
 
-  // Start test
+  // Start or resume test
   useEffect(() => {
     if (result || loading || attempt) return;
     dispatch(startTest(id))
@@ -72,13 +82,36 @@ export default function TestTaking() {
       });
   }, [dispatch, id, result, loading, attempt, navigate]);
 
-  // Enter fullscreen as soon as attempt is available
+  // Restore answers from localStorage backup on attempt load
+  useEffect(() => {
+    if (!attemptId || result) return;
+    try {
+      const backup = localStorage.getItem(`test_backup_${attemptId}`);
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        Object.entries(parsed).forEach(([qId, ans]) => {
+          if (answers[qId] === undefined && ans !== undefined) {
+            dispatch(setAnswer({ questionId: qId, answer: ans }));
+          }
+        });
+      }
+    } catch {}
+  }, [attemptId, result, dispatch]);
+
+  // Backup answers to localStorage on every change
+  useEffect(() => {
+    if (!attemptId || result || Object.keys(answers).length === 0) return;
+    try {
+      localStorage.setItem(`test_backup_${attemptId}`, JSON.stringify(answers));
+    } catch {}
+  }, [answers, attemptId, result]);
+
+  // Fullscreen management
   useEffect(() => {
     if (!attempt) return;
     enterFullscreen().catch(() => {});
   }, [!!attempt]);
 
-  // Restore fullscreen if user exits it unexpectedly (e.g. F11, Esc)
   useEffect(() => {
     if (!isTestActive) return;
     const handler = () => {
@@ -95,7 +128,7 @@ export default function TestTaking() {
     };
   }, [isTestActive]);
 
-  // Disable right-click
+  // Anti-cheat protections
   useEffect(() => {
     if (!isTestActive) return;
     const handler = (e) => e.preventDefault();
@@ -103,11 +136,9 @@ export default function TestTaking() {
     return () => document.removeEventListener('contextmenu', handler);
   }, [isTestActive]);
 
-  // Block devtools keyboard shortcuts and Escape
   useEffect(() => {
     if (!isTestActive) return;
     const handler = (e) => {
-      // Devtools / inspect shortcuts
       if (
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase())) ||
@@ -118,7 +149,6 @@ export default function TestTaking() {
         e.stopPropagation();
         return false;
       }
-      // Block Escape from doing anything (browser will still exit fullscreen but we re-enter above)
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -128,26 +158,9 @@ export default function TestTaking() {
     return () => document.removeEventListener('keydown', handler, true);
   }, [isTestActive]);
 
-  // Log violations for copy, cut, paste actions
+  // Tab switch warning & violation logging
   useEffect(() => {
-    if (!isTestActive) return;
-    const handler = (e) => {
-      e.preventDefault();
-      testAPI.logViolation(attemptId).catch(() => {});
-    };
-    document.addEventListener('copy', handler);
-    document.addEventListener('cut', handler);
-    document.addEventListener('paste', handler);
-    return () => {
-      document.removeEventListener('copy', handler);
-      document.removeEventListener('cut', handler);
-      document.removeEventListener('paste', handler);
-    };
-  }, [isTestActive, attemptId]);
-
-  // Block tab switch / window blur warning and log violation
-  useEffect(() => {
-    if (!isTestActive) return;
+    if (!isTestActive || !attemptId) return;
     const handler = () => {
       toast('Please focus on the test window!', { icon: '⚠️', id: 'focus-warn' });
       testAPI.logViolation(attemptId).catch(() => {});
@@ -156,11 +169,11 @@ export default function TestTaking() {
     return () => window.removeEventListener('blur', handler);
   }, [isTestActive, attemptId]);
 
-  // Initialize webcam stream for PiP proctoring
+  // Webcam stream
   useEffect(() => {
     if (!isTestActive) return;
     navigator.mediaDevices
-      .getUserMedia({ video: true })
+      ?.getUserMedia?.({ video: true })
       .then((stream) => {
         setWebcamStream(stream);
         if (webcamRef.current) webcamRef.current.srcObject = stream;
@@ -173,32 +186,9 @@ export default function TestTaking() {
     };
   }, [isTestActive]);
 
-  // Prevent page refresh / close
+  // Auto-save heartbeat to server every 30 seconds
   useEffect(() => {
-    if (!isTestActive) return;
-    const handler = (e) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isTestActive]);
-
-  // Back-button guard
-  useEffect(() => {
-    if (!isTestActive) return;
-    window.history.pushState({ testGuard: true }, '');
-    const handler = () => {
-      window.history.pushState({ testGuard: true }, '');
-      setShowExitModal(true);
-    };
-    window.addEventListener('popstate', handler);
-    return () => window.removeEventListener('popstate', handler);
-  }, [isTestActive]);
-
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    if (!attempt || !isTestActive) return;
+    if (!attempt || !isTestActive || !attemptId) return;
     const interval = setInterval(async () => {
       try {
         const payload = Object.entries(answers).map(([questionId, selectedOptions]) => ({
@@ -206,32 +196,36 @@ export default function TestTaking() {
           selectedOptions: Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions],
         }));
         if (payload.length === 0) return;
-        if (!attemptId) return;
+        setIsAutoSaving(true);
         await api.post(`/tests/auto-save/${attemptId}`, { answers: payload });
+        setTimeout(() => setIsAutoSaving(false), 1500);
       } catch {
-        // Silent — auto-save failures should never interrupt the test
+        setIsAutoSaving(false);
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [attempt, isTestActive, answers]);
+  }, [attempt, isTestActive, answers, attemptId]);
 
   // Navigate to result once submitted
   useEffect(() => {
     if (result) {
       isExitingRef.current = true;
       exitFullscreen().catch(() => {});
+      try {
+        localStorage.removeItem(`test_backup_${attemptId}`);
+      } catch {}
       navigate(`/tests/${id}/result`, { replace: true });
     }
-  }, [result, navigate, id]);
+  }, [result, navigate, id, attemptId]);
 
   const handleSubmit = useCallback(() => {
     setShowSubmitModal(false);
     dispatch(submitTest({ attemptId, answers }));
-    toast.success('Test submitted!');
+    toast.success('Test submitted successfully!');
   }, [dispatch, attemptId, answers]);
 
   const handleTimeUp = useCallback(() => {
-    toast.error('Time is up! Auto-submitting...');
+    toast.error('Time is up! Auto-submitting test...');
     dispatch(submitTest({ attemptId, answers }));
   }, [dispatch, attemptId, answers]);
 
@@ -244,7 +238,7 @@ export default function TestTaking() {
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      dispatch({ type: 'tests/setCurrentQuestion', payload: currentQuestionIndex + 1 });
+      dispatch(setCurrentQuestion(currentQuestionIndex + 1));
     } else {
       setShowSubmitModal(true);
     }
@@ -252,41 +246,79 @@ export default function TestTaking() {
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {
-      dispatch({ type: 'tests/setCurrentQuestion', payload: currentQuestionIndex - 1 });
+      dispatch(setCurrentQuestion(currentQuestionIndex - 1));
     }
   };
 
-  if (loading && !attempt) return <LoadingSpinner fullScreen text="Loading test..." />;
+  // Keyboard shortcut listener for options (1-4 or A-D)
+  useEffect(() => {
+    if (!isTestActive || !currentQuestion) return;
+    const qId = currentQuestion._id || currentQuestion.id || currentQuestionIndex;
+    const handler = (e) => {
+      if (['input', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
+      if (['1', 'a', 'A'].includes(e.key)) dispatch(setAnswer({ questionId: qId, answer: 0 }));
+      else if (['2', 'b', 'B'].includes(e.key)) dispatch(setAnswer({ questionId: qId, answer: 1 }));
+      else if (['3', 'c', 'C'].includes(e.key)) dispatch(setAnswer({ questionId: qId, answer: 2 }));
+      else if (['4', 'd', 'D'].includes(e.key)) dispatch(setAnswer({ questionId: qId, answer: 3 }));
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isTestActive, currentQuestion, currentQuestionIndex, dispatch]);
+
+  if (loading && !attempt) return <LoadingSpinner fullScreen text="Loading test environment..." />;
 
   if (!questions.length) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-dark-950 p-4">
+        <div className="text-center bg-white dark:bg-dark-900 p-8 rounded-3xl border border-slate-200 dark:border-dark-800 max-w-md shadow-xl">
           <div className="text-5xl mb-4">📝</div>
-          <h2 className="text-xl font-semibold mb-2">Unable to load test</h2>
-          <p className="text-dark-500 mb-4">Please try again</p>
+          <h2 className="text-xl font-bold text-dark-900 dark:text-white mb-2">
+            Unable to load test
+          </h2>
+          <p className="text-slate-500 text-sm mb-6">
+            We couldn't retrieve the questions for this test. Please try again.
+          </p>
           <Button onClick={() => navigate(`/tests/${id}`)}>Go Back</Button>
         </div>
       </div>
     );
   }
 
+  const answeredCount = Object.keys(answers).filter((k) => answers[k] !== undefined).length;
+  const markedCount = markedForReview.length;
+  const unansweredCount = Math.max(0, questions.length - answeredCount);
+
   return (
     <div className="test-fullscreen min-h-screen bg-white dark:bg-dark-900 select-none">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-dark-900 border-b border-slate-200 dark:border-dark-800 px-3 sm:px-6 py-3.5 shadow-sm">
+      {/* ── Sticky Top Header ── */}
+      <div className="sticky top-0 z-30 bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-dark-800 px-3 sm:px-6 py-3.5 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <h2 className="font-extrabold text-dark-900 dark:text-white truncate flex-1 text-sm sm:text-base font-display">
-            {testTitle}
-          </h2>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <h2 className="font-extrabold text-dark-900 dark:text-white truncate text-base sm:text-lg font-display">
+              {testTitle}
+            </h2>
+
+            {/* Auto-Save Indicator */}
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-dark-800 text-[11px] font-bold text-slate-500">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isAutoSaving ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'
+                }`}
+              />
+              <span>{isAutoSaving ? 'Auto-saving...' : 'Saved'}</span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+            {/* Timer */}
             <TestTimer duration={duration} onTimeUp={handleTimeUp} startTime={startTime} />
 
             <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-dark-800 mx-1"></div>
 
+            {/* Mobile Navigator Drawer Toggle */}
             <button
               onClick={() => setShowNav(!showNav)}
-              className="lg:hidden bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-700 font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 transition-colors"
+              className="lg:hidden bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-700 font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <HiMenu className="h-4 w-4" />
               <span className="hidden xs:inline">
@@ -294,17 +326,20 @@ export default function TestTaking() {
               </span>
               <span className="xs:hidden">{currentQuestionIndex + 1}</span>
             </button>
+
+            {/* Submit Button */}
             <button
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-xl transition-colors shadow-sm text-sm"
+              className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-5 sm:px-6 rounded-xl transition-all shadow-md text-xs sm:text-sm active:scale-95 cursor-pointer"
               onClick={() => setShowSubmitModal(true)}
             >
-              <span className="hidden sm:inline">Submit Test</span>
-              <span className="sm:hidden">Submit</span>
+              Submit Test
             </button>
+
+            {/* Close Button */}
             <button
               onClick={() => setShowCloseModal(true)}
               title="Close Test"
-              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center h-9 w-9 bg-slate-50 dark:bg-dark-800"
+              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center h-9 w-9 bg-slate-50 dark:bg-dark-800 cursor-pointer"
             >
               <HiX className="h-5 w-5" />
             </button>
@@ -312,7 +347,7 @@ export default function TestTaking() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* ── Main Layout (Question + Navigator) ── */}
       <div className="flex max-w-7xl mx-auto">
         <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0">
           {currentQuestion && (
@@ -327,7 +362,7 @@ export default function TestTaking() {
         </div>
 
         {/* Desktop Navigator */}
-        <div className="hidden lg:block w-64 p-6 pl-0 flex-shrink-0">
+        <div className="hidden lg:block w-72 p-6 pl-0 flex-shrink-0">
           <div className="sticky top-24">
             <TestNavigator questions={questions} onSubmit={() => setShowSubmitModal(true)} />
           </div>
@@ -338,7 +373,15 @@ export default function TestTaking() {
       {showNav && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowNav(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-72 bg-white dark:bg-dark-900 p-4 overflow-y-auto">
+          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-dark-900 p-4 overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100 dark:border-dark-800">
+              <span className="font-bold text-sm text-dark-900 dark:text-white">
+                Question Palette
+              </span>
+              <button onClick={() => setShowNav(false)} className="p-1 rounded-lg text-slate-400">
+                <HiX className="h-5 w-5" />
+              </button>
+            </div>
             <TestNavigator
               questions={questions}
               onSubmit={() => {
@@ -350,93 +393,114 @@ export default function TestTaking() {
         </div>
       )}
 
-      {/* Close Test Confirmation */}
-      <Modal
-        isOpen={showCloseModal}
-        onClose={() => setShowCloseModal(false)}
-        title="Close Test?"
-        size="sm"
-      >
-        <div className="text-center py-4">
-          <div className="text-4xl mb-3">🚪</div>
-          <p className="text-dark-600 dark:text-dark-400 mb-2 font-medium">
-            Are you sure you want to close the test?
-          </p>
-          <p className="text-sm text-dark-400 mb-6">
-            Your progress will be lost and the attempt will remain open. Submit the test to save
-            your answers.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={() => setShowCloseModal(false)}>
-              Keep Taking Test
-            </Button>
-            <Button variant="danger" onClick={handleCloseTest}>
-              Close Test
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Back Button / Navigation Guard */}
-      <Modal
-        isOpen={showExitModal}
-        onClose={() => setShowExitModal(false)}
-        title="Leave Test?"
-        size="sm"
-      >
-        <div className="text-center py-4">
-          <div className="text-4xl mb-3">⚠️</div>
-          <p className="text-dark-600 dark:text-dark-400 mb-2 font-medium">
-            Your test is still in progress!
-          </p>
-          <p className="text-sm text-dark-400 mb-6">
-            Leaving will not submit your answers. Use "Submit Test" to complete, or "Close Test" to
-            exit.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={() => setShowExitModal(false)}>
-              Stay & Continue
-            </Button>
-            <Button variant="danger" onClick={handleCloseTest}>
-              Leave Anyway
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Submit Confirmation */}
+      {/* ── Submit Confirmation Modal ── */}
       <Modal
         isOpen={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
         title="Submit Test?"
-        size="sm"
+        size="md"
       >
-        <div className="text-center py-4">
-          <div className="text-4xl mb-3">📋</div>
-          <p className="text-dark-600 dark:text-dark-400 mb-2">
-            You have answered <strong>{Object.keys(answers).length}</strong> out of{' '}
-            <strong>{questions.length}</strong> questions.
-          </p>
-          <p className="text-sm text-dark-400 mb-6">
-            {questions.length - Object.keys(answers).length} questions are unanswered.
-          </p>
+        <div className="py-2">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-2">📋</div>
+            <h3 className="text-lg font-extrabold text-dark-900 dark:text-white">
+              Are you ready to submit your test?
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Please review your attempt summary below before final submission.
+            </p>
+          </div>
+
+          {/* Detailed Statistics Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6">
+            <div className="bg-slate-50 dark:bg-dark-800 p-3 rounded-2xl border border-slate-200 dark:border-dark-700 text-center">
+              <div className="text-xl font-black text-dark-900 dark:text-white">
+                {questions.length}
+              </div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                Total
+              </div>
+            </div>
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 text-center">
+              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                {answeredCount}
+              </div>
+              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mt-0.5">
+                Answered
+              </div>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-950/30 p-3 rounded-2xl border border-purple-200 dark:border-purple-900/50 text-center">
+              <div className="text-xl font-black text-purple-600 dark:text-purple-400">
+                {markedCount}
+              </div>
+              <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mt-0.5">
+                Marked
+              </div>
+            </div>
+            <div className="bg-rose-50 dark:bg-rose-950/30 p-3 rounded-2xl border border-rose-200 dark:border-rose-900/50 text-center">
+              <div className="text-xl font-black text-rose-600 dark:text-rose-400">
+                {unansweredCount}
+              </div>
+              <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mt-0.5">
+                Unanswered
+              </div>
+            </div>
+          </div>
+
+          {unansweredCount > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3.5 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-medium mb-6 flex items-center gap-2">
+              <HiExclamationCircle className="h-5 w-5 flex-shrink-0 text-amber-600" />
+              <span>
+                You have <strong>{unansweredCount}</strong> unanswered questions. Once submitted,
+                you cannot change your answers.
+              </span>
+            </div>
+          )}
+
           <div className="flex gap-3 justify-center">
             <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
-              Review Again
+              Back to Questions
             </Button>
             <Button variant="primary" onClick={handleSubmit} loading={loading}>
-              Submit Test
+              Confirm & Submit
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* ── Close Test Confirmation ── */}
+      <Modal
+        isOpen={showCloseModal}
+        onClose={() => setShowCloseModal(false)}
+        title="Exit Test?"
+        size="sm"
+      >
+        <div className="text-center py-4">
+          <div className="text-4xl mb-3">🚪</div>
+          <p className="text-dark-900 dark:text-white font-bold mb-1">
+            Are you sure you want to exit?
+          </p>
+          <p className="text-xs text-slate-500 mb-6">
+            Your progress will be saved, but the timer will continue running until you return.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="secondary" onClick={() => setShowCloseModal(false)}>
+              Keep Practicing
+            </Button>
+            <Button variant="danger" onClick={handleCloseTest}>
+              Exit Test
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Webcam PiP */}
       <video
         ref={webcamRef}
         autoPlay
         muted
         playsInline
-        className="fixed bottom-4 right-4 w-32 h-24 rounded-lg border shadow-lg object-cover"
+        className="fixed bottom-4 right-4 w-28 h-20 sm:w-32 sm:h-24 rounded-2xl border-2 border-white dark:border-dark-700 shadow-xl object-cover z-40 bg-black pointer-events-none"
       />
     </div>
   );

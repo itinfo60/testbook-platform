@@ -8,16 +8,32 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '@/features/auth/authSlice';
 
 vi.mock('@/features/auth/authSlice', () => {
-  const login = vi.fn().mockReturnValue({
+  const loginFn = vi.fn().mockImplementation(() => ({
     type: 'auth/login/fulfilled',
     payload: {
       user: { name: 'Test', email: 'test@test.com', role: 'student' },
       token: 'mock-token',
     },
-  });
-  const verifyMfaLogin = vi
+  }));
+  loginFn.rejected = { match: (action) => action?.type === 'auth/login/rejected' };
+  loginFn.fulfilled = { match: (action) => action?.type === 'auth/login/fulfilled' };
+
+  const verifyMfaLoginFn = vi
     .fn()
-    .mockReturnValue({ type: 'auth/verifyMfaLogin/fulfilled', payload: {} });
+    .mockImplementation(() => ({ type: 'auth/verifyMfaLogin/fulfilled', payload: {} }));
+  verifyMfaLoginFn.rejected = {
+    match: (action) => action?.type === 'auth/verifyMfaLogin/rejected',
+  };
+
+  const registerFn = vi.fn().mockImplementation(() => ({
+    type: 'auth/register/fulfilled',
+    payload: {
+      user: { name: 'Test', email: 'test@test.com', role: 'student' },
+      token: 'mock-token',
+    },
+  }));
+  registerFn.rejected = { match: (action) => action?.type === 'auth/register/rejected' };
+  registerFn.fulfilled = { match: (action) => action?.type === 'auth/register/fulfilled' };
 
   const reducer = (
     state = { isAuthenticated: false, user: null, token: null, loading: false },
@@ -52,28 +68,9 @@ vi.mock('@/features/auth/authSlice', () => {
   return {
     __esModule: true,
     default: reducer,
-    login,
-    verifyMfaLogin,
-    register: vi.fn().mockReturnValue({
-      type: 'auth/register/fulfilled',
-      payload: {
-        user: { name: 'Test', email: 'test@test.com', role: 'student' },
-        token: 'mock-token',
-      },
-    }),
-    login: {
-      ...login,
-      rejected: { match: (action) => action?.type === 'auth/login/rejected' },
-      fulfilled: { match: (action) => action?.type === 'auth/login/fulfilled' },
-    },
-    verifyMfaLogin: {
-      ...verifyMfaLogin,
-      rejected: { match: (action) => action?.type === 'auth/verifyMfaLogin/rejected' },
-    },
-    register: {
-      rejected: { match: (action) => action?.type === 'auth/register/rejected' },
-      fulfilled: { match: (action) => action?.type === 'auth/register/fulfilled' },
-    },
+    login: loginFn,
+    verifyMfaLogin: verifyMfaLoginFn,
+    register: registerFn,
   };
 });
 
@@ -83,7 +80,7 @@ describe('LoginPage', () => {
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    // preserve mock implementations
   });
 
   const createTestStore = (preloadedState = {}) => {
@@ -233,7 +230,10 @@ describe('LoginPage', () => {
   describe('Server Error Handling', () => {
     it('handles server errors gracefully', async () => {
       const { login } = await import('@/features/auth/authSlice');
-      login.mockReturnValueOnce({ type: 'auth/login/rejected', payload: 'Invalid credentials' });
+      login.mockImplementationOnce(() => ({
+        type: 'auth/login/rejected',
+        payload: 'Invalid credentials',
+      }));
 
       const user = userEvent.setup();
       renderWithProviders(<LoginPage />);
@@ -265,7 +265,7 @@ describe('RegisterPage', () => {
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    // preserve mock implementations
   });
 
   const createTestStore = (preloadedState = {}) => {

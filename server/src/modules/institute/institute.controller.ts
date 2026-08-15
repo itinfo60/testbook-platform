@@ -18,7 +18,17 @@ export class InstituteController extends BaseController {
 
   getBranding = this.catchAsync(async (req: CustomRequest, res: Response) => {
     if (!req.tenant) {
-      throw ApiError.badRequest('No active institute resolved. Please check the subdomain.');
+      return this.ok(
+        res,
+        {
+          name: 'Testbook Platform',
+          logo: '',
+          primaryColor: '#f59e0b',
+          secondaryColor: '#ea580c',
+          domain: 'localhost',
+        },
+        'Default branding configuration'
+      );
     }
     const result = this.instituteService.getBranding(req.tenant);
     return this.ok(res, result, 'Branding configuration retrieved');

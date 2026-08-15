@@ -152,6 +152,15 @@ export default function BlogList() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const paramType = searchParams.get('type');
+    if (paramType && paramType !== activeTab) {
+      setActiveTab(paramType);
+    } else if (!paramType && activeTab !== 'all') {
+      setActiveTab('all');
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const fetchBlogs = async () => {
       try {
         setLoading(true);
@@ -180,14 +189,19 @@ export default function BlogList() {
   };
 
   const filteredBlogs = blogs.filter(
-    (b) => !search || `${b.title} ${b.excerpt || ''}`.toLowerCase().includes(search.toLowerCase())
+    (b) =>
+      (!search ||
+        `${b.title} ${b.excerpt || ''} ${b.content || ''}`
+          .toLowerCase()
+          .includes(search.toLowerCase())) &&
+      (activeTab === 'all' || b.type === activeTab)
   );
 
   return (
     <div className="min-h-screen bg-dark-25 dark:bg-dark-950 py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider text-xs bg-blue-50 dark:bg-blue-950 px-3 py-1 rounded-full mb-3">
             <HiNewspaper className="h-4 w-4" /> Blog & Job Alerts
           </div>
@@ -198,43 +212,6 @@ export default function BlogList() {
             Latest RPSC recruitment notices, admit cards, topper strategies, and Political Science
             subject discussions.
           </p>
-        </div>
-
-        {/* Quick Navigation Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-          {[
-            {
-              icon: HiBell,
-              label: 'Latest Job Notifications',
-              desc: 'Recruitment, admit cards, results',
-              color: 'from-red-500 to-rose-600',
-              tab: 'job_alert',
-            },
-            {
-              icon: HiTrendingUp,
-              label: 'Preparation Strategies',
-              desc: 'Topper interviews & study plans',
-              color: 'from-blue-500 to-indigo-600',
-              tab: 'article',
-            },
-            {
-              icon: HiPencilAlt,
-              label: 'Subject Discussions',
-              desc: 'Difficult Political Science topics',
-              color: 'from-purple-500 to-violet-600',
-              tab: 'current_affairs',
-            },
-          ].map((item) => (
-            <button
-              key={item.tab}
-              onClick={() => handleTabChange(item.tab)}
-              className={`text-left bg-gradient-to-br ${item.color} text-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 ${activeTab === item.tab ? 'ring-4 ring-white/40' : ''}`}
-            >
-              <item.icon className="h-7 w-7 mb-3 opacity-90" />
-              <p className="font-extrabold text-base mb-1">{item.label}</p>
-              <p className="text-xs text-white/80">{item.desc}</p>
-            </button>
-          ))}
         </div>
 
         {/* Search + Tabs */}

@@ -35,15 +35,22 @@ export class LibraryController extends BaseController {
 
   // List resources with optional filters
   getResources = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const { category, tags, accessLevel, page = 1, limit = 20 } = req.query as any;
-    const filter: any = { tenantId: req.tenantId };
-    if (category) filter.category = category;
-    if (accessLevel) filter.accessLevel = accessLevel;
+    const { category, tags, accessLevel, resourceType, page = 1, limit = 50 } = req.query as any;
+    const filter: any = {};
+    if (req.tenantId) filter.tenantId = req.tenantId;
+    if (category && category !== 'all') filter.category = category;
+    if (accessLevel && accessLevel !== 'all') filter.accessLevel = accessLevel;
+    if (resourceType && resourceType !== 'all') filter.resourceType = resourceType;
     if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
 
     const skip = (Number(page) - 1) * Number(limit);
     const [resources, total] = await Promise.all([
-      LibraryResource.find(filter).skip(skip).limit(Number(limit)).lean(),
+      LibraryResource.find(filter)
+        .populate('category', 'name slug icon')
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 })
+        .lean(),
       LibraryResource.countDocuments(filter),
     ]);
     ApiResponse.ok(

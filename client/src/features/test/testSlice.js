@@ -144,7 +144,15 @@ const testSlice = createSlice({
   reducers: {
     setAnswer: (state, action) => {
       const { questionId, answer } = action.payload;
-      state.answers[questionId] = answer;
+      if (answer === undefined || answer === null) {
+        delete state.answers[questionId];
+      } else {
+        state.answers[questionId] = answer;
+      }
+    },
+    clearAnswer: (state, action) => {
+      const questionId = action.payload;
+      delete state.answers[questionId];
     },
     toggleMarkForReview: (state, action) => {
       const qId = action.payload;
@@ -269,6 +277,7 @@ const testSlice = createSlice({
 
 export const {
   setAnswer,
+  clearAnswer,
   toggleMarkForReview,
   setCurrentQuestion,
   clearTestState,

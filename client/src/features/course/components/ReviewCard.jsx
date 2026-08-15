@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import RatingStars from '@/components/common/RatingStars';
 
 export default function ReviewCard({ review }) {
   return (
@@ -9,9 +10,13 @@ export default function ReviewCard({ review }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="font-medium text-dark-900 dark:text-white">{review.user?.name || 'Anonymous'}</h4>
+            <h4 className="font-medium text-dark-900 dark:text-white">
+              {review.user?.name || 'Anonymous'}
+            </h4>
             <span className="text-xs text-dark-400 flex-shrink-0">
-              {review.createdAt ? formatDistanceToNow(new Date(review.createdAt), { addSuffix: true }) : ''}
+              {review.createdAt
+                ? formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })
+                : ''}
             </span>
           </div>
           <RatingStars rating={review.rating} size="sm" showValue={false} />

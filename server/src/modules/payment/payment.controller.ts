@@ -8,6 +8,7 @@ import Course from '../course/course.model.js';
 import User from '../user/user.model.js';
 import Enrollment from '../enrollment/enrollment.model.js';
 import Test from '../test/test.model.js';
+import TestSeries from '../test-series/testSeries.model.js';
 import redis from '../../config/redis.js';
 import { transactionalEmailQueue, notificationQueue } from '../../queues/index.js';
 import mongoose from 'mongoose';
@@ -145,15 +146,18 @@ export class PaymentController extends BaseController {
       if (existing) throw ApiError.conflict('Already enrolled in this course');
     } else {
       item = await Test.findById(testId);
-      if (!item || !item.isPublished) throw ApiError.notFound('Test not found');
+      if (!item) {
+        item = await TestSeries.findById(testId);
+      }
+      if (!item || !item.isPublished) throw ApiError.notFound('Test or Test Series not found');
       amount = item.price || 0;
 
       const existing = await Enrollment.findOne({
         user: req.userId,
-        test: testId,
+        $or: [{ test: testId }, { testSeries: testId }],
         status: { $in: ['active', 'completed'] },
       });
-      if (existing) throw ApiError.conflict('Already purchased test');
+      if (existing) throw ApiError.conflict('Already purchased test or test series');
     }
 
     // Apply Coupon
@@ -187,7 +191,10 @@ export class PaymentController extends BaseController {
       tenantId: new mongoose.Types.ObjectId(req.tenantId || undefined),
     };
     if (courseId) paymentData.course = new mongoose.Types.ObjectId(courseId);
-    if (testId) paymentData.test = new mongoose.Types.ObjectId(testId);
+    if (testId) {
+      paymentData.test = new mongoose.Types.ObjectId(testId);
+      paymentData.testSeries = new mongoose.Types.ObjectId(testId);
+    }
 
     if (appliedCoupon) {
       paymentData.couponUsed = appliedCoupon.code;
@@ -204,7 +211,10 @@ export class PaymentController extends BaseController {
       status: 'active',
     };
     if (courseId) enrollmentData.course = new mongoose.Types.ObjectId(courseId);
-    if (testId) enrollmentData.test = new mongoose.Types.ObjectId(testId);
+    if (testId) {
+      enrollmentData.test = new mongoose.Types.ObjectId(testId);
+      enrollmentData.testSeries = new mongoose.Types.ObjectId(testId);
+    }
 
     const enrollment = await Enrollment.create(enrollmentData);
     const user = await User.findById(req.userId);

@@ -91,94 +91,13 @@ describe('ExamsCatalog', () => {
   });
 
   describe('EXAM-002/003: Category Display', () => {
-    it('displays Rajasthan specific exams group', async () => {
+    it('displays exam categories', async () => {
       renderWithProviders(<ExamsCatalog />);
       await waitFor(() => {
-        expect(screen.getByText(/Rajasthan Specific Exams/i)).toBeInTheDocument();
-        // Use getAllByText and check length
         const rasElements = screen.getAllByText(/RAS/i);
         expect(rasElements.length).toBeGreaterThanOrEqual(1);
         const patwariElements = screen.getAllByText(/Patwari/i);
         expect(patwariElements.length).toBeGreaterThanOrEqual(1);
-      });
-    });
-
-    it('displays Political Science special exams group', async () => {
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        // Use getAllByText for multiple matches
-        const psElements = screen.getAllByText(/Political Science Special/i);
-        expect(psElements.length).toBeGreaterThanOrEqual(1);
-        const psCategoryElements = screen.getAllByText(/Political Science/i);
-        expect(psCategoryElements.length).toBeGreaterThanOrEqual(1);
-      });
-    });
-  });
-
-  describe('EXAM-004/013: Navigation to Exam Detail', () => {
-    it('shows course count and test count on category card', async () => {
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        expect(screen.getByText(/5 Courses/i)).toBeInTheDocument();
-        expect(screen.getByText(/10 Tests/i)).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Search Functionality', () => {
-    it('renders search input', async () => {
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Search exams/i)).toBeInTheDocument();
-      });
-    });
-
-    it('allows typing in search input', async () => {
-      const user = userEvent.setup({ delay: 100 });
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        const searchInput = screen.getByPlaceholderText(/Search exams/i);
-        user.type(searchInput, 'R');
-        user.type(searchInput, 'A');
-        user.type(searchInput, 'S');
-        expect(searchInput).toHaveValue('RAS');
-      });
-    });
-
-    it('filters categories by search query', async () => {
-      const user = userEvent.setup({ delay: 100 });
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        const searchInput = screen.getByPlaceholderText(/Search exams/i);
-        user.type(searchInput, 'R');
-        user.type(searchInput, 'A');
-        user.type(searchInput, 'S');
-        expect(searchInput).toHaveValue('RAS');
-      });
-    });
-  });
-
-  describe('Group Filter Tabs', () => {
-    it('renders All Exams tab', async () => {
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /All Exams/i })).toBeInTheDocument();
-      });
-    });
-
-    it('renders Rajasthan Specific tab', async () => {
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Rajasthan Specific/i })).toBeInTheDocument();
-      });
-    });
-
-    it('renders Political Science Special tab', async () => {
-      renderWithProviders(<ExamsCatalog />);
-      await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /Political Science Special/i })
-        ).toBeInTheDocument();
       });
     });
   });

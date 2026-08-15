@@ -65,13 +65,17 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Welcome */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-dark-900 dark:text-white font-display">
-          Welcome back, {user?.name?.split(' ')[0]} 👋
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-2 font-medium">
-          Ready to conquer your exams? Let's continue your learning journey.
-        </p>
+      <div className="mb-8 p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-amber-500/10 to-orange-600/5 border border-amber-500/20 relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-dark-900 dark:text-white font-display mb-2">
+            Welcome back, {user?.name?.split(' ')[0]} 👋
+          </h1>
+          <p className="text-slate-600 dark:text-slate-300 font-medium max-w-2xl text-lg">
+            Ready to conquer your exams? Let's continue your learning journey and achieve your goals
+            today.
+          </p>
+        </div>
+        <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-amber-500/20 to-transparent pointer-events-none hidden md:block"></div>
       </div>
 
       {/* Stats */}
@@ -80,17 +84,20 @@ export default function Dashboard() {
           <Link
             key={stat.label}
             to={stat.link}
-            className="bg-white dark:bg-dark-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-dark-800 hover:shadow-md transition-shadow group"
+            className="bg-white dark:bg-dark-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-dark-800 hover:shadow-lg hover:-translate-y-1 transition-all group relative overflow-hidden"
           >
             <div
-              className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${stat.color} group-hover:scale-110 transition-transform`}
+              className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-20 ${stat.color.split(' ')[0]}`}
+            ></div>
+            <div
+              className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-4 ${stat.color} group-hover:scale-110 transition-transform`}
             >
-              <stat.icon className="h-5 w-5" />
+              <stat.icon className="h-6 w-6" />
             </div>
-            <div className="text-2xl font-extrabold text-dark-900 dark:text-white mb-0.5">
+            <div className="text-3xl font-extrabold text-dark-900 dark:text-white mb-1">
               {stat.value}
             </div>
-            <div className="text-sm font-medium text-slate-500">{stat.label}</div>
+            <div className="text-sm font-bold text-slate-500 dark:text-slate-400">{stat.label}</div>
           </Link>
         ))}
       </div>
@@ -139,21 +146,21 @@ export default function Dashboard() {
                   <Link
                     key={enrollment._id}
                     to={`/courses/${course._id}/learn`}
-                    className="bg-white dark:bg-dark-900 flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-shadow group"
+                    className="bg-white dark:bg-dark-900 flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-lg transition-all group"
                   >
-                    <div className="h-16 w-24 sm:h-20 sm:w-28 rounded-xl bg-slate-100 dark:bg-dark-800 flex-shrink-0 overflow-hidden relative">
+                    <div className="h-40 sm:h-24 sm:w-36 rounded-2xl bg-slate-100 dark:bg-dark-800 flex-shrink-0 overflow-hidden relative w-full">
                       {thumbnailUrl ? (
                         <img
                           src={thumbnailUrl}
                           alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl">
+                        <div className="w-full h-full flex items-center justify-center text-4xl">
                           📘
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent sm:hidden"></div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-sm sm:text-base text-dark-900 dark:text-white truncate mb-2">
@@ -219,9 +226,12 @@ export default function Dashboard() {
             </div>
 
             {enrollments && enrollments.length > 0 && (
-              <button className="w-full mt-6 py-2.5 rounded-xl border border-slate-200 dark:border-dark-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors">
-                View Full History
-              </button>
+              <Link
+                to="/orders"
+                className="block text-center w-full mt-6 py-2.5 rounded-xl border border-slate-200 dark:border-dark-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+              >
+                View Full Enrollment History
+              </Link>
             )}
           </div>
         </div>

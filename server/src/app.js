@@ -40,6 +40,7 @@ import courseRoutes from './modules/course/course.routes.js';
 import enrollmentRoutes from './modules/enrollment/enrollment.routes.js';
 import reviewRoutes from './modules/review/review.routes.js';
 import testRoutes from './modules/test/test.routes.js';
+import testSeriesRoutes from './modules/test-series/testSeries.routes.js';
 import quizRoutes from './modules/quiz/quiz.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import userRoutes from './modules/user/user.routes.js';
@@ -67,6 +68,7 @@ import affiliateRoutes from './modules/affiliate/affiliate.routes.js';
 import parentRoutes from './modules/parent/parent.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
+import settingsRoutes from './modules/admin/settings.routes.js';
 import { auditLog } from './middleware/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -210,10 +212,12 @@ app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/courses`, optionalTenant, courseRoutes);
 app.use(`${API_PREFIX}/categories`, optionalTenant, categoryRoutes);
 app.use(`${API_PREFIX}/tests`, optionalTenant, testRoutes); // public test listing
+app.use(`${API_PREFIX}/test-series`, optionalTenant, testSeriesRoutes); // public test series catalog
 app.use(`${API_PREFIX}/reviews`, optionalTenant, reviewRoutes); // public review listing
 app.use(`${API_PREFIX}/blogs`, optionalTenant, blogRoutes); // public blog listing
 app.use(`${API_PREFIX}/badges`, optionalTenant, badgeRoutes); // public badge catalog
 app.use(`${API_PREFIX}/leaderboard`, optionalTenant, leaderboardRoutes);
+app.use(`${API_PREFIX}/settings`, optionalTenant, settingsRoutes);
 
 // Private routes — require a resolved tenant
 app.use(`${API_PREFIX}/enrollments`, requireTenant, enrollmentRoutes);
@@ -234,7 +238,7 @@ app.use(`${API_PREFIX}/live-classes`, requireTenant, liveClassRoutes);
 app.use(`${API_PREFIX}/audit-logs`, requireTenant, auditRoutes);
 app.use(`${API_PREFIX}/gdpr`, requireTenant, gdprRoutes);
 app.use(`${API_PREFIX}/api-keys`, requireTenant, apiKeyRoutes);
-app.use(`${API_PREFIX}/library`, requireTenant, libraryRoutes);
+app.use(`${API_PREFIX}/library`, optionalTenant, libraryRoutes);
 app.use(`${API_PREFIX}/affiliate`, requireTenant, affiliateRoutes);
 app.use(`${API_PREFIX}/parent`, requireTenant, parentRoutes);
 app.use(`${API_PREFIX}/attendance`, requireTenant, attendanceRoutes);

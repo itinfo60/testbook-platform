@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../helpers/renderWithProviders';
 import { configureStore } from '@reduxjs/toolkit';
 import testReducer from '@/features/test/testSlice';
+import TestQuestion from '@/features/test/components/TestQuestion';
+import TestTaking from '@/features/test/pages/TestTaking';
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -130,7 +132,7 @@ describe('TestQuestion', () => {
         { store }
       );
       await waitFor(() => {
-        expect(screen.getByText(/What is 2\?/i)).toBeInTheDocument();
+        expect(screen.getByText(/What is 2\+2\?/i)).toBeInTheDocument();
         expect(screen.getByText('3')).toBeInTheDocument();
         expect(screen.getByText('4')).toBeInTheDocument();
         expect(screen.getByText('5')).toBeInTheDocument();
@@ -311,7 +313,7 @@ describe('TestQuestion', () => {
   describe('ATTEMPT-008: State Recovery on Refresh', () => {
     it('maintains answer state from Redux', async () => {
       const store = createTestStore({
-        answers: { q1: 1, q2: 0 },
+        answers: { q1: 1, q2: 1 },
         currentQuestionIndex: 1,
       });
       renderWithProviders(

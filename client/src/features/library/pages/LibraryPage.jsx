@@ -32,6 +32,8 @@ export default function LibraryPage() {
   const [search, setSearch] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [filterType, setFilterType] = useState('all'); // all, pdf, video, etc
+  const [selectedResource, setSelectedResource] = useState(null);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -277,16 +279,85 @@ export default function LibraryPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => handleDownload(resource)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                      onClick={() => setSelectedResource(resource)}
+                      className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                     >
-                      <HiDownload className="h-4 w-4" /> Download
+                      View Details
                     </button>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Resource Detail Modal ── */}
+      {selectedResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-dark-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-dark-200 dark:border-dark-800 animate-slide-up">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                    <HiLibrary className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-dark-900 dark:text-white leading-tight">
+                      {selectedResource.title}
+                    </h3>
+                    {selectedResource.category && (
+                      <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
+                        {selectedResource.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedResource(null)}
+                  className="p-2 rounded-full hover:bg-dark-100 dark:hover:bg-dark-800 text-dark-500 transition-colors cursor-pointer"
+                >
+                  <HiX className="h-5 w-5" />
+                </button>
+              </div>
+
+              {selectedResource.description && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-bold text-dark-900 dark:text-white mb-2">
+                    Description
+                  </h4>
+                  <p className="text-sm text-dark-600 dark:text-dark-400">
+                    {selectedResource.description}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-800/50 rounded-2xl mb-6">
+                <div>
+                  <div className="text-xs text-dark-500 mb-1">Downloads</div>
+                  <div className="text-sm font-bold text-dark-900 dark:text-white">
+                    {selectedResource.downloadsCount || 0} times
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-dark-500 mb-1">Access Level</div>
+                  <div className="text-sm font-bold text-dark-900 dark:text-white uppercase">
+                    {selectedResource.accessLevel}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  handleDownload(selectedResource);
+                  setSelectedResource(null);
+                }}
+                className="flex items-center justify-center gap-2 w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary-500/25 cursor-pointer"
+              >
+                <HiDownload className="h-5 w-5" /> Download Resource
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

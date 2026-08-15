@@ -21,7 +21,12 @@ export const authenticate = catchAsync(async (req, res, next) => {
   }
 
   // Check if token is blacklisted
-  const isBlacklisted = await redis.get(`bl_${token}`);
+  let isBlacklisted = false;
+  try {
+    isBlacklisted = await redis.get(`bl_${token}`);
+  } catch (err) {
+    // Redis offline fallback
+  }
   if (isBlacklisted) {
     throw ApiError.unauthorized('Token has been revoked. Please login again.');
   }
@@ -39,12 +44,21 @@ export const authenticate = catchAsync(async (req, res, next) => {
 
   // Look up user globally (bypassing tenant filter so we can authenticate them)
   let user = await runWithTenant(null, true, async () => {
-    let cachedUser = await redis.get(`user_${decoded.id}`);
+    let cachedUser = null;
+    try {
+      cachedUser = await redis.get(`user_${decoded.id}`);
+    } catch (err) {
+      // Redis offline fallback
+    }
     if (!cachedUser) {
       const dbUser = await User.findById(decoded.id).select('-password -refreshTokens').lean();
       if (dbUser) {
         // Cache for 5 minutes
-        await redis.set(`user_${decoded.id}`, dbUser, 300);
+        try {
+          await redis.set(`user_${decoded.id}`, dbUser, 300);
+        } catch (err) {
+          // Redis offline fallback
+        }
         return dbUser;
       }
       return null;

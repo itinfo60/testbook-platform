@@ -29,6 +29,11 @@ const enrollmentSchema = new mongoose.Schema(
       ref: 'Test',
       index: true,
     },
+    testSeries: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TestSeries',
+      index: true,
+    },
     status: {
       type: String,
       enum: ['active', 'completed', 'expired', 'refunded', 'pending'],

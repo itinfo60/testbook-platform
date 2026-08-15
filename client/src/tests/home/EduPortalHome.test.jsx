@@ -111,27 +111,28 @@ describe('EduPortalHome', () => {
     vi.clearAllMocks();
 
     // Default successful responses for all API calls
-    api.get.mockImplementation((url) => {
-      if (url.includes('/blogs') && url.includes('job_alert')) {
+    api.get.mockImplementation((url = '') => {
+      const urlStr = typeof url === 'string' ? url : String(url || '');
+      if (urlStr.includes('/blogs') && urlStr.includes('job_alert')) {
         return Promise.resolve({
           data: { data: { blogs: mockBlogs.filter((b) => b.type === 'job_alert') } },
         });
       }
-      if (url.includes('/blogs') && url.includes('article')) {
+      if (urlStr.includes('/blogs') && urlStr.includes('article')) {
         return Promise.resolve({
           data: { data: { blogs: mockBlogs.filter((b) => b.type === 'article') } },
         });
       }
-      if (url === '/categories' || url.includes('/categories')) {
+      if (urlStr.includes('/categories')) {
         return Promise.resolve({ data: { data: mockExams } });
       }
-      if (url === '/courses' || url.includes('/courses')) {
+      if (urlStr.includes('/courses')) {
         return Promise.resolve({ data: { data: { courses: mockCourses } } });
       }
-      if (url === '/tests' || url.includes('/tests')) {
+      if (urlStr.includes('/tests')) {
         return Promise.resolve({ data: { data: { tests: mockTestSeries } } });
       }
-      if (url === '/library' || url.includes('/library')) {
+      if (urlStr.includes('/library')) {
         return Promise.resolve({ data: { data: { resources: mockResources } } });
       }
       return Promise.resolve({ data: { data: [] } });
@@ -178,15 +179,11 @@ describe('EduPortalHome', () => {
     });
 
     it('allows typing in search input', async () => {
-      const user = userEvent.setup({ delay: 100 });
+      const user = userEvent.setup();
       renderWithProviders(<EduPortalHome />);
-      await waitFor(() => {
-        const searchInput = screen.getByPlaceholderText(/Search courses, exams/i);
-        user.type(searchInput, 'R');
-        user.type(searchInput, 'A');
-        user.type(searchInput, 'S');
-        expect(searchInput).toHaveValue('RAS');
-      });
+      const searchInput = await screen.findByPlaceholderText(/Search courses, exams/i);
+      await user.type(searchInput, 'RAS');
+      expect(searchInput).toHaveValue('RAS');
     });
 
     it('HOME-005: shows popular search tags', async () => {

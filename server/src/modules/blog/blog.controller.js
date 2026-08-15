@@ -1,10 +1,13 @@
 import Blog from './blog.model.js';
+import User from '../user/user.model.js';
+import ExamCategory from '../exam-category/examCategory.model.js';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import redis from '../../config/redis.js';
 import { generateSlug } from '../../utils/helpers.js';
 import { buildFilterQuery, buildPaginationQuery } from '../../utils/pagination.js';
+import { runWithTenant } from '../../utils/TenantContext.js';
 
 // ===== PUBLIC =====
 
@@ -17,6 +20,7 @@ export const getBlogs = catchAsync(async (req, res) => {
   const filter = buildFilterQuery(req.query, {
     search: { type: 'search', fields: ['title', 'content', 'tags'] },
     status: { type: 'exact' },
+    type: { type: 'exact' },
     tag: { type: 'array', field: 'tags' },
     author: { type: 'exact' },
   });
@@ -37,10 +41,15 @@ export const getBlogs = catchAsync(async (req, res) => {
 
   const sort = sortMap[req.query.sort] || '-createdAt';
 
-  const result = await Blog.paginate(filter, {
-    ...pagination,
-    sort,
-    populate: { path: 'author', select: 'name avatar' },
+  const result = await runWithTenant(null, true, async () => {
+    return await Blog.paginate(filter, {
+      ...pagination,
+      sort,
+      populate: [
+        { path: 'author', select: 'name avatar' },
+        { path: 'examCategory', select: 'name slug' },
+      ],
+    });
   });
 
   ApiResponse.paginated(res, {
@@ -57,9 +66,18 @@ export const getBlogs = catchAsync(async (req, res) => {
 export const getBlogBySlug = catchAsync(async (req, res) => {
   const { slug } = req.params;
 
-  const blog = await Blog.findOne({ slug, isDeleted: { $ne: true } })
-    .populate('author', 'name avatar bio')
-    .lean();
+  const blog = await runWithTenant(null, true, async () => {
+    return await Blog.findOne({
+      $or: [
+        { slug },
+        { slug: new RegExp('^' + slug.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') },
+      ],
+      isDeleted: { $ne: true },
+    })
+      .populate('author', 'name avatar bio')
+      .populate('examCategory', 'name slug')
+      .lean();
+  });
 
   if (!blog) {
     throw ApiError.notFound('Blog post not found');
@@ -71,7 +89,9 @@ export const getBlogBySlug = catchAsync(async (req, res) => {
   }
 
   // Increment views (async, don't wait)
-  Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } }).exec().catch(err => console.error('Error updating views:', err));
+  Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } })
+    .exec()
+    .catch((err) => console.error('Error updating views:', err));
 
   ApiResponse.ok(res, { blog });
 });
@@ -88,7 +108,9 @@ export const createBlog = catchAsync(async (req, res) => {
   // Check if slug exists
   const existingBlog = await Blog.findOne({ slug });
   if (existingBlog) {
-    throw ApiError.badRequest('A blog with this slug already exists. Please provide a different slug or title.');
+    throw ApiError.badRequest(
+      'A blog with this slug already exists. Please provide a different slug or title.'
+    );
   }
 
   const blog = await Blog.create({
@@ -131,7 +153,7 @@ export const deleteBlog = catchAsync(async (req, res) => {
     throw ApiError.notFound('Blog post not found');
   }
 
-  // Permanent delete or soft delete? 
+  // Permanent delete or soft delete?
   // Let's use soft delete if plugin is available
   await blog.softDelete(req.userId);
 

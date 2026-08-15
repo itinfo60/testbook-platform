@@ -19,6 +19,7 @@ const limiterOptions = (windowMs, max, message, prefix = 'rl') => ({
   max,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   store: makeStore(),
   message: { success: false, statusCode: 429, message },
   keyGenerator: (req) => `${prefix}:${req.ip}`,

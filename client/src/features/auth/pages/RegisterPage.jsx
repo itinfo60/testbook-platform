@@ -100,17 +100,29 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="card p-6 sm:p-8 animate-fade-in">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Create Account</h1>
-        <p className="text-dark-500 mt-1">Start your learning journey today</p>
+    <div className="bg-white dark:bg-dark-900 shadow-2xl rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-dark-800 animate-fade-in relative overflow-hidden">
+      {/* Decorative gradient blur */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
+
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-extrabold text-dark-900 dark:text-white font-display">
+          Create Account
+        </h1>
+        <p className="text-slate-500 mt-2 font-medium">Start your learning journey today</p>
       </div>
 
       <a
         href={`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/google`}
-        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-dark-200 dark:border-dark-700 hover:bg-dark-50 dark:hover:bg-dark-700 rounded-xl text-sm font-medium transition-colors mb-4"
+        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-750 hover:shadow-md rounded-2xl text-sm font-bold transition-all mb-6 group"
       >
-        <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          viewBox="0 0 24 24"
+          width="22"
+          height="22"
+          xmlns="http://www.w3.org/2000/svg"
+          className="group-hover:scale-110 transition-transform"
+        >
           <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
             <path
               fill="#4285F4"
@@ -130,15 +142,15 @@ export default function RegisterPage() {
             />
           </g>
         </svg>
-        <span className="text-dark-700 dark:text-dark-300">Sign up with Google</span>
+        <span className="text-dark-900 dark:text-white">Sign up with Google</span>
       </a>
 
-      <div className="relative mb-4">
+      <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-dark-200 dark:border-dark-700"></div>
+          <div className="w-full border-t border-slate-200 dark:border-dark-700"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white dark:bg-dark-900 text-dark-500">
+          <span className="px-3 bg-white dark:bg-dark-900 text-slate-500 font-medium">
             Or register with email
           </span>
         </div>
@@ -262,7 +274,12 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <Button type="submit" variant="primary" className="w-full" loading={isSubmitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full !py-3.5 !rounded-2xl text-base shadow-lg shadow-primary-500/20 mt-4"
+          loading={isSubmitting}
+        >
           Create Account
         </Button>
       </form>

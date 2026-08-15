@@ -64,6 +64,7 @@ const config = {
     keyId: process.env.RAZORPAY_KEY_ID,
     keySecret: process.env.RAZORPAY_KEY_SECRET,
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+    allowMock: process.env.ALLOW_MOCK_PAYMENTS === 'true',
   },
 
   twilio: {
