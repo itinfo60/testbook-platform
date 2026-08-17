@@ -120,9 +120,9 @@ export default function Navbar() {
                 <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
                   <HiAcademicCap className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold font-display tracking-tight text-navy-950 dark:text-white uppercase">
-                  <span className="text-navy-950 dark:text-white">Civics</span>
-                  <span className="text-amber-800 dark:text-amber-500">Edu</span>
+                <span className="text-2xl font-bold font-display tracking-tight uppercase">
+                  <span className="text-gray-900 dark:text-white">Civics</span>
+                  <span className="text-blue-600 dark:text-blue-400">Edu</span>
                 </span>
               </Link>
 

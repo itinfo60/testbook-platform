@@ -379,34 +379,10 @@ export default function ExamDetail() {
             {category.syllabus ? (
               <div dangerouslySetInnerHTML={{ __html: category.syllabus }} />
             ) : (
-              <div className="space-y-4">
-                <p>
-                  The official syllabus for <strong>{category.name}</strong> comprises:
-                </p>
-                <div className="grid sm:grid-cols-2 gap-4 not-prose">
-                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
-                      1. General Studies & Core Concepts
-                    </h3>
-                    <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
-                      <li>Indian Constitution, Polity & Governance</li>
-                      <li>History, Art, Culture & Heritage</li>
-                      <li>Geography of India and World</li>
-                      <li>Indian Economy & Key Budget Concepts</li>
-                    </ul>
-                  </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
-                      2. State Specific & Mental Ability
-                    </h3>
-                    <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
-                      <li>Rajasthan History, Art, Fairs & Festivals</li>
-                      <li>State Administrative Framework & Schemes</li>
-                      <li>Logical Reasoning & Analytical Ability</li>
-                      <li>Current Affairs & Recent Developments</li>
-                    </ul>
-                  </div>
-                </div>
+              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
+                <div className="text-3xl mb-2">📖</div>
+                <p className="font-medium">Syllabus not yet published.</p>
+                <p className="text-xs mt-1">Check back soon or visit the official website.</p>
               </div>
             )}
           </div>
@@ -435,39 +411,10 @@ export default function ExamDetail() {
             {category.examPattern ? (
               <div dangerouslySetInnerHTML={{ __html: category.examPattern }} />
             ) : (
-              <div className="overflow-x-auto not-prose">
-                <table className="w-full text-xs sm:text-sm text-left border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
-                  <thead className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[11px]">
-                    <tr>
-                      <th className="p-3.5">Stage / Paper</th>
-                      <th className="p-3.5">Subject</th>
-                      <th className="p-3.5">Total Questions</th>
-                      <th className="p-3.5">Max Marks</th>
-                      <th className="p-3.5">Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-600 dark:text-slate-300 font-medium">
-                    <tr>
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">
-                        Preliminary Examination
-                      </td>
-                      <td className="p-3.5">General Knowledge & General Science</td>
-                      <td className="p-3.5">150 Questions</td>
-                      <td className="p-3.5 font-bold text-amber-600 dark:text-amber-400">
-                        200 Marks
-                      </td>
-                      <td className="p-3.5">3 Hours (180 Mins)</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-white">
-                        Negative Marking
-                      </td>
-                      <td className="p-3.5" colSpan={4}>
-                        1/3rd (0.33) marks deducted for every incorrect response.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
+                <div className="text-3xl mb-2">📊</div>
+                <p className="font-medium">Exam pattern not yet published.</p>
+                <p className="text-xs mt-1">Check back soon or visit the official website.</p>
               </div>
             )}
           </div>
@@ -500,29 +447,10 @@ export default function ExamDetail() {
                 }}
               />
             ) : (
-              <div className="grid sm:grid-cols-2 gap-4 not-prose">
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
-                    Educational Qualifications & Age Limit
-                  </h3>
-                  <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
-                    <li>Bachelor’s Degree in any discipline from a recognized University.</li>
-                    <li>
-                      Age Limit: 21 to 40 years (Relaxations applicable as per State Government
-                      rules).
-                    </li>
-                  </ul>
-                </div>
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
-                    Selection Process Stages
-                  </h3>
-                  <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
-                    <li>Stage 1: Preliminary Screening Examination (Objective MCQs)</li>
-                    <li>Stage 2: Main Written Examination (Descriptive Papers)</li>
-                    <li>Stage 3: Personality Test & Interview Round</li>
-                  </ul>
-                </div>
+              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
+                <div className="text-3xl mb-2">✅</div>
+                <p className="font-medium">Eligibility details not yet published.</p>
+                <p className="text-xs mt-1">Check back soon or visit the official website.</p>
               </div>
             )}
           </div>

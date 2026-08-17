@@ -1,16 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Users, ShieldCheck, CheckCircle } from 'lucide-react';
-
-// Actions
+import { Users, ShieldCheck, CheckCircle, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
 import { fetchTeachers, verifyTeacher } from '@/features/teacher/teacherSlice';
-
-// Components
+import { teachersAPI } from '@/services/api';
 import DataTable from '@/components/DataTable';
-
-// Utils
 import { getStatusColor, formatDate } from '@/utils';
 import useDebounce from '@/hooks/useDebounce';
+import toast from 'react-hot-toast';
 
 export default function TeacherList() {
   const dispatch = useDispatch();
@@ -21,22 +17,35 @@ export default function TeacherList() {
   const debouncedSearch = useDebounce(search);
 
   const load = useCallback(() => {
-    dispatch(fetchTeachers({
-      page,
-      limit: 10,
-      search: debouncedSearch || undefined,
-      status: statusFilter || undefined,
-    }));
+    dispatch(
+      fetchTeachers({
+        page,
+        limit: 10,
+        search: debouncedSearch || undefined,
+        status: statusFilter || undefined,
+      })
+    );
   }, [dispatch, page, debouncedSearch, statusFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleVerify = async (id) => {
     await dispatch(verifyTeacher(id));
     load();
   };
 
-
+  const handleToggleStatus = async (teacher) => {
+    const newStatus = teacher.isActive === false;
+    try {
+      await teachersAPI.toggleStatus(teacher._id, newStatus);
+      toast.success(`Teacher ${newStatus ? 'activated' : 'deactivated'}`);
+      load();
+    } catch {
+      // handled by interceptor
+    }
+  };
 
   const columns = [
     {
@@ -59,20 +68,25 @@ export default function TeacherList() {
       label: 'Specialization',
       render: (_, row) => {
         const specs = row.teacherProfile?.specialization || [];
-        return specs.length > 0 ? specs.join(', ') : '-';
+        return specs.length > 0 ? specs.join(', ') : '—';
       },
+    },
+    {
+      key: 'courses',
+      label: 'Courses',
+      render: (_, row) => row.courseCount || row.teacherProfile?.totalCourses || 0,
     },
     {
       key: 'totalStudents',
       label: 'Students',
-      render: (_, row) => row.teacherProfile?.totalStudents || 0,
+      render: (_, row) => row.studentCount || row.teacherProfile?.totalStudents || 0,
     },
     {
-      key: 'totalEarnings',
-      label: 'Earnings',
+      key: 'totalRevenue',
+      label: 'Revenue',
       render: (_, row) => {
-        const earnings = row.teacherProfile?.totalEarnings || 0;
-        return `₹${earnings.toLocaleString()}`;
+        const rev = row.totalRevenue || row.teacherProfile?.totalEarnings || 0;
+        return `₹${rev.toLocaleString()}`;
       },
     },
     {
@@ -90,8 +104,8 @@ export default function TeacherList() {
     {
       key: 'isActive',
       label: 'Status',
-      render: (val, row) => {
-        const status = row.status || (val !== false ? 'active' : 'inactive');
+      render: (val) => {
+        const status = val !== false ? 'active' : 'inactive';
         return <span className={getStatusColor(status)}>{status}</span>;
       },
     },
@@ -110,7 +124,14 @@ export default function TeacherList() {
       </div>
 
       <div className="flex gap-3">
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="input-field w-44 py-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="input-field w-44 py-2"
+        >
           <option value="">All Teachers</option>
           <option value="verified">Verified</option>
           <option value="pending">Pending</option>
@@ -125,30 +146,56 @@ export default function TeacherList() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search teachers..."
         emptyMessage="No teachers found"
         emptyIcon={Users}
         actions={(row) => {
           const isVerified = row.teacherProfile?.isVerified || row.isVerified;
+          const isActive = row.isActive !== false;
           return (
             <div className="flex items-center justify-end gap-1">
-              {isVerified ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-600">
+              {/* View on student site */}
+              <a
+                href={`${import.meta.env.VITE_CLIENT_URL || 'http://localhost:5173'}/teacher/${row._id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="View profile"
+              >
+                <Eye className="w-4 h-4 text-blue-600" />
+              </a>
+
+              {/* Verify only (no reject endpoint on backend) */}
+              {!isVerified ? (
+                <button
+                  onClick={() => handleVerify(row._id)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  title="Verify teacher"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                </button>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-emerald-600 px-1">
                   <ShieldCheck className="w-4 h-4" /> Verified
                 </span>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleVerify(row._id)}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="Verify"
-                  >
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  </button>
-
-                </>
               )}
+
+              {/* Activate / Deactivate */}
+              <button
+                onClick={() => handleToggleStatus(row)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                title={isActive ? 'Deactivate' : 'Activate'}
+              >
+                {isActive ? (
+                  <ToggleRight className="w-4 h-4 text-emerald-600" />
+                ) : (
+                  <ToggleLeft className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
             </div>
           );
         }}

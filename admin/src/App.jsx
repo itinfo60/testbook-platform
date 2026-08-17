@@ -23,6 +23,8 @@ const CourseOversight = lazy(() => import('@/features/course/pages/CourseOversig
 const CourseForm = lazy(() => import('@/features/course/pages/CourseForm'));
 const TestOversight = lazy(() => import('@/features/test/pages/TestOversight'));
 const QuizOversight = lazy(() => import('@/features/quiz/pages/QuizOversight'));
+const TestSeriesList = lazy(() => import('@/features/testseries/pages/TestSeriesList'));
+const TestSeriesForm = lazy(() => import('@/features/testseries/pages/TestSeriesForm'));
 const ReviewModeration = lazy(() => import('@/features/review/pages/ReviewModeration'));
 const EnrollmentList = lazy(() => import('@/features/enrollment/pages/EnrollmentList'));
 const RevenueDashboard = lazy(() => import('@/features/revenue/pages/RevenueDashboard'));
@@ -87,6 +89,9 @@ export default function App() {
             <Route path="courses/create" element={<CourseForm />} />
             <Route path="courses/:id/edit" element={<CourseForm />} />
             <Route path="tests" element={<TestOversight />} />
+            <Route path="test-series" element={<TestSeriesList />} />
+            <Route path="test-series/create" element={<TestSeriesForm />} />
+            <Route path="test-series/:id/edit" element={<TestSeriesForm />} />
             <Route path="quizzes" element={<QuizOversight />} />
             <Route path="reviews" element={<ReviewModeration />} />
             <Route path="enrollments" element={<EnrollmentList />} />

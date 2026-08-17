@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   HiArrowRight,
   HiDocumentDownload,
@@ -7,56 +7,49 @@ import {
   HiOutlineDocumentText,
   HiOutlineLightBulb,
 } from 'react-icons/hi';
+import { libraryAPI } from '@/services/api';
+
+const ICON_MAP = {
+  pyq: HiOutlineDocumentText,
+  notes: HiOutlineLightBulb,
+  syllabus: HiOutlineDocumentText,
+  current_affairs: HiOutlineBookOpen,
+};
+
+const CATEGORY_LABEL = {
+  pyq: 'PYQs',
+  notes: 'Notes',
+  syllabus: 'Syllabus',
+  current_affairs: 'Current Affairs',
+};
+
+const TABS = ['All', 'PYQs', 'Syllabus', 'Current Affairs', 'Notes'];
 
 export default function FreeResourcesLibrary() {
   const [activeTab, setActiveTab] = useState('All');
-  const tabs = ['All', 'PYQs', 'Syllabus', 'Current Affairs', 'Notes', 'Mind Maps'];
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const resources = [
-    {
-      id: 1,
-      category: 'PYQs',
-      title: 'Patwari 2021 Previous Year Question Paper',
-      desc: 'Original solved paper with official answer key.',
-      type: 'PDF Document',
-      icon: HiOutlineDocumentText,
-    },
-    {
-      id: 2,
-      category: 'PYQs',
-      title: 'RAS Prelims 2023 Solved Question Paper',
-      desc: 'Complete solved paper with authentic RPSC answer key explanations.',
-      type: 'PDF Document',
-      icon: HiOutlineDocumentText,
-    },
-    {
-      id: 3,
-      category: 'Mind Maps',
-      title: 'Political Science — Western Political Thought',
-      desc: 'Visual mind map & quick revision notes for Assistant Professor & PGT.',
-      type: 'PDF Document',
-      icon: HiOutlineLightBulb,
-    },
-    {
-      id: 4,
-      category: 'Current Affairs',
-      title: 'Rajasthan Monthly Current Affairs — July 2026',
-      desc: 'Comprehensive coverage of Rajasthan specific current events.',
-      type: 'PDF Document',
-      icon: HiOutlineBookOpen,
-    },
-    {
-      id: 5,
-      category: 'Syllabus',
-      title: 'Patwari Official Syllabus & Exam Scheme',
-      desc: 'Latest updated syllabus for the upcoming recruitment.',
-      type: 'PDF Document',
-      icon: HiOutlineDocumentText,
-    },
-  ];
+  useEffect(() => {
+    libraryAPI
+      .getAll({ limit: 12, accessLevel: 'all', isPublished: true })
+      .then((res) => {
+        const data = res.data?.data?.resources || res.data?.resources || res.data?.data || [];
+        setResources(Array.isArray(data) ? data : []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered =
-    activeTab === 'All' ? resources : resources.filter((r) => r.category === activeTab);
+    activeTab === 'All'
+      ? resources
+      : resources.filter((r) => {
+          const cat = CATEGORY_LABEL[r.resourceType] || r.resourceType || '';
+          return cat === activeTab;
+        });
+
+  if (!loading && resources.length === 0) return null;
 
   return (
     <section className="py-24 bg-white relative">
@@ -83,7 +76,7 @@ export default function FreeResourcesLibrary() {
 
         {/* Filter Tabs */}
         <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-10 pb-2">
-          {tabs.map((tab) => (
+          {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -98,37 +91,66 @@ export default function FreeResourcesLibrary() {
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((resource) => (
-            <div
-              key={resource.id}
-              className="group bg-white rounded-xl p-6 border border-navy-100 shadow-sm hover:shadow-lg hover:border-accent-200 transition-all flex flex-col h-full"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="h-12 w-12 rounded-lg bg-navy-50 text-navy-600 flex items-center justify-center shrink-0 group-hover:bg-accent-50 group-hover:text-accent-600 transition-colors">
-                  <resource.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-navy-500 mb-1 block">
-                    {resource.category}
-                  </span>
-                  <h3 className="font-bold text-navy-900 leading-snug">{resource.title}</h3>
-                </div>
-              </div>
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-44 bg-navy-50 rounded-xl animate-pulse border border-navy-100"
+              />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12 text-navy-400">
+            <p className="font-medium">No resources available yet.</p>
+            <p className="text-sm mt-1">Check back soon for free study materials.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((resource) => {
+              const Icon = ICON_MAP[resource.resourceType] || HiOutlineDocumentText;
+              const catLabel =
+                CATEGORY_LABEL[resource.resourceType] || resource.resourceType || 'Resource';
 
-              <p className="text-sm text-navy-600 mb-6 flex-grow">{resource.desc}</p>
+              return (
+                <div
+                  key={resource._id}
+                  className="group bg-white rounded-xl p-6 border border-navy-100 shadow-sm hover:shadow-lg hover:border-accent-200 transition-all flex flex-col h-full"
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="h-12 w-12 rounded-lg bg-navy-50 text-navy-600 flex items-center justify-center shrink-0 group-hover:bg-accent-50 group-hover:text-accent-600 transition-colors">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-navy-500 mb-1 block">
+                        {catLabel}
+                      </span>
+                      <h3 className="font-bold text-navy-900 leading-snug">{resource.title}</h3>
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-navy-50 mt-auto">
-                <span className="text-xs font-medium text-navy-400 bg-navy-50 px-2.5 py-1 rounded">
-                  {resource.type}
-                </span>
-                <button className="text-sm font-semibold text-accent-600 hover:text-accent-700 flex items-center gap-1 group-hover:bg-accent-50 px-3 py-1.5 rounded transition-colors">
-                  <HiDocumentDownload className="h-4 w-4" /> Download PDF
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+                  {resource.description && (
+                    <p className="text-sm text-navy-600 mb-6 flex-grow line-clamp-2">
+                      {resource.description}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-navy-50 mt-auto">
+                    <span className="text-xs font-medium text-navy-400 bg-navy-50 px-2.5 py-1 rounded">
+                      PDF Document
+                    </span>
+                    <Link
+                      to="/free-resources"
+                      className="text-sm font-semibold text-accent-600 hover:text-accent-700 flex items-center gap-1 group-hover:bg-accent-50 px-3 py-1.5 rounded transition-colors"
+                    >
+                      <HiDocumentDownload className="h-4 w-4" /> View
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

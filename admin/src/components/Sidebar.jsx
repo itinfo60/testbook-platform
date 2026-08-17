@@ -13,6 +13,7 @@ import {
   Megaphone,
   Palette,
   Video,
+  ClipboardList,
   X,
   ChevronLeft,
 } from 'lucide-react';
@@ -22,13 +23,13 @@ const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'Users', path: '/users', icon: Users },
   { label: 'Courses', path: '/courses', icon: BookOpen },
+  { label: 'Test Series', path: '/test-series', icon: ClipboardList },
   { label: 'Tests', path: '/tests', icon: FileText },
   { label: 'Quizzes', path: '/quizzes', icon: Brain },
   { label: 'Reviews', path: '/reviews', icon: Star },
   { label: 'Enrollments', path: '/enrollments', icon: GraduationCap },
   { label: 'Revenue', path: '/revenue', icon: TrendingUp },
   { label: 'Teachers', path: '/teachers', icon: Users },
-  { label: 'Categories', path: '/categories', icon: FolderOpen },
   { label: 'Exam Categories', path: '/exam-categories', icon: FolderOpen },
   { label: 'Coupons', path: '/coupons', icon: Tag },
   { label: 'Announcements', path: '/announcements', icon: Megaphone },
@@ -61,7 +62,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold uppercase tracking-tight">
-                Civics<span className="text-yellow-500">Edu</span>
+                Civics<span className="text-blue-400">Edu</span>
               </span>
             </div>
           )}

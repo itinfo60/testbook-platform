@@ -35,8 +35,8 @@ export const blogSchemas = {
     search: Joi.string().trim().max(100).allow(''),
     tag: Joi.string().trim().allow(''),
     status: Joi.string().valid('draft', 'published'),
+    type: Joi.string().valid('article', 'job_alert', 'current_affairs').allow(''),
     author: objectId,
     sort: Joi.string().valid('newest', 'oldest', 'popular', 'title_asc', 'title_desc'),
   }),
-
 };

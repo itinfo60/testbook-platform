@@ -113,16 +113,17 @@ export default function PerformancePreview() {
                       Welcome back 👋
                     </h3>
                     <p className="text-xs text-navy-500 font-medium">
-                      Targeting: <span className="font-bold text-navy-900">RPSC RAS 2026</span> •
-                      Streak:{' '}
-                      <span className="text-amber-600 font-bold">
-                        {studyStreak || 7} Days Active
-                      </span>
+                      {analytics ? `Streak: ` : 'Sign in to see your progress'}
+                      {analytics && (
+                        <span className="text-amber-600 font-bold">{studyStreak} Days Active</span>
+                      )}
                     </p>
                   </div>
                   <div className="bg-navy-50 px-3 py-1.5 rounded-xl text-xs font-bold text-navy-700 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Overall Syllabus: {averageCourseProgress || 68}%
+                    {averageCourseProgress
+                      ? `Overall Syllabus: ${averageCourseProgress}%`
+                      : 'Track your progress'}
                   </div>
                 </div>
 
@@ -147,7 +148,7 @@ export default function PerformancePreview() {
                       <HiClipboardList className="h-4 w-4" />
                     </div>
                     <div className="text-xl font-extrabold text-navy-950 font-display">
-                      42 Tests
+                      {analytics?.totalTestAttempts ?? '—'} Tests
                     </div>
                     <div className="text-[10px] font-bold text-navy-400 uppercase tracking-wider">
                       Attempts
@@ -160,7 +161,7 @@ export default function PerformancePreview() {
                       <HiTrendingUp className="h-4 w-4" />
                     </div>
                     <div className="text-xl font-extrabold text-emerald-600 font-display">
-                      {averageTestScore || 84.2}%
+                      {averageTestScore ? `${averageTestScore}%` : '—'}
                     </div>
                     <div className="text-[10px] font-bold text-navy-400 uppercase tracking-wider">
                       Avg Accuracy
@@ -173,10 +174,10 @@ export default function PerformancePreview() {
                       <HiAcademicCap className="h-4 w-4" />
                     </div>
                     <div className="text-xl font-extrabold text-accent-600 font-display">
-                      96.8 %ile
+                      {analytics?.percentileRank ? `${analytics.percentileRank}%ile` : '—'}
                     </div>
                     <div className="text-[10px] font-bold text-navy-400 uppercase tracking-wider">
-                      State Rank #18
+                      Percentile Rank
                     </div>
                   </div>
                 </div>

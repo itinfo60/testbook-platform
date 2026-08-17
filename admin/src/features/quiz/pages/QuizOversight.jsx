@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Brain, Eye, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 // Actions
 import { fetchQuizzes, deleteQuiz } from '@/features/quiz/quizSlice';
@@ -15,7 +14,6 @@ import { getStatusColor, formatDate, truncate } from '@/utils';
 import useDebounce from '@/hooks/useDebounce';
 
 export default function QuizOversight() {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { list, pagination, loading } = useSelector((s) => s.quizzes);
   const [page, setPage] = useState(1);
@@ -120,13 +118,15 @@ export default function QuizOversight() {
         emptyIcon={Brain}
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => navigate(`/quizzes/${row._id}`)}
+            <a
+              href={`${import.meta.env.VITE_CLIENT_URL || 'http://localhost:5173'}/quiz/${row._id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="View"
+              title="View on student site"
             >
               <Eye className="w-4 h-4 text-blue-600" />
-            </button>
+            </a>
             <button
               onClick={() => setDeleteTarget(row._id)}
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"

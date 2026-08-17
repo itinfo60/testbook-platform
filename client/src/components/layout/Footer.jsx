@@ -72,8 +72,9 @@ export default function Footer() {
               <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
                 <HiAcademicCap className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-bold font-display tracking-tight text-white uppercase">
-                Civics<span className="text-amber-300">Edu</span>
+              <span className="text-2xl font-bold font-display tracking-tight uppercase">
+                <span className="text-white">Civics</span>
+                <span className="text-blue-400">Edu</span>
               </span>
             </Link>
             <p className="text-sm text-slate-400 mb-5 max-w-xs leading-relaxed">

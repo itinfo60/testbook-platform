@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { fetchCourseById, clearSelected } from '@/features/course/courseSlice';
 import { fetchCategories } from '@/features/category/categorySlice';
+import { fetchExamCategories } from '@/features/examcategory/examCategorySlice';
 import { coursesAPI } from '@/services/api';
 import LoadingSpinner from '@/components/loadingSpinner';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ export default function CourseForm() {
   const navigate = useNavigate();
   const { selected, loading } = useSelector((s) => s.courses);
   const { list: categories } = useSelector((s) => s.categories);
+  const { list: examCategories } = useSelector((s) => s.examCategories);
   const isEdit = !!id;
   const [saving, setSaving] = useState(false);
   const [thumbnail, setThumbnail] = useState(null);
@@ -24,6 +26,7 @@ export default function CourseForm() {
     shortDescription: '',
     price: 0,
     category: '',
+    examCategory: '',
     level: 'beginner',
     language: 'English',
     isFree: false,
@@ -31,6 +34,7 @@ export default function CourseForm() {
 
   useEffect(() => {
     dispatch(fetchCategories());
+    dispatch(fetchExamCategories({ page: 1, limit: 200 }));
     if (isEdit) dispatch(fetchCourseById(id));
     return () => dispatch(clearSelected());
   }, [dispatch, id, isEdit]);
@@ -43,6 +47,7 @@ export default function CourseForm() {
         shortDescription: selected.shortDescription || '',
         price: selected.price || 0,
         category: selected.category?._id || selected.category || '',
+        examCategory: selected.examCategory?._id || selected.examCategory || '',
         level: selected.level || 'beginner',
         language: selected.language || 'English',
         isFree: selected.isFree || selected.price === 0,
@@ -146,7 +151,7 @@ export default function CourseForm() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Category
+              Course Category
             </label>
             <select
               value={form.category}
@@ -163,6 +168,28 @@ export default function CourseForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Exam Category
+              <span className="text-xs text-gray-400 font-normal ml-1">(shows on exam page)</span>
+            </label>
+            <select
+              value={form.examCategory}
+              onChange={handleChange('examCategory')}
+              className="input-field"
+            >
+              <option value="">-- None --</option>
+              {examCategories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.icon ? `${c.icon} ` : ''}
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Level
             </label>
             <select value={form.level} onChange={handleChange('level')} className="input-field">
@@ -171,9 +198,6 @@ export default function CourseForm() {
               <option value="advanced">Advanced</option>
             </select>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Price (₹)
@@ -187,6 +211,9 @@ export default function CourseForm() {
               max={100000}
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Language

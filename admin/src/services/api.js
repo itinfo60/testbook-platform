@@ -236,6 +236,7 @@ export const revenueAPI = {
 export const teachersAPI = {
   getAll: (params) => api.get(`/admin/teachers${qs(params)}`),
   verify: (id) => api.patch(`/admin/teachers/${id}/verify`),
+  toggleStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }),
 };
 
 // ══════════════════════════════════════════════
@@ -266,6 +267,17 @@ export const examCategoriesAPI = {
 export const notificationsAPI = {
   send: (data) => api.post('/admin/announcements', data),
   getAll: (params) => api.get(`/notifications${qs(params)}`),
+};
+
+// ══════════════════════════════════════════════
+// TEST SERIES
+// ══════════════════════════════════════════════
+export const testSeriesAPI = {
+  getAll: (params) => api.get(`/test-series${qs(params)}`),
+  getBySlug: (slug) => api.get(`/test-series/${slug}`),
+  create: (data) => api.post('/test-series', data),
+  update: (id, data) => api.put(`/test-series/${id}`, data),
+  delete: (id) => api.delete(`/test-series/${id}`),
 };
 
 // ══════════════════════════════════════════════

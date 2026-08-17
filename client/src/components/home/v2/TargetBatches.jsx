@@ -1,82 +1,15 @@
 import { Link } from 'react-router-dom';
-import {
-  HiClipboardList,
-  HiDocumentText,
-  HiFire,
-  HiStar,
-  HiUserGroup,
-  HiVideoCamera,
-} from 'react-icons/hi';
+import { HiArrowRight, HiBookOpen, HiClipboardList } from 'react-icons/hi';
+import { useSelector } from 'react-redux';
 
 export default function TargetBatches() {
-  const batches = [
-    {
-      id: 1,
-      tag: 'RAS Prelims & Mains',
-      isPopular: true,
-      title: 'RAS Prelims 2026 Complete GS Crash Course',
-      rating: 4.8,
-      students: '120+',
-      features: [
-        { icon: HiVideoCamera, text: 'HD Live & Recorded Lectures' },
-        { icon: HiDocumentText, text: 'Downloadable Handwritten PDF Notes' },
-        { icon: HiClipboardList, text: 'Topic-Wise Practice Tests' },
-        { icon: HiUserGroup, text: 'Faculty Mentorship' },
-      ],
-      price: '₹4,999',
-      oldPrice: '₹9,999',
-      path: '/courses',
-    },
-    {
-      id: 2,
-      tag: 'Patwari',
-      isPopular: false,
-      title: 'Target Patwari Special Foundation Batch 2026',
-      rating: 4.7,
-      students: '450+',
-      features: [
-        { icon: HiVideoCamera, text: 'Bilingual Live Classes' },
-        { icon: HiDocumentText, text: 'Printable Class Notes' },
-        { icon: HiClipboardList, text: 'Weekly Mock Tests' },
-      ],
-      price: '₹2,999',
-      oldPrice: '₹5,999',
-      path: '/courses',
-    },
-    {
-      id: 3,
-      tag: 'RPSC EO & RO',
-      isPopular: true,
-      title: 'RPSC EO & RO Part-B Special Batch (Municipalities Act)',
-      rating: 4.9,
-      students: '800+',
-      features: [
-        { icon: HiVideoCamera, text: 'Bare Act Detailed Analysis' },
-        { icon: HiDocumentText, text: 'Simplified Summary Notes' },
-        { icon: HiClipboardList, text: 'Section-wise MCQ Practice' },
-      ],
-      price: '₹1,999',
-      oldPrice: '₹3,999',
-      path: '/courses',
-    },
-    {
-      id: 4,
-      tag: 'Assistant Professor',
-      isPopular: false,
-      title: 'RPSC Assistant Professor Political Science — Paper 1 & 2 Special',
-      rating: 4.9,
-      students: '200+',
-      features: [
-        { icon: HiVideoCamera, text: 'Complete UGC NET/RPSC Level Coverage' },
-        { icon: HiDocumentText, text: 'Advanced Political Theory Notes' },
-        { icon: HiClipboardList, text: 'PYQ Detailed Solutions' },
-        { icon: HiUserGroup, text: '1-on-1 Strategy Calls' },
-      ],
-      price: '₹7,999',
-      oldPrice: '₹14,999',
-      path: '/courses',
-    },
-  ];
+  // Pull featured/published courses from Redux store (populated by CuratedCourses or similar)
+  const { list: courses } = useSelector((s) => s.courses || { list: [] });
+
+  // Show up to 4 courses; if none yet, show nothing rather than fake data
+  const displayed = (courses || []).filter((c) => c.isPublished !== false).slice(0, 4);
+
+  if (displayed.length === 0) return null;
 
   return (
     <section className="py-24 bg-white relative">
@@ -93,68 +26,103 @@ export default function TargetBatches() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-          {batches.map((batch) => (
-            <div
-              key={batch.id}
-              className={`bg-white rounded-2xl border ${batch.isPopular ? 'border-accent-400 shadow-xl shadow-accent-500/10 relative' : 'border-navy-100 shadow-lg shadow-navy-900/5'} overflow-hidden flex flex-col`}
-            >
-              {batch.isPopular && (
-                <div className="bg-accent-500 text-white text-xs font-bold uppercase tracking-wider py-1.5 px-4 text-center flex items-center justify-center gap-1">
-                  <HiFire className="h-4 w-4" /> High Demand
-                </div>
-              )}
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {displayed.map((course, idx) => {
+            const isPopular = course.isFeatured || idx === 0;
+            const price = course.price > 0 ? `₹${course.price.toLocaleString('en-IN')}` : 'Free';
+            const oldPrice =
+              course.salePrice && course.salePrice < course.price
+                ? `₹${course.price.toLocaleString('en-IN')}`
+                : null;
+            const displayPrice =
+              course.salePrice && course.salePrice < course.price
+                ? `₹${course.salePrice.toLocaleString('en-IN')}`
+                : price;
 
-              <div className="p-6 flex flex-col flex-grow">
-                <span className="text-xs font-bold text-navy-500 uppercase tracking-wider mb-3 block">
-                  {batch.tag}
-                </span>
-                <h3 className="text-xl font-bold text-navy-900 leading-tight mb-3 min-h-[56px]">
-                  {batch.title}
-                </h3>
+            return (
+              <div
+                key={course._id}
+                className={`bg-white rounded-2xl border ${
+                  isPopular
+                    ? 'border-accent-400 shadow-xl shadow-accent-500/10 relative'
+                    : 'border-navy-100 shadow-lg shadow-navy-900/5'
+                } overflow-hidden flex flex-col`}
+              >
+                {isPopular && (
+                  <div className="bg-accent-500 text-white text-xs font-bold uppercase tracking-wider py-1.5 px-4 text-center">
+                    Featured
+                  </div>
+                )}
 
-                <div className="flex items-center gap-1 mb-6 pb-6 border-b border-navy-50">
-                  <HiStar className="text-yellow-400 h-5 w-5" />
-                  <span className="text-sm font-bold text-navy-900">{batch.rating}</span>
-                  <span className="text-sm text-navy-500">({batch.students} Aspirants)</span>
-                </div>
+                {course.thumbnail?.url && (
+                  <img
+                    src={course.thumbnail.url}
+                    alt={course.title}
+                    className="w-full h-36 object-cover"
+                  />
+                )}
 
-                <div className="space-y-4 mb-8 flex-grow">
-                  <p className="text-xs font-bold text-navy-900 uppercase tracking-wider">
-                    Includes:
-                  </p>
-                  {batch.features.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="mt-0.5 bg-navy-50 text-navy-600 p-1.5 rounded-md">
-                        <feature.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-sm text-navy-700 leading-snug">{feature.text}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-auto">
-                  <div className="flex items-end gap-2 mb-4">
-                    <span className="text-2xl font-bold text-navy-900">{batch.price}</span>
-                    <span className="text-sm text-navy-400 line-through mb-1">
-                      {batch.oldPrice}
+                <div className="p-6 flex flex-col flex-grow">
+                  {course.examCategory?.name && (
+                    <span className="text-xs font-bold text-navy-500 uppercase tracking-wider mb-3 block">
+                      {course.examCategory.name}
                     </span>
+                  )}
+                  <h3 className="text-base font-bold text-navy-900 leading-tight mb-3">
+                    {course.title}
+                  </h3>
+
+                  {course.shortDescription && (
+                    <p className="text-xs text-navy-600 line-clamp-2 mb-4">
+                      {course.shortDescription}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-3 text-xs text-navy-500 mb-4">
+                    {course.totalLessons > 0 && (
+                      <span className="flex items-center gap-1">
+                        <HiBookOpen className="h-4 w-4" /> {course.totalLessons} lessons
+                      </span>
+                    )}
+                    {course.enrollmentCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <HiClipboardList className="h-4 w-4" /> {course.enrollmentCount}+ enrolled
+                      </span>
+                    )}
                   </div>
 
-                  <Link
-                    to={batch.path}
-                    className={`block w-full text-center py-3 rounded-xl font-semibold transition-all ${
-                      batch.isPopular
-                        ? 'bg-accent-500 text-white shadow-lg shadow-accent-500/20 hover:bg-accent-600'
-                        : 'bg-navy-900 text-white hover:bg-navy-800'
-                    }`}
-                  >
-                    Enroll Now
-                  </Link>
+                  <div className="mt-auto">
+                    <div className="flex items-end gap-2 mb-4">
+                      <span className="text-2xl font-bold text-navy-900">{displayPrice}</span>
+                      {oldPrice && (
+                        <span className="text-sm text-navy-400 line-through mb-1">{oldPrice}</span>
+                      )}
+                    </div>
+
+                    <Link
+                      to={`/courses/${course.slug || course._id}`}
+                      className={`block w-full text-center py-3 rounded-xl font-semibold transition-all ${
+                        isPopular
+                          ? 'bg-accent-500 text-white hover:bg-accent-600'
+                          : 'bg-navy-900 text-white hover:bg-navy-800'
+                      }`}
+                    >
+                      Enroll Now <HiArrowRight className="inline h-4 w-4 ml-1" />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link
+            to="/courses"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-navy-50 hover:bg-navy-100 text-navy-900 rounded-full font-bold text-sm transition-all"
+          >
+            Browse All Courses <HiArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </section>

@@ -11,13 +11,9 @@ export default function JobAlertList() {
 
   const fetchBlogs = async () => {
     try {
-      const res = await blogsAPI.getAll({ limit: 50, tags: 'job-alert' });
-      // or filter frontend if backend doesn't support filtering by tags directly
-      const fetched = res.data?.data?.blogs || [];
-      const jobAlerts = fetched.filter(
-        (b) => b.tags?.includes('job-alert') || b.type === 'job-alert'
-      );
-      setBlogs(jobAlerts.length > 0 ? jobAlerts : fetched);
+      const res = await blogsAPI.getAll({ limit: 50, type: 'job_alert' });
+      const fetched = res.data?.data?.blogs || res.data?.data || [];
+      setBlogs(fetched);
     } catch (err) {
       toast.error('Failed to fetch job alerts');
     } finally {

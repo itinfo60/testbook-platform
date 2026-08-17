@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiSearch } from 'react-icons/hi';
+import { useExamCategories } from '@/services/categories';
 
 export default function SmartSearch() {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
+  const { categories } = useExamCategories();
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -13,18 +15,15 @@ export default function SmartSearch() {
     }
   };
 
-  const popularSearches = [
-    'RPSC RAS',
-    'Political Science Assistant Professor',
-    'RPSC EO & RO',
-    '1st & 2nd Grade Teacher',
-    'Patwari',
-    'Rajasthan CET',
-  ];
-
   const handleChipClick = (term) => {
     navigate(`/search?q=${encodeURIComponent(term)}`);
   };
+
+  // Use root-level exam category names as popular searches (up to 6)
+  const popularSearches = categories
+    .filter((c) => !c.parent)
+    .slice(0, 6)
+    .map((c) => c.name);
 
   return (
     <section className="bg-white py-12 relative -mt-8 z-20 mx-4 sm:mx-6 lg:mx-8 rounded-2xl shadow-xl shadow-navy-900/5 max-w-5xl xl:mx-auto border border-navy-50">
@@ -55,18 +54,20 @@ export default function SmartSearch() {
           </button>
         </form>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
-          <span className="text-sm font-medium text-navy-500 mr-2">Popular searches:</span>
-          {popularSearches.map((term) => (
-            <button
-              key={term}
-              onClick={() => handleChipClick(term)}
-              className="text-xs font-medium text-navy-700 bg-navy-50 border border-navy-100 px-3 py-1.5 rounded-full hover:bg-accent-50 hover:text-accent-700 hover:border-accent-200 transition-all cursor-pointer"
-            >
-              {term}
-            </button>
-          ))}
-        </div>
+        {popularSearches.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+            <span className="text-sm font-medium text-navy-500 mr-2">Popular searches:</span>
+            {popularSearches.map((term) => (
+              <button
+                key={term}
+                onClick={() => handleChipClick(term)}
+                className="text-xs font-medium text-navy-700 bg-navy-50 border border-navy-100 px-3 py-1.5 rounded-full hover:bg-accent-50 hover:text-accent-700 hover:border-accent-200 transition-all cursor-pointer"
+              >
+                {term}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

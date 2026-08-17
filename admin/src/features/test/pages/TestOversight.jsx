@@ -123,13 +123,15 @@ export default function TestOversight() {
         emptyIcon={FileText}
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => navigate(`/tests/${row._id}`)}
+            <a
+              href={`${import.meta.env.VITE_CLIENT_URL || 'http://localhost:5173'}/tests/${row._id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="View"
+              title="View on student site"
             >
               <Eye className="w-4 h-4 text-blue-600" />
-            </button>
+            </a>
             <button
               onClick={() => setDeleteTarget(row._id)}
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"

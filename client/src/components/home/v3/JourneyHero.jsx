@@ -1,65 +1,27 @@
 import { Link } from 'react-router-dom';
-import {
-  HiArrowRight,
-  HiOutlineAcademicCap,
-  HiOutlineBookOpen,
-  HiOutlineBriefcase,
-  HiOutlineGlobe,
-  HiOutlineLibrary,
-  HiOutlinePencil,
-} from 'react-icons/hi';
+import { HiArrowRight, HiOutlineAcademicCap } from 'react-icons/hi';
+import { useExamCategories } from '@/services/categories';
+
+// Colour palette cycled per chip
+const CHIP_STYLES = [
+  { color: 'text-blue-600', bg: 'bg-blue-100', hoverBg: 'group-hover:bg-blue-600' },
+  { color: 'text-purple-600', bg: 'bg-purple-100', hoverBg: 'group-hover:bg-purple-600' },
+  { color: 'text-pink-600', bg: 'bg-pink-100', hoverBg: 'group-hover:bg-pink-600' },
+  { color: 'text-orange-600', bg: 'bg-orange-100', hoverBg: 'group-hover:bg-orange-600' },
+  { color: 'text-green-600', bg: 'bg-green-100', hoverBg: 'group-hover:bg-green-600' },
+  { color: 'text-teal-600', bg: 'bg-teal-100', hoverBg: 'group-hover:bg-teal-600' },
+  { color: 'text-rose-600', bg: 'bg-rose-100', hoverBg: 'group-hover:bg-rose-600' },
+  { color: 'text-indigo-600', bg: 'bg-indigo-100', hoverBg: 'group-hover:bg-indigo-600' },
+];
 
 export default function JourneyHero() {
-  const featuredExams = [
-    {
-      name: 'RPSC RAS',
-      path: '/exams/rpsc-ras',
-      icon: HiOutlineLibrary,
-      color: 'text-blue-600',
-      bg: 'bg-blue-100',
-      hoverBg: 'group-hover:bg-blue-600',
-    },
-    {
-      name: 'RPSC Grade 1',
-      path: '/exams/rpsc-grade-1',
-      icon: HiOutlineBookOpen,
-      color: 'text-purple-600',
-      bg: 'bg-purple-100',
-      hoverBg: 'group-hover:bg-purple-600',
-    },
-    {
-      name: 'RPSC Grade 2',
-      path: '/exams/rpsc-grade-2',
-      icon: HiOutlinePencil,
-      color: 'text-pink-600',
-      bg: 'bg-pink-100',
-      hoverBg: 'group-hover:bg-pink-600',
-    },
-    {
-      name: 'Patwari',
-      path: '/exams/patwari',
-      icon: HiOutlineBriefcase,
-      color: 'text-orange-600',
-      bg: 'bg-orange-100',
-      hoverBg: 'group-hover:bg-orange-600',
-    },
-    {
-      name: 'Rajasthan CET',
-      path: '/exams/rajasthan-cet',
-      icon: HiOutlineAcademicCap,
-      color: 'text-green-600',
-      bg: 'bg-green-100',
-      hoverBg: 'group-hover:bg-green-600',
-    },
-    {
-      name: 'Political Science',
-      path: '/exams/political-science',
-      icon: HiOutlineGlobe,
-      color: 'text-teal-600',
-      bg: 'bg-teal-100',
-      hoverBg: 'group-hover:bg-teal-600',
-    },
-  ];
+  const { categories, loading } = useExamCategories();
+
+  // Only root-level categories for the marquee
+  const examChips = categories.filter((c) => !c.parent);
+
+  // Repeat enough times to fill the marquee scroll
+  const repeated = examChips.length > 0 ? Array.from({ length: 5 }, () => examChips).flat() : [];
 
   return (
     <section className="relative pt-32 pb-20 overflow-hidden bg-[#faf9f6]">
@@ -91,44 +53,57 @@ export default function JourneyHero() {
             .
           </p>
 
-          {/* Auto-scrolling Exams Marquee (Full Bleed Wide) */}
+          {/* Auto-scrolling Exams Marquee */}
           <div className="my-12 relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden">
             {/* Fading Edges */}
             <div className="absolute left-0 top-0 bottom-0 w-24 md:w-48 bg-gradient-to-r from-[#faf9f6] via-[#faf9f6]/90 to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-24 md:w-48 bg-gradient-to-l from-[#faf9f6] via-[#faf9f6]/90 to-transparent z-10 pointer-events-none" />
 
-            <div
-              className="marquee-scroll-track gap-4 py-3 pr-4"
-              style={{
-                display: 'flex',
-                width: 'max-content',
-                animation: 'marqueeContinuous 45s linear infinite',
-                willChange: 'transform',
-              }}
-            >
-              {[
-                ...featuredExams,
-                ...featuredExams,
-                ...featuredExams,
-                ...featuredExams,
-                ...featuredExams,
-              ].map((exam, idx) => (
-                <Link
-                  key={idx}
-                  to={exam.path}
-                  className="flex items-center gap-3.5 bg-white border border-navy-100 hover:border-accent-400 rounded-full px-7 py-3.5 shadow-sm hover:shadow-md transition-all shrink-0 group"
-                >
+            {loading ? (
+              /* Skeleton chips while loading */
+              <div className="flex gap-4 py-3 px-4">
+                {Array.from({ length: 8 }).map((_, i) => (
                   <div
-                    className={`h-10 w-10 rounded-full ${exam.bg} ${exam.color} flex items-center justify-center ${exam.hoverBg} group-hover:text-white transition-colors`}
-                  >
-                    <exam.icon className="h-5 w-5" />
-                  </div>
-                  <span className="font-bold text-navy-900 text-base whitespace-nowrap group-hover:text-accent-600 transition-colors">
-                    {exam.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
+                    key={i}
+                    className="h-[58px] w-40 rounded-full bg-gray-200 animate-pulse shrink-0"
+                  />
+                ))}
+              </div>
+            ) : examChips.length === 0 ? null : (
+              <div
+                className="marquee-scroll-track gap-4 py-3 pr-4"
+                style={{
+                  display: 'flex',
+                  width: 'max-content',
+                  animation: 'marqueeContinuous 45s linear infinite',
+                  willChange: 'transform',
+                }}
+              >
+                {repeated.map((exam, idx) => {
+                  const style = CHIP_STYLES[idx % CHIP_STYLES.length];
+                  return (
+                    <Link
+                      key={`${exam._id}-${idx}`}
+                      to={`/exams/${exam.slug}`}
+                      className="flex items-center gap-3.5 bg-white border border-navy-100 hover:border-accent-400 rounded-full px-7 py-3.5 shadow-sm hover:shadow-md transition-all shrink-0 group"
+                    >
+                      <div
+                        className={`h-10 w-10 rounded-full ${style.bg} ${style.color} flex items-center justify-center ${style.hoverBg} group-hover:text-white transition-colors`}
+                      >
+                        {exam.icon && !exam.icon.startsWith('http') ? (
+                          <span className="text-lg leading-none">{exam.icon}</span>
+                        ) : (
+                          <HiOutlineAcademicCap className="h-5 w-5" />
+                        )}
+                      </div>
+                      <span className="font-bold text-navy-900 text-base whitespace-nowrap group-hover:text-accent-600 transition-colors">
+                        {exam.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
@@ -174,7 +149,7 @@ export default function JourneyHero() {
               className="whitespace-nowrap flex items-center gap-2 hover:text-accent-600 transition-colors py-1 group"
             >
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100/80 group-hover:scale-110 transition-transform"></span>{' '}
-              Updates & Free Resources
+              Updates &amp; Free Resources
             </Link>
           </div>
         </div>

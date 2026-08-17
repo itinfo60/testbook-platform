@@ -1,76 +1,39 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HiArrowRight, HiClipboardList } from 'react-icons/hi';
+import { testSeriesAPI } from '@/services/api';
+import { useExamCategories } from '@/services/categories';
 
 export default function TestSeriesMarketplace() {
+  const [series, setSeries] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
+  const { categories } = useExamCategories();
 
-  const tabs = ['All', 'RAS', 'Teacher', 'Assistant Professor', 'Patwari', 'EO/RO', 'CET'];
-
-  const testSeries = [
-    {
-      id: 1,
-      category: 'PGT / 1st Grade',
-      isFree: true,
-      title: 'Chapter & Topic Practice Series',
-      desc: 'Topic-wise practice questions covering the complete syllabus for PGT and 1st Grade Teacher exams.',
-      tests: '18 Tests',
-      price: 'Free Included',
-      tag: 'Teacher',
-    },
-    {
-      id: 2,
-      category: 'PGT / 1st Grade',
-      isFree: false,
-      title: 'Subject-Wise Target Test Series',
-      desc: 'Targeted tests focusing on core subjects with detailed explanations and state-level rankings.',
-      tests: '12 Tests',
-      price: '₹199',
-      tag: 'Teacher',
-    },
-    {
-      id: 3,
-      category: 'PGT / 1st Grade',
-      isFree: false,
-      title: 'Official Previous Year Papers Series',
-      desc: 'Authentic previous year question papers mapped to the latest exam pattern.',
-      tests: '10 Tests',
-      price: '₹499',
-      tag: 'Teacher',
-    },
-    {
-      id: 4,
-      category: 'PGT / 1st Grade',
-      isFree: false,
-      title: 'Full Length Mock Test Series 2026',
-      desc: 'Proctored full-length mock tests simulating the exact exam environment.',
-      tests: '15 Tests',
-      price: '₹499',
-      tag: 'Teacher',
-    },
-    {
-      id: 5,
-      category: 'Assistant Professor — MPPSC',
-      isFree: true,
-      title: 'Chapter & Topic Practice Series',
-      desc: 'Topic-by-topic coverage for Political Science Assistant Professor exam.',
-      tests: '20 Tests',
-      price: 'Free',
-      tag: 'Assistant Professor',
-    },
-    {
-      id: 6,
-      category: 'Assistant Professor — MPPSC',
-      isFree: false,
-      title: 'Subject-Wise Target Test Series',
-      desc: 'Advanced level questions designed by subject experts for MPPSC pattern.',
-      tests: '15 Tests',
-      price: '₹199',
-      tag: 'Assistant Professor',
-    },
+  // Build tabs from root-level exam categories + "All"
+  const tabs = [
+    'All',
+    ...categories
+      .filter((c) => !c.parent)
+      .slice(0, 6)
+      .map((c) => c.name),
   ];
 
-  const filtered = activeTab === 'All' ? testSeries : testSeries.filter((t) => t.tag === activeTab);
+  useEffect(() => {
+    testSeriesAPI
+      .getAll({ limit: 12, isPublished: true })
+      .then((res) => {
+        const data = res.data?.data?.testSeries || res.data?.testSeries || res.data?.data || [];
+        setSeries(Array.isArray(data) ? data : []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered =
+    activeTab === 'All' ? series : series.filter((s) => s.examCategory?.name === activeTab);
+
+  if (!loading && series.length === 0) return null;
 
   return (
     <section className="py-20 bg-navy-50">
@@ -82,63 +45,97 @@ export default function TestSeriesMarketplace() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-12 justify-center pb-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`whitespace-nowrap px-4 py-2 text-sm font-medium rounded-full transition-colors ${
-                activeTab === tab
-                  ? 'bg-navy-900 text-white shadow-sm'
-                  : 'bg-white text-navy-600 border border-navy-200 hover:bg-navy-50'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        {tabs.length > 1 && (
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-12 justify-center pb-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`whitespace-nowrap px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                  activeTab === tab
+                    ? 'bg-navy-900 text-white shadow-sm'
+                    : 'bg-white text-navy-600 border border-navy-200 hover:bg-navy-50'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Cards Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((series) => (
-            <div
-              key={series.id}
-              className="bg-white rounded-xl border border-navy-100 overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col h-full"
-            >
-              <div className="p-6 flex flex-col flex-grow">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="text-xs font-semibold text-navy-500 uppercase tracking-wider">
-                    {series.category}
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm ${series.isFree ? 'bg-green-100 text-green-700' : 'bg-navy-100 text-navy-700'}`}
-                  >
-                    {series.isFree ? 'Free' : 'Premium'}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-navy-900 mb-2 leading-tight">
-                  {series.title}
-                </h3>
-                <p className="text-sm text-navy-600 mb-6 flex-grow">{series.desc}</p>
-
-                <div className="flex items-center gap-2 text-sm font-medium text-navy-700 mb-6 bg-navy-50 w-fit px-3 py-1.5 rounded-md">
-                  <HiClipboardList className="text-navy-400" /> {series.tests}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-navy-100 mt-auto">
-                  <div>
-                    <p className="text-lg font-bold text-navy-900">{series.price}</p>
+        {/* Cards */}
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-56 bg-white rounded-xl animate-pulse border border-navy-100"
+              />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-navy-500">
+            <HiClipboardList className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="font-medium">No test series available yet.</p>
+            <p className="text-sm mt-1">Check back soon for new mock test series.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((s) => (
+              <div
+                key={s._id}
+                className="bg-white rounded-xl border border-navy-100 overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col h-full"
+              >
+                <div className="p-6 flex flex-col flex-grow">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-xs font-semibold text-navy-500 uppercase tracking-wider">
+                      {s.examCategory?.name || 'General'}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm ${
+                        s.price === 0 ? 'bg-green-100 text-green-700' : 'bg-navy-100 text-navy-700'
+                      }`}
+                    >
+                      {s.price === 0 ? 'Free' : 'Premium'}
+                    </span>
                   </div>
-                  <Link
-                    to="/tests"
-                    className="text-sm font-semibold text-white bg-accent-600 hover:bg-accent-700 px-4 py-2 rounded transition-colors flex items-center gap-1"
-                  >
-                    Start Series <HiArrowRight className="h-4 w-4" />
-                  </Link>
+
+                  <h3 className="text-xl font-bold text-navy-900 mb-2 leading-tight">{s.title}</h3>
+                  {s.description && (
+                    <p className="text-sm text-navy-600 mb-6 flex-grow line-clamp-2">
+                      {s.description}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-2 text-sm font-medium text-navy-700 mb-6 bg-navy-50 w-fit px-3 py-1.5 rounded-md">
+                    <HiClipboardList className="text-navy-400" />
+                    {s.tests?.length || s.testCount || 0} Tests
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-navy-100 mt-auto">
+                    <p className="text-lg font-bold text-navy-900">
+                      {s.price > 0 ? `₹${s.price}` : 'Free'}
+                    </p>
+                    <Link
+                      to={`/test-series/${s.slug || s._id}`}
+                      className="text-sm font-semibold text-white bg-accent-600 hover:bg-accent-700 px-4 py-2 rounded transition-colors flex items-center gap-1"
+                    >
+                      Start Series <HiArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+
+        <div className="mt-10 text-center">
+          <Link
+            to="/test-series"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-navy-50 text-navy-900 border border-navy-200 rounded-full font-bold text-sm transition-all"
+          >
+            View All Test Series <HiArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </section>

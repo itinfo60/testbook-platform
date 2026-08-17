@@ -2,11 +2,12 @@ import LoadingSpinner from '@/components/loadingSpinner';
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, Calendar, Globe, Building } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Calendar, Globe, Building, GitBranch } from 'lucide-react';
 import {
   createExamCategory,
   updateExamCategory,
   fetchExamCategoryById,
+  fetchExamCategories,
   clearSelected,
 } from '@/features/examcategory/examCategorySlice';
 
@@ -15,6 +16,7 @@ const INITIAL_FORM = {
   description: '',
   icon: '',
   isActive: true,
+  parent: '',
   conductingBody: '',
   officialWebsite: '',
   latestStatus: '',
@@ -29,13 +31,15 @@ export default function ExamCategoryForm() {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { selected, loading } = useSelector((s) => s.examCategories);
+  const { selected, loading, list: allCategories } = useSelector((s) => s.examCategories);
   const isEdit = !!id;
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [activeTab, setActiveTab] = useState('basic');
 
   useEffect(() => {
+    // Load all categories so we can populate parent dropdown
+    dispatch(fetchExamCategories({ page: 1, limit: 200 }));
     if (isEdit) dispatch(fetchExamCategoryById(id));
     return () => dispatch(clearSelected());
   }, [dispatch, id, isEdit]);
@@ -47,6 +51,7 @@ export default function ExamCategoryForm() {
         description: selected.description || '',
         icon: selected.icon || '',
         isActive: selected.isActive !== false,
+        parent: selected.parent?._id || selected.parent || '',
         conductingBody: selected.conductingBody || '',
         officialWebsite: selected.officialWebsite || '',
         latestStatus: selected.latestStatus || '',
@@ -61,7 +66,8 @@ export default function ExamCategoryForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const action = isEdit ? updateExamCategory({ id, data: form }) : createExamCategory(form);
+    const payload = { ...form, parent: form.parent || null };
+    const action = isEdit ? updateExamCategory({ id, data: payload }) : createExamCategory(payload);
     const result = await dispatch(action);
     if (!result.error) navigate('/exam-categories');
   };
@@ -72,19 +78,17 @@ export default function ExamCategoryForm() {
       importantDates: [...form.importantDates, { label: '', date: '', description: '' }],
     });
   };
-
   const removeDate = (index) => {
-    setForm({
-      ...form,
-      importantDates: form.importantDates.filter((_, i) => i !== index),
-    });
+    setForm({ ...form, importantDates: form.importantDates.filter((_, i) => i !== index) });
   };
-
   const updateDate = (index, field, value) => {
     const updated = [...form.importantDates];
     updated[index] = { ...updated[index], [field]: value };
     setForm({ ...form, importantDates: updated });
   };
+
+  // Parent options: all categories except the current one being edited
+  const parentOptions = allCategories.filter((c) => c._id !== id);
 
   if (isEdit && loading && !selected)
     return (
@@ -135,6 +139,33 @@ export default function ExamCategoryForm() {
         {/* BASIC INFO TAB */}
         {activeTab === 'basic' && (
           <div className="space-y-5">
+            {/* Parent Category */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <GitBranch className="inline w-4 h-4 mr-1" />
+                Parent Category{' '}
+                <span className="text-gray-400 font-normal">(leave blank for top-level)</span>
+              </label>
+              <select
+                value={form.parent}
+                onChange={(e) => setForm({ ...form, parent: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— None (Top-level / Root) —</option>
+                {parentOptions.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.icon ? `${c.icon} ` : ''}
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {form.parent && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  This will be a sub-exam under the selected parent category.
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Name *
@@ -148,6 +179,7 @@ export default function ExamCategoryForm() {
                 placeholder="e.g., Patwari, RAS, RPSC SI"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
@@ -160,6 +192,7 @@ export default function ExamCategoryForm() {
                 placeholder="Brief description of the exam..."
               />
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -200,6 +233,7 @@ export default function ExamCategoryForm() {
                 </select>
               </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -289,20 +323,17 @@ export default function ExamCategoryForm() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Important Dates
+                <Calendar className="w-5 h-5" /> Important Dates
               </h3>
               <button type="button" onClick={addDate} className="btn-secondary gap-1 text-sm">
                 <Plus className="w-4 h-4" /> Add Date
               </button>
             </div>
-
             {form.importantDates.length === 0 && (
               <p className="text-gray-500 dark:text-gray-400 text-center py-8">
                 No important dates added yet. Click "Add Date" to start.
               </p>
             )}
-
             {form.importantDates.map((item, index) => (
               <div
                 key={index}
