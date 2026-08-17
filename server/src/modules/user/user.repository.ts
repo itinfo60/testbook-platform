@@ -16,9 +16,8 @@ export class UserRepository extends TenantRepository<IUser> {
       filter.role = query.role;
     }
 
-    if (query.isActive !== undefined) {
-      filter.isActive = query.isActive;
-    }
+    // Default to active users only; allow explicit override to show inactive
+    filter.isActive = query.isActive !== undefined ? query.isActive : true;
 
     if (query.search) {
       filter.$or = [

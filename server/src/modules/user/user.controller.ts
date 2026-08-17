@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { BaseController } from '../../core/base.controller.js';
 import { UserService } from './user.service.js';
 import { CustomRequest } from '../auth/auth.controller.js';
+import redis from '../../config/redis.js';
 
 export class UserController extends BaseController {
   private readonly userService: UserService;
@@ -38,6 +39,9 @@ export class UserController extends BaseController {
 
   deleteUser = this.catchAsync(async (req: CustomRequest, res: Response) => {
     await this.userService.deleteUser(req.params.id);
+    // Bust the per-tenant dashboard cache so stats update immediately
+    const tenantId = req.tenantId || 'global';
+    await redis.del(`admin:dashboard:${tenantId}`);
     return this.noContent(res);
   });
 

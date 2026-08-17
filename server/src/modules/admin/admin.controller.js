@@ -23,7 +23,9 @@ import { reminderQueue, transactionalEmailQueue } from '../../queues/index.js';
 // ===== DASHBOARD =====
 
 export const getDashboardStats = catchAsync(async (req, res) => {
-  const cached = await redis.get('admin:dashboard');
+  const tenantId = req.tenantId || 'global';
+  const cacheKey = `admin:dashboard:${tenantId}`;
+  const cached = await redis.get(cacheKey);
   if (cached) return ApiResponse.ok(res, cached);
 
   const now = new Date();
@@ -31,6 +33,8 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
   const startOfWeek = new Date(now.getTime() - 7 * 86400000);
+
+  const tenantFilter = req.tenantId ? { tenantId: req.tenantId } : {};
 
   const [
     totalUsers,
@@ -48,20 +52,31 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     recentUsers,
     recentEnrollments,
   ] = await Promise.all([
-    User.countDocuments({ isActive: true }),
-    Course.countDocuments(),
-    Enrollment.countDocuments(),
-    Test.countDocuments(),
-    Review.countDocuments(),
-    User.countDocuments({ createdAt: { $gte: startOfMonth } }),
-    User.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
-    Enrollment.countDocuments({ enrolledAt: { $gte: startOfMonth } }),
-    Enrollment.countDocuments({ enrolledAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
-    Course.countDocuments({ isPublished: true }),
-    Enrollment.countDocuments({ status: 'active' }),
-    Enrollment.countDocuments({ status: 'completed' }),
-    User.find().sort('-createdAt').limit(5).select('name email role createdAt avatar').lean(),
-    Enrollment.find()
+    User.countDocuments({ ...tenantFilter, isActive: true }),
+    Course.countDocuments({ ...tenantFilter }),
+    Enrollment.countDocuments({ ...tenantFilter }),
+    Test.countDocuments({ ...tenantFilter }),
+    Review.countDocuments({ ...tenantFilter }),
+    User.countDocuments({ ...tenantFilter, isActive: true, createdAt: { $gte: startOfMonth } }),
+    User.countDocuments({
+      ...tenantFilter,
+      isActive: true,
+      createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+    }),
+    Enrollment.countDocuments({ ...tenantFilter, enrolledAt: { $gte: startOfMonth } }),
+    Enrollment.countDocuments({
+      ...tenantFilter,
+      enrolledAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+    }),
+    Course.countDocuments({ ...tenantFilter, isPublished: true }),
+    Enrollment.countDocuments({ ...tenantFilter, status: 'active' }),
+    Enrollment.countDocuments({ ...tenantFilter, status: 'completed' }),
+    User.find({ ...tenantFilter, isActive: true })
+      .sort('-createdAt')
+      .limit(5)
+      .select('name email role createdAt avatar')
+      .lean(),
+    Enrollment.find({ ...tenantFilter })
       .sort('-enrolledAt')
       .limit(5)
       .populate('user', 'name email avatar')
@@ -110,7 +125,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   // Monthly trends (last 6 months)
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const monthlyTrends = await Enrollment.aggregate([
-    { $match: { enrolledAt: { $gte: sixMonthsAgo } } },
+    { $match: { ...tenantFilter, enrolledAt: { $gte: sixMonthsAgo } } },
     {
       $group: {
         _id: { year: { $year: '$enrolledAt' }, month: { $month: '$enrolledAt' } },
@@ -123,7 +138,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
 
   // Role distribution
   const roleDistribution = await User.aggregate([
-    { $match: { isActive: true } },
+    { $match: { ...tenantFilter, isActive: true } },
     { $group: { _id: '$role', count: { $sum: 1 } } },
   ]);
 
@@ -163,8 +178,8 @@ export const getDashboardStats = catchAsync(async (req, res) => {
 
   const [studentCount, teacherCount] = institute
     ? await Promise.all([
-        User.countDocuments({ role: 'student' }),
-        User.countDocuments({ role: 'teacher' }),
+        User.countDocuments({ ...tenantFilter, role: 'student', isActive: true }),
+        User.countDocuments({ ...tenantFilter, role: 'teacher', isActive: true }),
       ])
     : [0, 0];
 
@@ -213,7 +228,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       : null,
   };
 
-  await redis.set('admin:dashboard', data, 300); // 5 min cache
+  await redis.set(cacheKey, data, 300); // 5 min cache
 
   ApiResponse.ok(res, data);
 });
@@ -849,7 +864,7 @@ export const bulkAssignEnrollments = catchAsync(async (req, res) => {
 export const getTeachers = catchAsync(async (req, res) => {
   const pagination = buildPaginationQuery(req.query);
 
-  const filter = { role: 'teacher' };
+  const filter = { role: 'teacher', isActive: true };
   if (req.query.search) {
     filter.$or = [
       { name: { $regex: req.query.search, $options: 'i' } },

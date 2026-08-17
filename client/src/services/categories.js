@@ -144,18 +144,14 @@ export async function getUnifiedExamCategories(forceRefresh = false) {
         res.data?.data ||
         [];
 
-      let list = Array.isArray(rawList) ? rawList.map(normalizeCategory).filter(Boolean) : [];
-
-      if (list.length === 0) {
-        list = CANONICAL_EXAM_CATEGORIES.map(normalizeCategory);
-      }
+      const list = Array.isArray(rawList) ? rawList.map(normalizeCategory).filter(Boolean) : [];
 
       cachedCategories = list;
       return list;
     } catch (err) {
-      console.warn('Failed to load categories from API, using canonical fallback list', err);
-      cachedCategories = CANONICAL_EXAM_CATEGORIES.map(normalizeCategory);
-      return cachedCategories;
+      console.warn('Failed to load categories from API', err);
+      cachedCategories = [];
+      return [];
     } finally {
       fetchPromise = null;
     }
@@ -168,9 +164,7 @@ export async function getUnifiedExamCategories(forceRefresh = false) {
  * React Hook for consuming exam categories everywhere in client components
  */
 export function useExamCategories() {
-  const [categories, setCategories] = useState(
-    cachedCategories || CANONICAL_EXAM_CATEGORIES.map(normalizeCategory)
-  );
+  const [categories, setCategories] = useState(cachedCategories || []);
   const [loading, setLoading] = useState(!cachedCategories);
 
   useEffect(() => {

@@ -1,86 +1,46 @@
 import { HiArrowRight, HiBookOpen, HiClipboardList } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
+import { useExamCategories } from '@/services/categories';
+
+const ICON_STYLES = [
+  {
+    iconBg: 'bg-blue-50 text-blue-600',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  {
+    iconBg: 'bg-amber-50 text-amber-600',
+    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  {
+    iconBg: 'bg-purple-50 text-purple-600',
+    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+  },
+  { iconBg: 'bg-rose-50 text-rose-600', badgeColor: 'bg-rose-50 text-rose-700 border-rose-200' },
+  { iconBg: 'bg-teal-50 text-teal-600', badgeColor: 'bg-teal-50 text-teal-700 border-teal-200' },
+  {
+    iconBg: 'bg-indigo-50 text-indigo-600',
+    badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  },
+];
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-sm border border-navy-100 animate-pulse flex flex-col gap-4">
+      <div className="flex justify-between">
+        <div className="h-12 w-12 rounded-2xl bg-gray-200" />
+        <div className="h-6 w-24 rounded-full bg-gray-200" />
+      </div>
+      <div className="h-5 w-2/3 rounded bg-gray-200" />
+      <div className="h-3 w-1/2 rounded bg-gray-100" />
+      <div className="h-10 w-full rounded bg-gray-100" />
+      <div className="h-9 w-full rounded-xl bg-gray-200 mt-auto" />
+    </div>
+  );
+}
+
 export default function CuratedExams() {
-  const exams = [
-    {
-      id: 'ras',
-      name: 'RPSC RAS',
-      subtitle: 'Prelims + Mains Complete Hub',
-      badge: 'Target Batch 2026',
-      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      desc: 'Rajasthan Administrative Service — Complete syllabus, standard PYQ papers, current affairs, and comprehensive test series.',
-      coursesCount: 8,
-      testsCount: 120,
-      path: '/exams/rpsc-ras',
-      iconText: 'RAS',
-      iconBg: 'bg-blue-50 text-blue-600',
-    },
-    {
-      id: 'eo-ro',
-      name: 'RPSC EO & RO',
-      subtitle: 'Executive & Revenue Officers',
-      badge: 'Revised Scheme',
-      badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
-      desc: 'Targeted preparation for Rajasthan Municipality Acts, Local Self Government rules, and general studies papers.',
-      coursesCount: 5,
-      testsCount: 55,
-      path: '/exams/rpsc-eo-ro',
-      iconText: 'EO',
-      iconBg: 'bg-amber-50 text-amber-600',
-    },
-    {
-      id: 'si',
-      name: 'RPSC SI',
-      subtitle: 'Rajasthan Police Sub-Inspector',
-      badge: 'New Vacancy',
-      badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
-      desc: 'Paper-I (General Hindi) & Paper-II (General Knowledge & Science) complete video classes and speed mock tests.',
-      coursesCount: 6,
-      testsCount: 75,
-      path: '/exams/rpsc-si',
-      iconText: 'SI',
-      iconBg: 'bg-purple-50 text-purple-600',
-    },
-    {
-      id: 'teacher',
-      name: '1st & 2nd Grade Teacher',
-      subtitle: 'School Lecturer & Sr. Teacher',
-      badge: 'Dates Announced',
-      badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
-      desc: 'Educational Psychology, Rajasthan GK, Pedagogy, and Subject-wise (Political Science & Hindi) special modules.',
-      coursesCount: 10,
-      testsCount: 90,
-      path: '/exams/rpsc-1st-2nd-grade',
-      iconText: 'TR',
-      iconBg: 'bg-rose-50 text-rose-600',
-    },
-    {
-      id: 'cet',
-      name: 'Rajasthan CET',
-      subtitle: 'Graduation & 10+2 Levels',
-      badge: 'Score Valid 1 Year',
-      badgeColor: 'bg-teal-50 text-teal-700 border-teal-200',
-      desc: 'Common Eligibility Test scheme — Rajasthan History, Art, Culture, Polity, Economy, Reasoning, and Hindi/English.',
-      coursesCount: 7,
-      testsCount: 65,
-      path: '/exams/rajasthan-cet',
-      iconText: 'CET',
-      iconBg: 'bg-teal-50 text-teal-600',
-    },
-    {
-      id: 'patwari',
-      name: 'Patwari & VDO',
-      subtitle: 'Revenue Board Recruitment',
-      badge: 'Upcoming Exam',
-      badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      desc: 'Complete syllabus coverage for Revenue Patwari and Village Development Officer recruitment examinations.',
-      coursesCount: 6,
-      testsCount: 60,
-      path: '/exams/patwari',
-      iconText: 'PAT',
-      iconBg: 'bg-indigo-50 text-indigo-600',
-    },
-  ];
+  const { categories, loading } = useExamCategories();
+  const displayed = categories.filter((c) => !c.parent).slice(0, 6);
 
   return (
     <section className="py-20 bg-[#faf9f6]">
@@ -99,7 +59,6 @@ export default function CuratedExams() {
               study notes.
             </p>
           </div>
-
           <Link
             to="/exams"
             className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-navy-950 hover:text-accent-600 transition-colors border-b-2 border-navy-200 hover:border-accent-600 pb-1 whitespace-nowrap self-start md:self-auto"
@@ -108,65 +67,91 @@ export default function CuratedExams() {
           </Link>
         </div>
 
-        {/* 6 Compact Portal-Style Exam Cards Grid */}
+        {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exams.map((exam) => (
-            <div
-              key={exam.id}
-              className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-navy-100 transition-all flex flex-col justify-between group"
-            >
-              <div>
-                {/* Card Top: Icon & Status Badge */}
-                <div className="flex items-center justify-between gap-2 mb-4">
-                  <div
-                    className={`h-12 w-12 rounded-2xl ${exam.iconBg} flex items-center justify-center text-base font-black group-hover:scale-105 transition-transform`}
-                  >
-                    {exam.iconText}
-                  </div>
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${exam.badgeColor}`}
-                  >
-                    {exam.badge}
-                  </span>
-                </div>
-
-                {/* Card Title & Subtitle */}
-                <h3 className="text-xl font-bold text-navy-950 mb-1 group-hover:text-accent-600 transition-colors font-display">
-                  {exam.name}
-                </h3>
-                <p className="text-xs font-bold text-accent-600 mb-3">{exam.subtitle}</p>
-
-                {/* Description */}
-                <p className="text-xs text-navy-600 leading-relaxed mb-6 line-clamp-2">
-                  {exam.desc}
-                </p>
-              </div>
-
-              <div>
-                {/* Stats Strip */}
-                <div className="pt-4 border-t border-navy-50 flex items-center justify-between text-xs font-semibold text-navy-500 mb-4">
-                  <span className="flex items-center gap-1.5">
-                    <HiBookOpen className="h-4 w-4 text-blue-500" /> Premium Courses
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <HiClipboardList className="h-4 w-4 text-amber-500" /> Mock Tests
-                  </span>
-                </div>
-
-                {/* CTA Action Button */}
-                <Link
-                  to={exam.path}
-                  className="w-full bg-navy-950 hover:bg-navy-900 group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
-                >
-                  <span>Explore Exam</span>
-                  <HiArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-              </div>
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+          ) : displayed.length === 0 ? (
+            <div className="col-span-full text-center py-12 bg-[#faf9f6] rounded-3xl border border-navy-100">
+              <h3 className="text-xl font-bold text-navy-900">No exams available</h3>
+              <p className="text-navy-600 mt-2">Check back later for new exam hubs.</p>
             </div>
-          ))}
+          ) : (
+            displayed.map((exam, idx) => {
+              const { iconBg, badgeColor } = ICON_STYLES[idx % ICON_STYLES.length];
+              const iconText = exam.name.split(/\s+/)[0].slice(0, 3).toUpperCase();
+              const badge = exam.latestStatus || 'Enroll Now';
+              const courseCount = exam.courseCount || exam.coursesCount || 0;
+              const testCount = exam.testCount || exam.testsCount || 0;
+
+              return (
+                <div
+                  key={exam._id}
+                  className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-navy-100 transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div
+                        className={`h-12 w-12 rounded-2xl ${iconBg} flex items-center justify-center text-base font-black group-hover:scale-105 transition-transform`}
+                      >
+                        {exam.icon && !exam.icon.startsWith('http') ? (
+                          <span className="text-xl">{exam.icon}</span>
+                        ) : (
+                          iconText
+                        )}
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${badgeColor}`}
+                      >
+                        {badge}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-navy-950 mb-1 group-hover:text-accent-600 transition-colors font-display">
+                      {exam.name}
+                    </h3>
+                    {exam.conductingBody && (
+                      <p className="text-xs font-bold text-accent-600 mb-3">
+                        {exam.conductingBody}
+                      </p>
+                    )}
+                    {exam.description && (
+                      <p className="text-xs text-navy-600 leading-relaxed mb-6 line-clamp-2">
+                        {exam.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="pt-4 border-t border-navy-50 flex items-center justify-between text-xs font-semibold text-navy-500 mb-4">
+                      <span className="flex items-center gap-1.5">
+                        <HiBookOpen className="h-4 w-4 text-blue-500" />
+                        {courseCount > 0
+                          ? `${courseCount} Course${courseCount !== 1 ? 's' : ''}`
+                          : 'Courses'}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <HiClipboardList className="h-4 w-4 text-amber-500" />
+                        {testCount > 0
+                          ? `${testCount} Mock Test${testCount !== 1 ? 's' : ''}`
+                          : 'Mock Tests'}
+                      </span>
+                    </div>
+                    <Link
+                      to={`/exams/${exam.slug}`}
+                      className="w-full bg-navy-950 hover:bg-navy-900 group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
+                    >
+                      <span>Explore Exam</span>
+                      <HiArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
-        {/* Bottom View All Button */}
+        {/* Bottom View All */}
         <div className="mt-12 text-center">
           <Link
             to="/exams"
