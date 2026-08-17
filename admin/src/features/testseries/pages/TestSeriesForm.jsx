@@ -136,15 +136,15 @@ export default function TestSeriesForm() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Exam Category
-              <span className="text-xs text-gray-400 font-normal ml-1">(shows on exam page)</span>
+              Exam Category <span className="text-red-500">*</span>
             </label>
             <select
               value={form.examCategory}
               onChange={set('examCategory')}
               className="input-field"
+              required
             >
-              <option value="">— None —</option>
+              <option value="">— Select Exam Category —</option>
               {examCategories.map((c) => (
                 <option key={c._id} value={c._id}>
                   {c.icon ? `${c.icon} ` : ''}

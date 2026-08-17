@@ -7,7 +7,7 @@ import {
   FaTelegram,
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-import { HiAcademicCap, HiMail, HiPhone } from 'react-icons/hi';
+import { HiAcademicCap, HiMail } from 'react-icons/hi';
 
 export default function Footer() {
   const footerLinks = {
@@ -54,11 +54,11 @@ export default function Footer() {
   };
 
   const socialLinks = [
-    { icon: FaYoutube, href: '#', label: 'YouTube' },
-    { icon: FaTelegram, href: '#', label: 'Telegram' },
-    { icon: FaInstagram, href: '#', label: 'Instagram' },
-    { icon: FaFacebook, href: '#', label: 'Facebook' },
-    { icon: FaTwitter, href: '#', label: 'Twitter' },
+    { icon: FaYoutube, href: null, label: 'YouTube' },
+    { icon: FaTelegram, href: null, label: 'Telegram' },
+    { icon: FaInstagram, href: null, label: 'Instagram' },
+    { icon: FaFacebook, href: null, label: 'Facebook' },
+    { icon: FaTwitter, href: null, label: 'Twitter' },
   ];
 
   return (
@@ -85,10 +85,6 @@ export default function Footer() {
               <div className="flex items-center gap-2">
                 <HiMail className="h-4 w-4 text-primary-400" />
                 <span>support@civicsedu.com</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <HiPhone className="h-4 w-4 text-primary-400" />
-                <span>+91 98765 43210</span>
               </div>
             </div>
           </div>
@@ -122,16 +118,20 @@ export default function Footer() {
             RPSC & Political Science.
           </p>
           <div className="flex items-center gap-3">
-            {socialLinks.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                aria-label={social.label}
-                className="h-8 w-8 bg-dark-800 hover:bg-primary-600 hover:text-white rounded-lg flex items-center justify-center transition-colors text-dark-400 text-xs"
-              >
-                <social.icon />
-              </a>
-            ))}
+            {socialLinks
+              .filter((s) => s.href)
+              .map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
+                  className="h-8 w-8 bg-dark-800 hover:bg-primary-600 hover:text-white rounded-lg flex items-center justify-center transition-colors text-dark-400 text-xs"
+                >
+                  <social.icon />
+                </a>
+              ))}
           </div>
         </div>
       </div>

@@ -198,7 +198,6 @@ export const getCategoryBySlug = catchAsync(async (req, res) => {
           .lean(),
         LibraryItem.find({
           $or: [{ examCategory: { $in: catIds } }, { category: { $in: catIds } }],
-          isPublished: true,
         })
           .sort('-downloadsCount -createdAt')
           .limit(12)

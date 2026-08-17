@@ -474,7 +474,7 @@ export default function Dashboard() {
                 </div>
 
                 <Link
-                  to={`/tests/${attempt.test?._id || attempt.test || attempt._id}/result/${attempt._id}`}
+                  to={`/tests/${attempt.test?._id || attempt.test || attempt._id}/result`}
                   className="w-full bg-blue-50 hover:bg-blue-600 hover:text-white dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 font-bold py-2.5 px-4 rounded-xl transition-all text-xs text-center flex items-center justify-center gap-1"
                 >
                   View Solution & Scorecard →

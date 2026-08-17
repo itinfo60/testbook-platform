@@ -282,7 +282,9 @@ export default function TestSeriesDetail() {
                   })}
                 </span>
                 <span>•</span>
-                <span className="text-amber-300 font-semibold">⭐ 4.8 Rating</span>
+                <span className="text-amber-300 font-semibold">
+                  {series?.averageRating ? `⭐ ${series.averageRating} Rating` : ''}
+                </span>
                 <span>•</span>
                 <span className="text-white font-semibold">{grandTotalTests} Total Tests</span>
                 <span>•</span>
@@ -290,7 +292,11 @@ export default function TestSeriesDetail() {
                   {freeTestsInSeries.length || 1} Free Tests
                 </span>
                 <span>•</span>
-                <span>21.2k Users</span>
+                <span>
+                  {series?.enrollmentCount
+                    ? `${series.enrollmentCount.toLocaleString()} Users`
+                    : ''}
+                </span>
                 <span>•</span>
                 <span>English, Hindi</span>
               </div>

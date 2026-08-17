@@ -130,6 +130,12 @@ const courseSchema = new Schema<ICourse>(
       required: true,
       index: true,
     },
+    examCategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'ExamCategory',
+      default: null,
+      index: true,
+    },
     price: { type: Number, default: 0, min: 0, index: true },
     discountPrice: { type: Number, default: 0, min: 0 },
     effectivePrice: { type: Number, default: 0, min: 0 },

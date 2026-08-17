@@ -13,7 +13,7 @@ import {
 import { fetchTeacherCourses } from '@/features/course/courseSlice';
 import { fetchTeacherTests } from '@/features/test/testSlice';
 import { fetchTeacherQuizzes } from '@/features/quiz/quizSlice';
-import { enrollmentAPI } from '@/services/api';
+import { enrollmentAPI, blogAPI } from '@/services/api';
 
 export default function TeacherDashboard() {
   const dispatch = useDispatch();
@@ -39,11 +39,11 @@ export default function TeacherDashboard() {
       .catch(() => setUniqueStudentsCount(0));
 
     // Fetch blogs count
-    api
-      .get('/blogs', { params: { limit: 100 } })
+    blogAPI
+      .getAll({ limit: 1 })
       .then((res) => {
-        const list = res.data?.data?.blogs || res.data?.blogs || res.data?.data || [];
-        setBlogsCount(Array.isArray(list) ? list.length : 0);
+        const total = res.data?.data?.pagination?.total || res.data?.pagination?.total || 0;
+        setBlogsCount(total);
       })
       .catch(() => setBlogsCount(0));
   }, [dispatch]);

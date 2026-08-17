@@ -8,7 +8,8 @@ import ApiResponse from '../../utils/ApiResponse.js';
 export class LibraryController extends BaseController {
   // Create a new library resource (admin)
   createResource = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const { title, description, category, tags, accessLevel, applicableCourses } = req.body;
+    const { title, description, category, examCategory, tags, accessLevel, applicableCourses } =
+      req.body;
     const fileUrl =
       req.body.fileUrl ||
       (req.file && req.file.path) ||
@@ -22,6 +23,7 @@ export class LibraryController extends BaseController {
       title,
       description,
       category: category ?? null,
+      examCategory: examCategory ?? null,
       tags,
       fileUrl,
       fileType,

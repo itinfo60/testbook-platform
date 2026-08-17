@@ -21,6 +21,7 @@ const librarySchema = new Schema<ILibraryResource>(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     category: { type: Schema.Types.ObjectId, ref: 'ExamCategory', default: null },
+    examCategory: { type: Schema.Types.ObjectId, ref: 'ExamCategory', default: null, index: true },
     resourceType: {
       type: String,
       enum: [
