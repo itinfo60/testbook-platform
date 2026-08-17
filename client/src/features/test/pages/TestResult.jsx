@@ -97,9 +97,9 @@ export default function TestResult() {
 
   if (error && !result) {
     return (
-      <div className="max-w-md mx-auto my-20 px-6 py-10 text-center bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-xl">
+      <div className="max-w-md mx-auto my-20 px-8 py-12 text-center bg-white dark:bg-dark-950 rounded-3xl border border-slate-200/50 dark:border-dark-800/50 shadow-premium transition-all duration-300">
         <div className="text-5xl mb-3">⚠️</div>
-        <h2 className="text-xl font-bold text-dark-900 dark:text-white mb-2">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
           Error Loading Result
         </h2>
         <p className="text-slate-500 mb-6 text-sm">{error || 'Could not find attempt results.'}</p>
@@ -130,7 +130,7 @@ export default function TestResult() {
         </div>
         <Link
           to={`/tests/${id}`}
-          className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 transition-colors shrink-0 shadow-sm"
+          className="bg-white dark:bg-dark-950 border border-slate-200/50 dark:border-dark-800/50 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-900 font-bold py-2.5 px-5 rounded-xl text-xs flex items-center gap-1.5 transition-all duration-300 shrink-0 shadow-premium"
         >
           <HiRefresh className="h-4 w-4 text-amber-500" /> Reattempt Test
         </Link>
@@ -147,9 +147,9 @@ export default function TestResult() {
       {activeTab === 'review' && (
         <div className="space-y-6">
           {/* Filter Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-dark-900 p-4 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-dark-950 p-6 rounded-2xl border border-slate-200/50 dark:border-dark-800/50 shadow-premium transition-all duration-300">
             <div>
-              <h3 className="font-extrabold text-dark-900 dark:text-white text-base">
+              <h3 className="font-extrabold tracking-tight text-slate-900 dark:text-white text-base">
                 Question Solutions Key
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -162,8 +162,8 @@ export default function TestResult() {
                 onClick={() => setReviewFilter('all')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   reviewFilter === 'all'
-                    ? 'bg-white dark:bg-dark-900 text-dark-900 dark:text-white shadow-sm'
-                    : 'text-slate-500 hover:text-dark-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-dark-950 text-slate-900 dark:text-white shadow-premium'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 All ({questions.length})
@@ -203,9 +203,9 @@ export default function TestResult() {
 
           {/* List of reviewed questions */}
           {filteredQuestions.length === 0 ? (
-            <div className="bg-white dark:bg-dark-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-dark-800">
+            <div className="bg-white dark:bg-dark-950 rounded-3xl p-16 text-center border border-dashed border-slate-200/50 dark:border-dark-800/50 shadow-premium transition-all duration-300">
               <span className="text-4xl mb-2 block">🎯</span>
-              <h4 className="font-bold text-dark-900 dark:text-white text-base">
+              <h4 className="font-bold tracking-tight text-slate-900 dark:text-white text-base">
                 No questions in this filter
               </h4>
               <p className="text-xs text-slate-400 mt-1">

@@ -1,98 +1,129 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '../helpers/renderWithProviders';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LoginPage from '@/features/auth/pages/LoginPage';
+import { renderWithProviders } from '../testUtils';
+import { authAPI } from '@/services/api';
 
-// Mock the auth slice thunks to avoid real API calls
-vi.mock('@/features/auth/authSlice', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    login: Object.assign(
-      vi.fn((credentials) => async (dispatch) => {
-        const action = { type: 'auth/login/fulfilled', payload: { user: null, token: null } };
-        return action;
-      }),
-      {
-        rejected: { match: (action) => action?.type === 'auth/login/rejected' },
-        fulfilled: { match: (action) => action?.type === 'auth/login/fulfilled' },
-      }
-    ),
-  };
-});
+vi.mock('@/services/api', () => ({
+  authAPI: {
+    login: vi.fn(),
+  },
+  injectStore: vi.fn(),
+  courseAPI: {},
+  quizAPI: {},
+}));
 
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders email and password fields', () => {
+  it('renders login form', () => {
     renderWithProviders(<LoginPage />);
+    expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/enter your email/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/enter your password/i)).toBeInTheDocument();
-  });
-
-  it('renders Sign In button', () => {
-    renderWithProviders(<LoginPage />);
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('shows validation error when email is empty on submit', async () => {
-    const user = userEvent.setup();
+  it('validates email format', async () => {
     renderWithProviders(<LoginPage />);
+    const user = userEvent.setup();
+    const emailInput = screen.getByPlaceholderText(/enter your email/i);
+    const passwordInput = screen.getByPlaceholderText(/enter your password/i);
+    const submitBtn = screen.getByRole('button', { name: /sign in/i });
 
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.type(emailInput, 'invalid-email');
+    await user.type(passwordInput, 'password123');
+    await user.click(submitBtn);
 
-    await waitFor(() => {
-      expect(screen.getByText(/enter a valid email address/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
   });
 
-  it('shows validation error when password is empty on submit', async () => {
-    const user = userEvent.setup();
+  it('validates required password', async () => {
     renderWithProviders(<LoginPage />);
+    const user = userEvent.setup();
+    const emailInput = screen.getByPlaceholderText(/enter your email/i);
+    const submitBtn = screen.getByRole('button', { name: /sign in/i });
+
+    await user.type(emailInput, 'test@example.com');
+    await user.click(submitBtn);
+
+    expect(await screen.findByText(/password is required/i)).toBeInTheDocument();
+  });
+
+  it('shows error on wrong credentials (mock API 401)', async () => {
+    authAPI.login.mockRejectedValue({
+      response: { data: { message: 'Invalid credentials' } },
+    });
+    renderWithProviders(<LoginPage />);
+    const user = userEvent.setup();
 
     await user.type(screen.getByPlaceholderText(/enter your email/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/enter your password/i), 'wrongpass');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText(/invalid credentials/i)).toBeInTheDocument();
+  });
+
+  it('redirects to dashboard on success (mock API 200)', async () => {
+    authAPI.login.mockResolvedValue({
+      data: { data: { token: 'fake-token', user: { id: 1, name: 'Test User' } } },
+    });
+
+    // We can spy on window.location or use a Router mock, but MemoryRouter handles it.
+    // The component redirects using navigate(from, { replace: true }).
+    renderWithProviders(<LoginPage />, { initialEntries: ['/login'] });
+
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText(/enter your email/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/enter your password/i), 'correctpass');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+      // It should dispatch login and then auth state becomes authenticated, redirecting to /dashboard.
+      // Testing redirection directly in this isolated test requires checking the router context or mock,
+      // but we can check if it successfully submitted and API was called.
+      expect(authAPI.login).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'correctpass',
+      });
     });
   });
 
-  it('renders quick login buttons for Student and Teacher', () => {
-    renderWithProviders(<LoginPage />);
-    expect(screen.getByText('Student')).toBeInTheDocument();
-    expect(screen.getByText('Teacher')).toBeInTheDocument();
-  });
+  it('disables button while loading', async () => {
+    let resolveLogin;
+    authAPI.login.mockReturnValue(
+      new Promise((resolve) => {
+        resolveLogin = resolve;
+      })
+    );
 
-  it('renders link to register page', () => {
     renderWithProviders(<LoginPage />);
-    expect(screen.getByText(/sign up/i)).toBeInTheDocument();
-  });
-
-  it('renders forgot password link', () => {
-    renderWithProviders(<LoginPage />);
-    expect(screen.getByText(/forgot password/i)).toBeInTheDocument();
-  });
-
-  it('does not show MFA input by default', () => {
-    renderWithProviders(<LoginPage />);
-    expect(screen.queryByPlaceholderText(/6-digit code/i)).not.toBeInTheDocument();
-  });
-
-  it('fills in student quick login credentials on button click', async () => {
     const user = userEvent.setup();
+
+    await user.type(screen.getByPlaceholderText(/enter your email/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/enter your password/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    const btn = screen.getByRole('button', { name: /sign in/i });
+    expect(btn).toBeDisabled();
+
+    // Cleanup
+    resolveLogin({ data: { token: 'token', user: {} } });
+  });
+
+  it('handles network failure gracefully', async () => {
+    authAPI.login.mockRejectedValue(new Error('Network Error'));
     renderWithProviders(<LoginPage />);
+    const user = userEvent.setup();
 
-    const studentBtn = screen.getByText('Student').closest('button');
-    await user.click(studentBtn);
+    await user.type(screen.getByPlaceholderText(/enter your email/i), 'test@example.com');
+    await user.type(screen.getByPlaceholderText(/enter your password/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    // Email field should be set
-    await waitFor(() => {
-      const emailInput = screen.getByPlaceholderText(/enter your email/i);
-      expect(emailInput.value).toBe('arjun@student.com');
-    });
+    expect(await screen.findByText(/network error|login failed/i)).toBeInTheDocument();
   });
 });

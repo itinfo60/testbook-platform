@@ -1,3 +1,4 @@
+import SeoHead from '@/components/SeoHead';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -56,11 +57,23 @@ export default function ExamsCatalog() {
   }, []);
 
   useEffect(() => {
-    if (location.state?.filterGroup) {
+    const params = new URLSearchParams(location.search);
+    const categoryParam = params.get('category');
+    if (categoryParam) {
+      if (categoryParam === 'rajasthan' || categoryParam === 'rajasthan-exams') {
+        setSelectedGroup('rajasthan');
+      } else if (
+        categoryParam === 'political_science' ||
+        categoryParam === 'political-science' ||
+        categoryParam === 'pol-sci'
+      ) {
+        setSelectedGroup('political_science');
+      }
+    } else if (location.state?.filterGroup) {
       setSelectedGroup(location.state.filterGroup);
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.search, location.state]);
 
   // Extract all subcategory exam items from categories
   const allExamItems = categories.flatMap((cat) => {
@@ -147,6 +160,10 @@ export default function ExamsCatalog() {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-screen py-10 px-4 sm:px-6 lg:px-8 text-slate-900 dark:text-slate-100">
+      <SeoHead
+        title="Explore Exams — RPSC, RAS, RJS, Political Science"
+        description="Browse all competitive exams. Access syllabus, PYQs, mock tests, and specialized courses for RPSC, RAS, RJS, and Political Science."
+      />
       <div className="max-w-7xl mx-auto">
         {/* Header Banner */}
         <div className="text-center max-w-3xl mx-auto mb-10">

@@ -32,7 +32,7 @@ const fileFilter = (_req, file, cb) => {
 export const uploadMiddleware = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 500 * 1024 * 1024, files: 5 }, // 500 MB max per file
+  limits: { fileSize: 52428800, files: 5 }, // 50MB max per file
 }).single('file');
 
 const uploadToCloudinary = (buffer, folder, resourceType = 'auto', options = {}) =>

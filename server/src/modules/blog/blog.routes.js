@@ -11,21 +11,21 @@ router.get('/', optionalAuth, validate(blogSchemas.query, 'query'), blogControll
 router.get('/slug/:slug', optionalAuth, blogController.getBlogBySlug);
 router.get('/:slug', optionalAuth, blogController.getBlogBySlug);
 
-// Admin routes
+// Admin & Teacher routes
 router.post(
   '/',
   authenticate,
-  authorize('admin'),
+  authorize('admin', 'teacher'),
   validate(blogSchemas.create),
   blogController.createBlog
 );
 router.patch(
   '/:id',
   authenticate,
-  authorize('admin'),
+  authorize('admin', 'teacher'),
   validate(blogSchemas.update),
   blogController.updateBlog
 );
-router.delete('/:id', authenticate, authorize('admin'), blogController.deleteBlog);
+router.delete('/:id', authenticate, authorize('admin', 'teacher'), blogController.deleteBlog);
 
 export default router;

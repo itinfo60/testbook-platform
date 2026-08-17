@@ -1,11 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api, {
-  courseAPI,
-  testAPI,
-  enrollmentAPI,
-  notificationAPI,
-  liveClassAPI,
-} from '@/services/api';
+import { courseAPI, testAPI, enrollmentAPI, notificationAPI, liveClassAPI } from '@/services/api';
 import toast from 'react-hot-toast';
 
 // ===== Query Keys =====

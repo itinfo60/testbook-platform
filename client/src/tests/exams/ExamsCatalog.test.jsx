@@ -85,7 +85,7 @@ describe('ExamsCatalog', () => {
     it('renders without errors', async () => {
       renderWithProviders(<ExamsCatalog />);
       await waitFor(() => {
-        expect(screen.getByText(/Explore Exam Portals/i)).toBeInTheDocument();
+        expect(screen.getByText(/Explore Exams/i)).toBeInTheDocument();
       });
     });
   });

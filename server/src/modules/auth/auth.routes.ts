@@ -34,7 +34,7 @@ router.post(
   controller.register
 );
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
-router.get('/check-email', controller.checkEmail);
+router.get('/check-email', authLimiter, controller.checkEmail);
 router.post('/logout', authenticate, controller.logout);
 router.post('/refresh-token', controller.refreshToken);
 router.post(
@@ -43,7 +43,12 @@ router.post(
   validate(forgotPasswordSchema),
   controller.forgotPassword
 );
-router.post('/reset-password', validate(resetPasswordSchema), controller.resetPassword);
+router.post(
+  '/reset-password',
+  authLimiter,
+  validate(resetPasswordSchema),
+  controller.resetPassword
+);
 router.get('/verify-email/:token', controller.verifyEmail);
 router.get('/me', authenticate, controller.getMe);
 router.get('/profile', authenticate, controller.getMe);
@@ -61,7 +66,7 @@ router.delete('/fcm-token', authenticate, controller.removeFcmToken);
 // MFA Setup & Activation
 router.post('/mfa/setup', authenticate, controller.setupMfa);
 router.post('/mfa/verify', authenticate, validate(mfaVerifySchema), controller.verifyMfa);
-router.post('/mfa/login', validate(mfaLoginSchema), controller.verifyMfaLogin);
+router.post('/mfa/login', authLimiter, validate(mfaLoginSchema), controller.verifyMfaLogin);
 router.post('/mfa/disable', authenticate, controller.disableMfa);
 
 // Google OAuth

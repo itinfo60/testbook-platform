@@ -1,10 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDashboardStats } from '@/features/dashboard/dashboardSlice';
 import { formatNumber, formatCurrency } from '@/utils';
 import LoadingSpinner from '@/components/loadingSpinner';
 import StatsCard from '@/components/StatsCard';
-import { Users, BookOpen, GraduationCap, CreditCard, FileText, Brain, Star } from 'lucide-react';
+import {
+  Users,
+  BookOpen,
+  GraduationCap,
+  CreditCard,
+  FileText,
+  Brain,
+  Star,
+  RefreshCw,
+} from 'lucide-react';
+import { revenueAPI } from '@/services/api';
 import {
   BarChart,
   Bar,
@@ -20,23 +30,63 @@ import {
 } from 'recharts';
 
 const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
+const MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 export default function Dashboard() {
   const dispatch = useDispatch();
   const { stats, loading, error } = useSelector((s) => s.dashboard);
 
+  const [revenueData, setRevenueData] = useState([]);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [revenueError, setRevenueError] = useState(false);
+
   useEffect(() => {
     dispatch(fetchDashboardStats());
   }, [dispatch]);
 
-  // Don't block on loading — show what we have
+  const loadRevenue = async () => {
+    setRevenueLoading(true);
+    setRevenueError(false);
+    try {
+      const res = await revenueAPI.getMonthly();
+      const trends = res.data?.data?.trends || res.data?.trends || [];
+      const formatted = trends.map((t) => ({
+        month: MONTH_NAMES[(t._id?.month ?? t.month ?? 1) - 1] || 'Unknown',
+        revenue: t.revenue || 0,
+        enrollments: t.count || t.enrollments || 0,
+      }));
+      setRevenueData(formatted);
+    } catch (err) {
+      setRevenueError(true);
+    } finally {
+      setRevenueLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRevenue();
+  }, []);
+
   const s = stats || {};
   const overview = s.overview || {};
-  const revenueData = s.revenue || {};
+  const revenueStats = s.revenue || {};
   const growthData = s.growth || {};
   const limits = s.limits || null;
-
   const roleMap = s.roleDistribution || {};
+  const categoryData = s.categoryDistribution || s.categories || [];
 
   const statCards = [
     {
@@ -61,10 +111,10 @@ export default function Dashboard() {
     },
     {
       title: 'Revenue',
-      value: formatCurrency(revenueData.total || 0),
+      value: formatCurrency(revenueStats.total || 0),
       icon: CreditCard,
       color: 'rose',
-      change: revenueData.growth,
+      change: revenueStats.growth,
     },
     {
       title: 'Tests',
@@ -87,45 +137,6 @@ export default function Dashboard() {
     { title: 'Teachers', value: formatNumber(roleMap.teacher || 0), icon: Users, color: 'emerald' },
   ];
 
-  const MONTH_NAMES = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  const hasMonthlyTrends = Array.isArray(s.monthlyTrends) && s.monthlyTrends.length > 0;
-  const monthlyData = hasMonthlyTrends
-    ? s.monthlyTrends.map((t) => ({
-        month: MONTH_NAMES[(t._id?.month ?? 1) - 1],
-        revenue: t.revenue || 0,
-        enrollments: t.count || 0,
-      }))
-    : [
-        { month: 'Jan', revenue: 45000, enrollments: 120 },
-        { month: 'Feb', revenue: 52000, enrollments: 150 },
-        { month: 'Mar', revenue: 48000, enrollments: 130 },
-        { month: 'Apr', revenue: 61000, enrollments: 180 },
-        { month: 'May', revenue: 55000, enrollments: 165 },
-        { month: 'Jun', revenue: 67000, enrollments: 200 },
-      ];
-
-  const categoryData = s.categoryDistribution ||
-    s.categories || [
-      { name: 'SSC', value: 30 },
-      { name: 'Banking', value: 25 },
-      { name: 'Railway', value: 20 },
-      { name: 'Teaching', value: 15 },
-      { name: 'Other', value: 10 },
-    ];
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -136,7 +147,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stats Grid */}
       {loading && !stats ? (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
@@ -149,7 +159,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Plan Limits */}
           {limits && (
             <div className="card p-5">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
@@ -211,66 +220,96 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 card p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Revenue & Enrollments
-                {!hasMonthlyTrends && (
-                  <span className="text-xs text-gray-400 font-normal ml-2">(Sample Data)</span>
+            <div className="lg:col-span-2 card p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Revenue & Enrollments
+                </h3>
+              </div>
+              <div className="flex-1 min-h-[320px] relative">
+                {revenueLoading ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <LoadingSpinner />
+                  </div>
+                ) : revenueError ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 space-y-3">
+                    <p>Revenue data unavailable</p>
+                    <button
+                      onClick={loadRevenue}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Retry
+                    </button>
+                  </div>
+                ) : revenueData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" stroke="#9ca3af" fontSize={12} />
+                      <YAxis stroke="#9ca3af" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--toast-bg, #fff)',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="revenue"
+                        name="Revenue (₹)"
+                        fill="#6366f1"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="enrollments"
+                        name="Enrollments"
+                        fill="#10b981"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                    No data to display
+                  </div>
                 )}
-              </h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#9ca3af" fontSize={12} />
-                  <YAxis stroke="#9ca3af" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--toast-bg, #fff)',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="revenue" name="Revenue (₹)" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  <Bar
-                    dataKey="enrollments"
-                    name="Enrollments"
-                    fill="#10b981"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              </div>
             </div>
 
             <div className="card p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Categories
               </h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {categoryData.map((_, idx) => (
-                      <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {categoryData && categoryData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={320}>
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {categoryData.map((_, idx) => (
+                        <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[320px] text-gray-500">
+                  No category data available
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Recent Users */}
           {(s.recent?.users || []).length > 0 && (
             <div className="card p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">

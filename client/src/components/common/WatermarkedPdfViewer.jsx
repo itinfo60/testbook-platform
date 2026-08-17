@@ -7,8 +7,8 @@ export default function WatermarkedPdfViewer({ title, fileUrl, accessLevel = 'pa
   const [downloading, setDownloading] = useState(false);
 
   const watermarkText = user
-    ? `Licensed to: ${user.name} (${user.email || user.phone || 'Student'}) • EduPortal Copy Protected`
-    : 'Licensed to Registered EduPortal Student • Copy Protected';
+    ? `Licensed to: ${user.name} (${user.email || user.phone || 'Student'}) • EduHub Copy Protected`
+    : 'Licensed to Registered EduHub Student • Copy Protected';
 
   return (
     <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 shadow-xl border border-slate-200 dark:border-dark-800">
@@ -51,7 +51,7 @@ export default function WatermarkedPdfViewer({ title, fileUrl, accessLevel = 'pa
         <div className="relative z-0 space-y-4">
           <div className="flex items-center gap-2 text-amber-400 text-sm font-bold border-b border-slate-800 pb-3">
             <HiDocumentText className="h-5 w-5" />
-            <span>EduPortal Premium Handwritten Notes — Chapter Summary</span>
+            <span>EduHub Premium Handwritten Notes — Chapter Summary</span>
           </div>
 
           <div className="space-y-2 text-xs text-slate-300 font-serif leading-relaxed">

@@ -23,10 +23,12 @@ export default function AnnouncementCenter() {
     }
     setSending(true);
     try {
-      await notificationsAPI.send({
-        ...form,
-        scheduledAt: form.scheduledAt || undefined,
-      });
+      const payload = { ...form };
+      payload.targetRoles = [payload.targetRole];
+      delete payload.targetRole;
+      if (!payload.scheduledAt) delete payload.scheduledAt;
+
+      await notificationsAPI.send(payload);
       toast.success(
         form.scheduledAt
           ? 'Announcement scheduled successfully!'

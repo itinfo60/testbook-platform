@@ -21,7 +21,7 @@ function TextContent({ content }) {
   );
 }
 
-function ResourceItem({ resource }) {
+export function ResourceItem({ resource }) {
   const icons = { pdf: '📄', doc: '📝', link: '🔗' };
 
   const handleDownload = () => {
@@ -68,8 +68,6 @@ export default function LessonContent({
   onNext,
   isLastLesson,
 }) {
-  const [completing, setCompleting] = useState(false);
-
   if (!lesson) {
     return (
       <div className="flex items-center justify-center h-96 bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 p-8">
@@ -85,24 +83,6 @@ export default function LessonContent({
       </div>
     );
   }
-
-  const handleComplete = async () => {
-    if (isCompleted || completing) return;
-    setCompleting(true);
-    await onComplete?.();
-    setCompleting(false);
-  };
-
-  const handleCompleteAndNext = async () => {
-    if (!isCompleted) {
-      setCompleting(true);
-      await onComplete?.();
-      setCompleting(false);
-    }
-    if (onNext) {
-      onNext();
-    }
-  };
 
   const formatDuration = (secs) => {
     if (!secs) return null;
@@ -140,7 +120,7 @@ export default function LessonContent({
           </a>
         </div>
       ) : lesson.type === 'video' ? (
-        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-900/10 dark:border-white/10 bg-black aspect-video relative flex items-center justify-center group ring-1 ring-black/5 dark:ring-white/5">
+        <div className="w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-900/10 dark:border-white/10 bg-black aspect-video relative flex items-center justify-center group ring-1 ring-black/5 dark:ring-white/5">
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-10"></div>
           <VideoPlayer
             ref={playerRef}
@@ -163,85 +143,10 @@ export default function LessonContent({
           <h3 className="text-xl font-extrabold text-dark-900 dark:text-white mb-2 font-display">
             Lesson Assessment Quiz
           </h3>
-          <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
+          <p className="text-slate-500 text-sm max-w-md mx-auto">
             {lesson.content ||
               'Test your knowledge on this module before continuing to the next chapter.'}
           </p>
-          {lesson.quizId && (
-            <Link
-              to={`/quiz/${lesson.quizId}`}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all inline-flex items-center gap-2 text-sm"
-            >
-              Start Lesson Quiz <HiArrowRight className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* Lesson Header & Action Bar */}
-      <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 border border-slate-200 dark:border-dark-800 shadow-sm">
-        {sectionTitle && (
-          <p className="text-xs text-amber-600 dark:text-amber-500 font-bold uppercase tracking-wider mb-1">
-            {sectionTitle}
-          </p>
-        )}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-dark-900 dark:text-white font-display">
-              {lesson.title}
-            </h2>
-            <div className="flex items-center gap-3 mt-1.5 text-xs font-bold text-slate-400">
-              <span className="capitalize px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
-                {lesson.type}
-              </span>
-              {lesson.duration > 0 && <span>⏱️ {formatDuration(lesson.duration)}</span>}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Mark Complete Button */}
-            <button
-              onClick={handleComplete}
-              disabled={isCompleted || completing}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                isCompleted
-                  ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 cursor-default'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
-              }`}
-            >
-              <HiCheckCircle className="h-4 w-4" />
-              {isCompleted ? 'Completed ✓' : completing ? 'Saving...' : 'Mark as Complete'}
-            </button>
-
-            {/* Next Lesson / Course Completed Action */}
-            {onNext ? (
-              <button
-                onClick={handleCompleteAndNext}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer active:scale-95"
-              >
-                Next Lesson <HiArrowRight className="h-4 w-4" />
-              </button>
-            ) : isCompleted ? (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800">
-                <HiAcademicCap className="h-4 w-4" /> Course Completed!
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {/* Resources Attachment Section */}
-      {lesson.resources?.length > 0 && (
-        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 border border-slate-200 dark:border-dark-800 shadow-sm">
-          <h4 className="text-sm font-extrabold text-dark-900 dark:text-white mb-4 flex items-center gap-2">
-            <HiDownload className="h-4 w-4 text-amber-500" /> Lesson Attachments & Notes (
-            {lesson.resources.length})
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {lesson.resources.map((r, i) => (
-              <ResourceItem key={r._id || i} resource={r} />
-            ))}
-          </div>
         </div>
       )}
     </div>

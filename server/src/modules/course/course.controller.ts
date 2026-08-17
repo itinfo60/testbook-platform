@@ -85,5 +85,10 @@ export class CourseController extends BaseController {
     const courses = await this.courseService.getFeaturedCourses();
     return this.ok(res, { courses });
   });
+
+  getSampleClasses = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    const samples = await this.courseService.getSampleClasses();
+    return this.ok(res, { samples });
+  });
 }
 export default CourseController;

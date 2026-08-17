@@ -208,6 +208,8 @@ export const enrollmentsAPI = {
     api.get(`/admin/enrollments/export${qs(params)}`, {
       responseType: 'blob',
     }),
+  bulkAssign: (data) => api.post('/admin/enrollments/bulk', data),
+  revokeEnrollment: (id) => api.delete(`/enrollments/${id}`),
 };
 
 // ══════════════════════════════════════════════
@@ -216,8 +218,7 @@ export const enrollmentsAPI = {
 // ══════════════════════════════════════════════
 export const revenueAPI = {
   getAnalytics: (params) => api.get(`/admin/revenue${qs(params)}`),
-  // monthly doesn't exist — return empty
-  getMonthly: async () => ({ data: { data: [] } }),
+  getMonthly: (params) => api.get(`/admin/revenue/monthly${qs(params)}`),
 };
 
 // ══════════════════════════════════════════════

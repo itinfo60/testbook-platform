@@ -12,6 +12,7 @@ const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
   mfaToken: z.string().optional(),
+  rememberMe: z.boolean().optional(),
 });
 
 export default function LoginPage() {
@@ -55,24 +56,10 @@ export default function LoginPage() {
     }
   };
 
-  const quickLogin = async (email, password) => {
-    setValue('email', email);
-    setValue('password', password);
-    setServerError('');
-    const result = await dispatch(login({ email, password }));
-    if (login.rejected.match(result)) {
-      setServerError(result.payload || 'Login failed');
-    }
-  };
-
   return (
-    <div className="bg-white dark:bg-dark-900 shadow-2xl rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-dark-800 animate-fade-in relative overflow-hidden">
-      {/* Decorative gradient blur */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
-
+    <div className="bg-white dark:bg-slate-950 shadow-premium rounded-2xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 animate-fade-in relative overflow-hidden transition-all duration-300">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-dark-900 dark:text-white font-display">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
           Welcome Back
         </h1>
         <p className="text-slate-500 mt-2 font-medium">Sign in to continue learning</p>
@@ -80,7 +67,7 @@ export default function LoginPage() {
 
       <a
         href={`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/google`}
-        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-750 hover:shadow-md rounded-2xl text-sm font-bold transition-all mb-6 group"
+        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-premium rounded-xl text-sm font-medium transition-all duration-300 mb-6 group"
       >
         <svg
           viewBox="0 0 24 24"
@@ -108,15 +95,15 @@ export default function LoginPage() {
             />
           </g>
         </svg>
-        <span className="text-dark-900 dark:text-white">Continue with Google</span>
+        <span className="text-slate-900 dark:text-slate-50 font-medium">Continue with Google</span>
       </a>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200 dark:border-dark-700"></div>
+          <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-3 bg-white dark:bg-dark-900 text-slate-500 font-medium">
+          <span className="px-3 bg-white dark:bg-slate-950 text-slate-500 font-medium">
             Or sign in with email
           </span>
         </div>
@@ -124,7 +111,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-bold text-dark-700 dark:text-dark-300 mb-1.5">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
             Email
           </label>
           <div className="relative">
@@ -133,7 +120,7 @@ export default function LoginPage() {
               {...register('email')}
               type="email"
               placeholder="Enter your email"
-              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-dark-900 dark:text-white transition-all shadow-sm"
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-slate-900 dark:text-slate-50 transition-all duration-300 shadow-sm"
             />
           </div>
           {errors.email && (
@@ -142,7 +129,7 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-dark-700 dark:text-dark-300 mb-1.5">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
             Password
           </label>
           <div className="relative">
@@ -151,7 +138,7 @@ export default function LoginPage() {
               {...register('password')}
               type="password"
               placeholder="Enter your password"
-              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-dark-900 dark:text-white transition-all shadow-sm"
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-slate-900 dark:text-slate-50 transition-all duration-300 shadow-sm"
             />
           </div>
           {errors.password && (
@@ -161,14 +148,14 @@ export default function LoginPage() {
 
         {requiresMfa && (
           <div>
-            <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               MFA Token
             </label>
             <input
               {...register('mfaToken')}
               placeholder="6-digit code from authenticator app"
               maxLength={6}
-              className="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-primary-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-dark-900 dark:text-white tracking-widest"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-primary-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-900 dark:text-slate-50 tracking-widest transition-all duration-300"
             />
           </div>
         )}
@@ -184,6 +171,7 @@ export default function LoginPage() {
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
               type="checkbox"
+              {...register('rememberMe')}
               className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
             />
             <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
@@ -201,41 +189,16 @@ export default function LoginPage() {
         <Button
           type="submit"
           variant="primary"
-          className="w-full !py-3.5 !rounded-2xl text-base shadow-lg shadow-primary-500/20"
+          className="w-full !py-3 !rounded-xl text-base shadow-sm transition-all duration-300 hover:shadow-premium"
           loading={isSubmitting}
         >
           Sign In
         </Button>
       </form>
 
-      {/* Quick Login — Student & Teacher only */}
-      <div className="mt-4 pt-4 border-t border-dark-100 dark:border-dark-700">
-        <p className="text-xs text-dark-400 text-center mb-3">Quick demo login</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => quickLogin('arjun@student.com', 'Student@123456')}
-            className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-xl border border-dark-200 dark:border-dark-700 hover:bg-primary-50 dark:hover:bg-primary-950/30 hover:border-primary-300 dark:hover:border-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="text-lg">📚</span>
-            <span className="text-xs font-medium text-dark-700 dark:text-dark-300">Student</span>
-            <span className="text-[10px] text-dark-400">arjun@student.com</span>
-          </button>
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => quickLogin('teacher@testbook.com', 'Teacher@123456')}
-            className="flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-xl border border-dark-200 dark:border-dark-700 hover:bg-secondary-50 dark:hover:bg-secondary-950/30 hover:border-secondary-300 dark:hover:border-secondary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="text-lg">👨‍🏫</span>
-            <span className="text-xs font-medium text-dark-700 dark:text-dark-300">Teacher</span>
-            <span className="text-[10px] text-dark-400">teacher@testbook.com</span>
-          </button>
-        </div>
-      </div>
+      {/* Quick Login Removed */}
 
-      <p className="text-center text-sm text-dark-500 mt-6">
+      <p className="text-center text-sm text-slate-500 mt-6">
         Don't have an account?{' '}
         <Link
           to="/register"

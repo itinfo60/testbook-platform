@@ -59,9 +59,6 @@ export default function TestTaking() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const isExitingRef = useRef(false);
-  const webcamRef = useRef(null);
-  const [webcamStream, setWebcamStream] = useState(null);
-
   const questions = storedQuestions.length ? storedQuestions : attempt?.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
   const duration = attempt?.duration || 60;
@@ -169,23 +166,6 @@ export default function TestTaking() {
     return () => window.removeEventListener('blur', handler);
   }, [isTestActive, attemptId]);
 
-  // Webcam stream
-  useEffect(() => {
-    if (!isTestActive) return;
-    navigator.mediaDevices
-      ?.getUserMedia?.({ video: true })
-      .then((stream) => {
-        setWebcamStream(stream);
-        if (webcamRef.current) webcamRef.current.srcObject = stream;
-      })
-      .catch(() => {});
-    return () => {
-      if (webcamStream) {
-        webcamStream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [isTestActive]);
-
   // Auto-save heartbeat to server every 30 seconds
   useEffect(() => {
     if (!attempt || !isTestActive || !attemptId) return;
@@ -270,9 +250,9 @@ export default function TestTaking() {
   if (!questions.length) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-dark-950 p-4">
-        <div className="text-center bg-white dark:bg-dark-900 p-8 rounded-3xl border border-slate-200 dark:border-dark-800 max-w-md shadow-xl">
+        <div className="text-center bg-white dark:bg-dark-950 p-10 rounded-3xl border border-slate-200/50 dark:border-dark-800/50 max-w-md shadow-premium transition-all duration-300">
           <div className="text-5xl mb-4">📝</div>
-          <h2 className="text-xl font-bold text-dark-900 dark:text-white mb-2">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
             Unable to load test
           </h2>
           <p className="text-slate-500 text-sm mb-6">
@@ -289,12 +269,12 @@ export default function TestTaking() {
   const unansweredCount = Math.max(0, questions.length - answeredCount);
 
   return (
-    <div className="test-fullscreen min-h-screen bg-white dark:bg-dark-900 select-none">
+    <div className="test-fullscreen min-h-screen bg-white dark:bg-dark-950 select-none transition-colors duration-300">
       {/* ── Sticky Top Header ── */}
-      <div className="sticky top-0 z-30 bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-dark-800 px-3 sm:px-6 py-3.5 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white/80 dark:bg-dark-950/80 backdrop-blur-2xl border-b border-slate-200/50 dark:border-dark-800/50 px-4 sm:px-8 py-4 shadow-premium transition-all duration-300">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <h2 className="font-extrabold text-dark-900 dark:text-white truncate text-base sm:text-lg font-display">
+            <h2 className="font-extrabold tracking-tight text-slate-900 dark:text-white truncate text-base sm:text-lg font-display">
               {testTitle}
             </h2>
 
@@ -373,9 +353,9 @@ export default function TestTaking() {
       {showNav && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowNav(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-dark-900 p-4 overflow-y-auto shadow-2xl">
+          <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-dark-950 p-6 overflow-y-auto shadow-premium transition-transform duration-300">
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100 dark:border-dark-800">
-              <span className="font-bold text-sm text-dark-900 dark:text-white">
+              <span className="font-bold tracking-tight text-sm text-slate-900 dark:text-white">
                 Question Palette
               </span>
               <button onClick={() => setShowNav(false)} className="p-1 rounded-lg text-slate-400">
@@ -403,7 +383,7 @@ export default function TestTaking() {
         <div className="py-2">
           <div className="text-center mb-6">
             <div className="text-5xl mb-2">📋</div>
-            <h3 className="text-lg font-extrabold text-dark-900 dark:text-white">
+            <h3 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
               Are you ready to submit your test?
             </h3>
             <p className="text-xs text-slate-500 mt-1">
@@ -421,27 +401,27 @@ export default function TestTaking() {
                 Total
               </div>
             </div>
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 text-center">
-              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+            <div className="bg-success-50 dark:bg-success-950/30 p-3 rounded-2xl border border-success-200 dark:border-success-900/50 text-center">
+              <div className="text-xl font-black text-success-600 dark:text-success-400">
                 {answeredCount}
               </div>
-              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] font-bold text-success-600 dark:text-success-400 uppercase tracking-wider mt-0.5">
                 Answered
               </div>
             </div>
-            <div className="bg-purple-50 dark:bg-purple-950/30 p-3 rounded-2xl border border-purple-200 dark:border-purple-900/50 text-center">
-              <div className="text-xl font-black text-purple-600 dark:text-purple-400">
+            <div className="bg-warning-50 dark:bg-warning-950/30 p-3 rounded-2xl border border-warning-200 dark:border-warning-900/50 text-center">
+              <div className="text-xl font-black text-warning-600 dark:text-warning-400">
                 {markedCount}
               </div>
-              <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] font-bold text-warning-600 dark:text-warning-400 uppercase tracking-wider mt-0.5">
                 Marked
               </div>
             </div>
-            <div className="bg-rose-50 dark:bg-rose-950/30 p-3 rounded-2xl border border-rose-200 dark:border-rose-900/50 text-center">
-              <div className="text-xl font-black text-rose-600 dark:text-rose-400">
+            <div className="bg-slate-100 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-800/50 text-center">
+              <div className="text-xl font-black text-slate-600 dark:text-slate-400">
                 {unansweredCount}
               </div>
-              <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-0.5">
                 Unanswered
               </div>
             </div>
@@ -477,7 +457,7 @@ export default function TestTaking() {
       >
         <div className="text-center py-4">
           <div className="text-4xl mb-3">🚪</div>
-          <p className="text-dark-900 dark:text-white font-bold mb-1">
+          <p className="text-slate-900 dark:text-white font-bold tracking-tight mb-1">
             Are you sure you want to exit?
           </p>
           <p className="text-xs text-slate-500 mb-6">
@@ -493,15 +473,6 @@ export default function TestTaking() {
           </div>
         </div>
       </Modal>
-
-      {/* Webcam PiP */}
-      <video
-        ref={webcamRef}
-        autoPlay
-        muted
-        playsInline
-        className="fixed bottom-4 right-4 w-28 h-20 sm:w-32 sm:h-24 rounded-2xl border-2 border-white dark:border-dark-700 shadow-xl object-cover z-40 bg-black pointer-events-none"
-      />
     </div>
   );
 }

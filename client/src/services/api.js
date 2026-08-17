@@ -185,6 +185,7 @@ export const courseAPI = {
   getAll: (params) => api.get('/courses', { params }),
   getById: (id) => api.get(`/courses/${id}`),
   getFeatured: () => api.get('/courses/featured'),
+  getSamples: () => api.get('/courses/samples'),
   create: (data) => api.post('/courses', data),
   update: (id, data) => api.put(`/courses/${id}`, data),
   delete: (id) => api.delete(`/courses/${id}`),
@@ -196,6 +197,7 @@ export const enrollmentAPI = {
   enroll: (data) => api.post('/enrollments', data),
   getMyEnrollments: () => api.get('/enrollments/my'),
   getMyTestEnrollments: () => api.get('/enrollments/my-tests'),
+  getStudentAnalytics: () => api.get('/enrollments/analytics/performance'),
   getProgress: (courseId) => api.get(`/enrollments/progress/${courseId}`),
   updateProgress: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
   completeLesson: (courseId, data) => api.post(`/enrollments/progress/${courseId}`, data),
@@ -218,6 +220,7 @@ export const testAPI = {
   getById: (id) => api.get(`/tests/${id}`),
   create: (data) => api.post('/tests', data),
   update: (id, data) => api.put(`/tests/${id}`, data),
+  delete: (id) => api.delete(`/tests/${id}`),
   start: (id) => api.post(`/tests/${id}/start`),
   submit: (attemptId, data) => api.post(`/tests/submit/${attemptId}`, data),
   logViolation: (attemptId) => api.post(`/tests/violation/${attemptId}`),
@@ -227,11 +230,21 @@ export const testAPI = {
   getAttemptResult: (attemptId) => api.get(`/tests/result/${attemptId}`),
 };
 
+export const testSeriesAPI = {
+  getAll: (params) => api.get('/test-series', { params }),
+  getBySlug: (slug) => api.get(`/test-series/${slug}`),
+  create: (data) => api.post('/test-series', data),
+  update: (id, data) => api.put(`/test-series/${id}`, data),
+  delete: (id) => api.delete(`/test-series/${id}`),
+};
+
 export const quizAPI = {
+  getAll: (params) => api.get('/quizzes', { params }),
   getCourseQuizzes: (courseId) => api.get(`/quizzes/course/${courseId}`),
-  submit: (id, data) => api.post(`/quizzes/${id}/submit`, data),
+  submit: (id, data) => api.post('/quizzes/submit', data),
   getTeacherQuizzes: () => api.get('/quizzes/teacher/my-quizzes'),
   getById: (id) => api.get(`/quizzes/teacher/${id}`),
+  getStudentQuizById: (id) => api.get(`/quizzes/${id}`),
   create: (data) => api.post('/quizzes', data),
   update: (id, data) => api.put(`/quizzes/${id}`, data),
   delete: (id) => api.delete(`/quizzes/${id}`),
@@ -267,7 +280,7 @@ export const wishlistAPI = {
 export const discussionAPI = {
   getCourseDiscussions: (courseId, params) =>
     api.get(`/discussions/course/${courseId}`, { params }),
-  create: (data) => api.post('/discussions', data),
+  create: (data) => api.post(`/discussions/course/${data.course}`, data),
   update: (id, data) => api.put(`/discussions/${id}`, data),
   reply: (id, data) => api.post(`/discussions/${id}/reply`, data),
   updateReply: (id, replyId, data) => api.put(`/discussions/${id}/reply/${replyId}`, data),
@@ -291,9 +304,17 @@ export const leaderboardAPI = {
 export const blogAPI = {
   getAll: (params) => api.get('/blogs', { params }),
   getBySlug: (slug) => api.get(`/blogs/slug/${slug}`),
+  getFeaturedArticles: (params) => api.get('/blogs', { params: { ...params, type: 'article' } }),
+  getJobAlerts: (params) => api.get('/blogs', { params: { ...params, type: 'job_alert' } }),
   create: (data) => api.post('/blogs', data),
   update: (id, data) => api.patch(`/blogs/${id}`, data),
   delete: (id) => api.delete(`/blogs/${id}`),
+};
+
+export const libraryAPI = {
+  getAll: (params) => api.get('/library', { params }),
+  getFreeResources: (params) => api.get('/library', { params: { ...params, accessLevel: 'free' } }),
+  download: (id) => api.get(`/library/${id}/download`),
 };
 
 export const examCategoryAPI = {
@@ -332,6 +353,10 @@ export const instituteAPI = {
 
 export const auditAPI = {
   getLogs: (params) => api.get('/audit-logs', { params }),
+};
+
+export const supportAPI = {
+  createTicket: (data) => api.post('/support/tickets', data),
 };
 
 export default api;

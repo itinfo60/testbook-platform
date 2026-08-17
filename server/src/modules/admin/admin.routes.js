@@ -34,9 +34,11 @@ router.patch('/reviews/:id/toggle-approval', adminController.adminToggleReviewAp
 
 // Revenue
 router.get('/revenue', adminController.getRevenue);
+router.get('/revenue/monthly', adminController.getMonthlyRevenue);
 
 // Enrollments
 router.get('/enrollments', adminController.adminGetEnrollments);
+router.post('/enrollments/bulk', adminController.bulkAssignEnrollments);
 router.get('/enrollments/export', adminController.adminExportEnrollments);
 
 // Teachers

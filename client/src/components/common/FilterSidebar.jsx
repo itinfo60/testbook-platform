@@ -1,7 +1,18 @@
 import { useState } from 'react';
-import { Filter, X } from 'lucide-react';
-export default function FilterSidebar({ filters = [], activeFilters = {}, onFilterChange, onClear }) {
+import { Filter, X, ChevronDown, ChevronRight } from 'lucide-react';
+export default function FilterSidebar({
+  filters = [],
+  activeFilters = {},
+  onFilterChange,
+  onClear,
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState({});
+
+  const toggleExpand = (e, val) => {
+    e.preventDefault();
+    setExpandedNodes((prev) => ({ ...prev, [val]: !prev[val] }));
+  };
 
   const hasActiveFilters = Object.values(activeFilters).some(
     (v) => v !== '' && v !== undefined && v !== null
@@ -23,36 +34,78 @@ export default function FilterSidebar({ filters = [], activeFilters = {}, onFilt
 
       {filters.map((filter) => (
         <div key={filter.key}>
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          <h4 className="text-[15px] font-bold text-gray-900 dark:text-white mb-4">
             {filter.label}
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filter.options.map((option) => (
-              <label
-                key={option.value}
-                className="flex items-center gap-3 cursor-pointer group"
-              >
-                <input
-                  type={filter.type === 'radio' ? 'radio' : 'checkbox'}
-                  name={filter.key}
-                  checked={
-                    activeFilters[filter.key] === option.value ||
-                    (Array.isArray(activeFilters[filter.key]) &&
-                      activeFilters[filter.key].includes(option.value))
-                  }
-                  onChange={() => onFilterChange(filter.key, option.value)}
-                  className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 
-                             rounded focus:ring-primary-500"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-400 
-                                 group-hover:text-gray-900 dark:group-hover:text-gray-200 
-                                 transition-colors">
-                  {option.label}
-                </span>
-                {option.count !== undefined && (
-                  <span className="text-xs text-gray-400 ml-auto">({option.count})</span>
+              <div key={option.value} className="space-y-2">
+                <div className="flex items-center gap-2 group">
+                  {option.children && option.children.length > 0 ? (
+                    <button
+                      onClick={(e) => toggleExpand(e, option.value)}
+                      className="p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      {expandedNodes[option.value] ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </button>
+                  ) : (
+                    <div className="w-5" /> // spacer
+                  )}
+                  <label className="flex items-center gap-3 cursor-pointer flex-1">
+                    <input
+                      type={filter.type === 'radio' ? 'radio' : 'checkbox'}
+                      name={filter.key}
+                      checked={
+                        activeFilters[filter.key] === option.value ||
+                        (Array.isArray(activeFilters[filter.key]) &&
+                          activeFilters[filter.key].includes(option.value))
+                      }
+                      onChange={() => onFilterChange(filter.key, option.value)}
+                      className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 transition-colors"
+                    />
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {option.label}
+                    </span>
+                    {option.count !== undefined && (
+                      <span className="text-xs font-medium text-gray-400 ml-auto bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                        {option.count}
+                      </span>
+                    )}
+                  </label>
+                </div>
+
+                {/* Nested Children */}
+                {option.children && option.children.length > 0 && expandedNodes[option.value] && (
+                  <div className="pl-9 space-y-2 relative before:absolute before:left-[19px] before:top-0 before:bottom-2 before:w-[1.5px] before:bg-gray-200 dark:before:bg-gray-700">
+                    {option.children.map((child) => (
+                      <label
+                        key={child.value}
+                        className="flex items-center gap-3 cursor-pointer group relative"
+                      >
+                        <span className="absolute -left-[17px] top-1/2 w-3 h-[1.5px] bg-gray-200 dark:bg-gray-700 -translate-y-1/2"></span>
+                        <input
+                          type={filter.type === 'radio' ? 'radio' : 'checkbox'}
+                          name={filter.key}
+                          checked={
+                            activeFilters[filter.key] === child.value ||
+                            (Array.isArray(activeFilters[filter.key]) &&
+                              activeFilters[filter.key].includes(child.value))
+                          }
+                          onChange={() => onFilterChange(filter.key, child.value)}
+                          className="h-[14px] w-[14px] text-primary-500 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 transition-colors"
+                        />
+                        <span className="text-[13px] text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                          {child.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 )}
-              </label>
+              </div>
             ))}
           </div>
         </div>
@@ -72,15 +125,15 @@ export default function FilterSidebar({ filters = [], activeFilters = {}, onFilt
       >
         <Filter className="w-4 h-4" />
         Filters
-        {hasActiveFilters && (
-          <span className="w-2 h-2 rounded-full bg-primary-600" />
-        )}
+        {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-primary-600" />}
       </button>
 
       {/* Desktop sidebar */}
       <div className="hidden lg:block w-64 flex-shrink-0">
-        <div className="sticky top-24 bg-white dark:bg-gray-800 rounded-xl border 
-                        border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+        <div
+          className="sticky top-24 bg-white dark:bg-gray-800 rounded-xl border 
+                        border-gray-200 dark:border-gray-700 p-5 shadow-sm"
+        >
           {content}
         </div>
       </div>
@@ -94,8 +147,10 @@ export default function FilterSidebar({ filters = [], activeFilters = {}, onFilt
             onClick={() => setMobileOpen(false)}
           />
           {/* Drawer */}
-          <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white dark:bg-gray-900 
-                          shadow-xl z-50 overflow-y-auto animate-slide-in-right">
+          <div
+            className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white dark:bg-gray-900 
+                          shadow-xl z-50 overflow-y-auto animate-slide-in-right"
+          >
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
               <button

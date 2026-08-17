@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /my-courses
+Disallow: /my-test-attempts
+Disallow: /orders
+Disallow: /checkout
+Disallow: /settings
+Disallow: /profile
+Disallow: /notifications
+Disallow: /teacher
+Disallow: /parent
+Disallow: /messages
+Disallow: /affiliate
+Disallow: /live-classes
+Disallow: /ai/
+Disallow: /institute/
+Disallow: /tests/*/take
+Disallow: /courses/*/learn
+
+Sitemap: https://edurportal.in/sitemap.xml

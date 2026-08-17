@@ -12,6 +12,7 @@ import {
 import toast from 'react-hot-toast';
 
 export default function HelpCenterPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [openFaq, setOpenFaq] = useState(null);
   const [ticketForm, setTicketForm] = useState({
@@ -49,7 +50,7 @@ export default function HelpCenterPage() {
       id: 5,
       cat: 'Video Classes',
       q: 'Can I watch video lectures offline on mobile?',
-      a: 'Yes, video lectures can be streamed in adaptive HD or saved offline inside the EduPortal Mobile App.',
+      a: 'Yes, video lectures can be streamed in adaptive HD or saved offline inside the EduHub Mobile App.',
     },
   ];
 
@@ -59,16 +60,24 @@ export default function HelpCenterPage() {
       f.a.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleTicketSubmit = (e) => {
+  const handleTicketSubmit = async (e) => {
     e.preventDefault();
     if (!ticketForm.subject || !ticketForm.description) {
       toast.error('Please enter subject and description');
       return;
     }
-    toast.success(
-      'Support ticket created! Ticket ID #EDU-' + Math.floor(100000 + Math.random() * 900000)
-    );
-    setTicketForm({ category: 'Account & Login', subject: '', description: '' });
+
+    setIsSubmitting(true);
+    try {
+      const res = await supportAPI.createTicket(ticketForm);
+      const ticketId = res.data?.data?.ticketId || Math.floor(100000 + Math.random() * 900000);
+      toast.success(`Support ticket created! Ticket ID #EDU-${ticketId}`);
+      setTicketForm({ category: 'Account & Login', subject: '', description: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit ticket. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -224,9 +233,10 @@ export default function HelpCenterPage() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs sm:text-sm"
+              disabled={isSubmitting}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Submit Ticket
+              {isSubmitting ? 'Submitting...' : 'Submit Ticket'}
             </button>
           </form>
         </div>

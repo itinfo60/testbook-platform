@@ -127,6 +127,29 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     { $group: { _id: '$role', count: { $sum: 1 } } },
   ]);
 
+  // Category distribution
+  const categoryDistributionAgg = await Course.aggregate([
+    { $match: { isPublished: true } },
+    {
+      $lookup: {
+        from: 'examcategories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDoc',
+      },
+    },
+    { $unwind: '$categoryDoc' },
+    {
+      $group: {
+        _id: '$categoryDoc.name',
+        value: { $sum: 1 },
+      },
+    },
+    { $project: { _id: 0, name: '$_id', value: 1 } },
+    { $sort: { value: -1 } },
+    { $limit: 6 },
+  ]);
+
   // Helper: calculate growth percentage
   const calcGrowth = (current, previous) => {
     if (!previous) return current > 0 ? 100 : 0;
@@ -173,6 +196,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       acc[r._id] = r.count;
       return acc;
     }, {}),
+    categoryDistribution: categoryDistributionAgg,
     monthlyTrends,
     recent: { users: recentUsers, enrollments: recentEnrollments },
     limits: institute
@@ -661,6 +685,47 @@ export const getRevenue = catchAsync(async (req, res) => {
   });
 });
 
+export const getMonthlyRevenue = catchAsync(async (req, res) => {
+  const now = new Date();
+  const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+  const monthlyData = await Payment.aggregate([
+    { $match: { status: 'completed', createdAt: { $gte: twelveMonthsAgo } } },
+    {
+      $group: {
+        _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+        revenue: { $sum: '$amount' },
+        orders: { $sum: 1 },
+      },
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } },
+  ]);
+
+  // Format response for UI: e.g. { month: 'Jan', revenue: 45000, orders: 32 }
+  const monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  const formatted = monthlyData.map((d) => ({
+    month: monthNames[d._id.month - 1],
+    year: d._id.year,
+    revenue: d.revenue,
+    orders: d.orders,
+  }));
+
+  ApiResponse.ok(res, formatted);
+});
+
 // ===== ENROLLMENT MANAGEMENT =====
 
 export const adminGetEnrollments = catchAsync(async (req, res) => {
@@ -745,6 +810,38 @@ export const adminExportEnrollments = catchAsync(async (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename=enrollments-${Date.now()}.csv`);
   res.send(csv);
+});
+
+export const bulkAssignEnrollments = catchAsync(async (req, res) => {
+  const { userIds, entityId, entityType } = req.body;
+  if (!userIds || !Array.isArray(userIds) || !entityId || !entityType) {
+    throw ApiError.badRequest('userIds array, entityId, and entityType are required');
+  }
+
+  const existing = await Enrollment.find({
+    user: { $in: userIds },
+    [entityType]: entityId,
+  });
+  const existingUserIds = existing.map((e) => e.user.toString());
+
+  const toEnroll = userIds.filter((id) => !existingUserIds.includes(id));
+
+  if (toEnroll.length === 0) {
+    return ApiResponse.ok(res, { message: 'All users already enrolled' });
+  }
+
+  const enrollments = toEnroll.map((userId) => ({
+    user: userId,
+    [entityType]: entityId,
+    status: 'active',
+    enrolledAt: new Date(),
+    amountPaid: 0,
+    progressPercentage: 0,
+  }));
+
+  await Enrollment.insertMany(enrollments);
+
+  ApiResponse.ok(res, { message: `Successfully enrolled ${toEnroll.length} users` });
 });
 
 // ===== TEACHER MANAGEMENT =====

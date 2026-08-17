@@ -15,6 +15,7 @@ router.get(
   validate(courseQuerySchema, 'query'),
   controller.getCourses
 );
+router.get('/samples', controller.getSampleClasses);
 router.get('/featured', controller.getFeaturedCourses);
 router.get('/slug/:slug', optionalAuth, controller.getCourseBySlug);
 router.get('/:id', optionalAuth, controller.getCourseById);

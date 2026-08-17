@@ -118,9 +118,11 @@ const userSchema = new Schema<IUser>(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: (_, ret) => {
+      transform: (_, ret: any) => {
         delete ret.password;
         delete ret.refreshTokens;
+        delete ret.mfaSecret;
+        delete ret.mfaBackupCodes;
         return ret;
       },
     },

@@ -14,7 +14,7 @@ export default function Footer() {
     'Quick Links': [
       { label: 'Home', path: '/' },
       { label: 'Exams Directory', path: '/exams' },
-      { label: 'Courses & Batches', path: '/courses' },
+      { label: 'Courses', path: '/courses' },
       { label: 'Test Series Portal', path: '/tests' },
       { label: 'Free Study Material', path: '/free-resources' },
       { label: 'Job Alerts', path: '/blog?type=job_alert' },
@@ -29,19 +29,25 @@ export default function Footer() {
       { label: 'Patwari', path: '/exams/patwari' },
       { label: 'VDO', path: '/exams/vdo' },
     ],
-    'Pol. Science Special': [
-      { label: 'Asst. Prof. (RPSC)', path: '/exams/rpsc-assistant-professor-political-science' },
+    'Political Science': [
       {
-        label: 'Asst. Prof. (UPHESC)',
+        label: 'Assistant Professor RPSC',
+        path: '/exams/rpsc-assistant-professor-political-science',
+      },
+      {
+        label: 'Assistant Professor UPHESC',
         path: '/exams/uphesc-assistant-professor-political-science',
       },
-      { label: 'Asst. Prof. (MPPSC)', path: '/exams/mppsc-assistant-professor-political-science' },
+      {
+        label: 'Assistant Professor MPPSC',
+        path: '/exams/mppsc-assistant-professor-political-science',
+      },
       { label: 'PGT Political Science', path: '/exams/pgt-political-science' },
     ],
     Support: [
       { label: 'Help Center & FAQs', path: '/help' },
       { label: 'Faculty Members', path: '/faculty' },
-      { label: 'About EduPortal', path: '/about' },
+      { label: 'About EduHub', path: '/about' },
       { label: 'Privacy Policy', path: '/legal/privacy' },
       { label: 'Terms & Conditions', path: '/legal/terms' },
     ],
@@ -63,21 +69,21 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Link to="/" className="flex items-center gap-2.5 mb-4">
-              <div className="h-9 w-9 bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm rounded-xl flex items-center justify-center">
-                <HiAcademicCap className="h-5 w-5 text-white" />
+              <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
+                <HiAcademicCap className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold font-display text-white">
-                Edu<span className="text-primary-400">Portal</span>
+              <span className="text-2xl font-bold font-display tracking-tight text-white uppercase">
+                Edu<span className="text-accent-500">Hub</span>
               </span>
             </Link>
             <p className="text-sm text-dark-500 mb-5 max-w-xs leading-relaxed">
-              Rajasthan's #1 Dedicated Learning & Test Series Portal for RPSC, EO/RO, RAS, Teachers
-              & Political Science Competitive Exams.
+              Rajasthan's dedicated learning & test-series platform for serious competitive exam
+              aspirants.
             </p>
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <HiMail className="h-4 w-4 text-primary-400" />
-                <span>support@eduportal.com</span>
+                <span>support@eduhub.com</span>
               </div>
               <div className="flex items-center gap-2">
                 <HiPhone className="h-4 w-4 text-primary-400" />
@@ -111,8 +117,8 @@ export default function Footer() {
         {/* Bottom Footer */}
         <div className="py-6 border-t border-dark-800/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-dark-500">
-            © {new Date().getFullYear()} EduPortal. All rights reserved. Specialized Coaching for
-            RPSC & Political Science.
+            © {new Date().getFullYear()} EduHub. All rights reserved. Specialized Coaching for RPSC
+            & Political Science.
           </p>
           <div className="flex items-center gap-3">
             {socialLinks.map((social) => (

@@ -9,6 +9,8 @@ export interface ILesson {
   type: 'video' | 'text' | 'quiz';
   content?: string;
   videoUrl?: string;
+  quizId?: string;
+  testSeriesSlug?: string;
   duration: number; // in seconds
   isFree: boolean;
   order: number;
@@ -72,6 +74,8 @@ const lessonSchema = new Schema<ILesson>({
   type: { type: String, enum: ['video', 'text', 'quiz'], required: true },
   content: { type: String, default: '' },
   videoUrl: { type: String, default: '' },
+  quizId: { type: String, default: '' },
+  testSeriesSlug: { type: String, default: '' },
   duration: { type: Number, default: 0 },
   isFree: { type: Boolean, default: false },
   order: { type: Number, default: 0 },

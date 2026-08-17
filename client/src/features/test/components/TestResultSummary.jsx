@@ -180,6 +180,122 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
         </div>
       </div>
 
+      {/* Accuracy Donut Chart */}
+      {correct !== undefined && incorrect !== undefined && (
+        <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 shadow-sm mb-6">
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-5 text-center">
+            Performance Breakdown
+          </h3>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+            {/* Donut SVG */}
+            {(() => {
+              const total = (correct || 0) + (incorrect || 0) + (unanswered || 0);
+              if (total === 0) return null;
+              const r = 60;
+              const circ = 2 * Math.PI * r;
+              const correctPct = (correct || 0) / total;
+              const incorrectPct = (incorrect || 0) / total;
+              const correctDash = correctPct * circ;
+              const incorrectDash = incorrectPct * circ;
+              const skippedDash = circ - correctDash - incorrectDash;
+              return (
+                <svg width="160" height="160" viewBox="0 0 160 160" className="flex-shrink-0">
+                  {/* Background */}
+                  <circle cx="80" cy="80" r={r} fill="none" stroke="#f1f5f9" strokeWidth="18" />
+                  {/* Skipped (slate) */}
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r={r}
+                    fill="none"
+                    stroke="#94a3b8"
+                    strokeWidth="18"
+                    strokeDasharray={`${skippedDash} ${circ - skippedDash}`}
+                    strokeDashoffset={-correctDash - incorrectDash}
+                    strokeLinecap="butt"
+                    transform="rotate(-90 80 80)"
+                  />
+                  {/* Incorrect (red) */}
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r={r}
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="18"
+                    strokeDasharray={`${incorrectDash} ${circ - incorrectDash}`}
+                    strokeDashoffset={-correctDash}
+                    strokeLinecap="butt"
+                    transform="rotate(-90 80 80)"
+                  />
+                  {/* Correct (green) */}
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r={r}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="18"
+                    strokeDasharray={`${correctDash} ${circ - correctDash}`}
+                    strokeDashoffset={0}
+                    strokeLinecap="butt"
+                    transform="rotate(-90 80 80)"
+                  />
+                  {/* Center text */}
+                  <text
+                    x="80"
+                    y="74"
+                    textAnchor="middle"
+                    className="text-3xl"
+                    fontSize="26"
+                    fontWeight="800"
+                    fill="currentColor"
+                  >
+                    {Math.round((correct / total) * 100)}%
+                  </text>
+                  <text
+                    x="80"
+                    y="94"
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="600"
+                    fill="#94a3b8"
+                  >
+                    ACCURACY
+                  </text>
+                </svg>
+              );
+            })()}
+            {/* Legend */}
+            <div className="space-y-3">
+              {[
+                { color: 'bg-green-500', label: 'Correct', value: correct || 0 },
+                { color: 'bg-red-500', label: 'Incorrect', value: incorrect || 0 },
+                { color: 'bg-slate-400', label: 'Skipped', value: unanswered || 0 },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-3">
+                  <div className={`h-3 w-3 rounded-full ${item.color} flex-shrink-0`}></div>
+                  <span className="text-sm font-bold text-dark-700 dark:text-dark-300 w-20">
+                    {item.label}
+                  </span>
+                  <span className="text-sm font-extrabold text-dark-900 dark:text-white">
+                    {item.value}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    (
+                    {(
+                      (item.value / ((correct || 0) + (incorrect || 0) + (unanswered || 0))) *
+                        100 || 0
+                    ).toFixed(0)}
+                    %)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Advanced Analytics (Rank, Percentile, Strong/Weak) */}
       <div className="grid sm:grid-cols-2 gap-4 mb-8">
         {(hasRank || hasPercentile) && (

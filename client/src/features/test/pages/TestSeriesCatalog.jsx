@@ -1,3 +1,4 @@
+import SeoHead from '@/components/SeoHead';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -82,19 +83,8 @@ export default function TestSeriesCatalog() {
         params: { examCategory: exam._id || exam.slug, limit: 30 },
       });
       const list = res.data?.data?.testSeries || res.data?.testSeries || [];
-      if (Array.isArray(list) && list.length > 0) {
+      if (Array.isArray(list)) {
         setExamTestSeries(list);
-      } else {
-        // Fallback matching from full list
-        const matched = testSeriesList.filter(
-          (s) =>
-            s.examCategory?._id === exam._id ||
-            s.examCategory?.slug === exam.slug ||
-            s.examCategory === exam._id ||
-            s.title?.toLowerCase().includes(exam.name?.toLowerCase() || '') ||
-            s.description?.toLowerCase().includes(exam.name?.toLowerCase() || '')
-        );
-        setExamTestSeries(matched.length > 0 ? matched : testSeriesList.slice(0, 4));
       }
     } catch (err) {
       console.error(err);
@@ -120,26 +110,11 @@ export default function TestSeriesCatalog() {
   // Filter exams based on left selection
   const displayedExams = allExamsList.filter((exam) => {
     if (activeCategoryFilter === 'all') return true;
-    if (activeCategoryFilter === 'rajasthan') {
-      const pSlug = exam.parentCategory?.slug || '';
-      const slug = exam.slug || '';
-      return (
-        pSlug === 'rajasthan-exams' ||
-        ['ras', 'rpsc', 'rsmssb', 'patwari', 'vdo', 'cet'].some((s) => slug.includes(s))
-      );
-    }
-    if (activeCategoryFilter === 'polsci') {
-      const pSlug = exam.parentCategory?.slug || '';
-      const slug = exam.slug || '';
-      return (
-        pSlug === 'political-science-exams' ||
-        ['political-science', 'assistant-professor', 'pgt', 'ugc-net'].some((s) => slug.includes(s))
-      );
-    }
     return (
       exam.parentCategory?._id === activeCategoryFilter ||
       exam.parentCategory?.slug === activeCategoryFilter ||
-      exam._id === activeCategoryFilter
+      exam._id === activeCategoryFilter ||
+      exam.slug === activeCategoryFilter
     );
   });
 
@@ -168,26 +143,7 @@ export default function TestSeriesCatalog() {
         }`}
       />
       <div className="p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-primary-50 text-primary-600 dark:bg-primary-950/60 dark:text-primary-400 border border-primary-100 dark:border-primary-900/40">
-            {series.examCategory?.name || series.testType?.replace('_', ' ') || 'Test Series'}
-          </span>
-          {series.isPurchased || series.isEnrolled ? (
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              Enrolled
-            </span>
-          ) : series.isFree || series.price === 0 ? (
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              Free Test Included
-            </span>
-          ) : (
-            <span className="text-xs font-black text-primary-600 dark:text-primary-400">
-              ₹{series.price}
-            </span>
-          )}
-        </div>
-
-        <h3 className="text-base sm:text-lg font-black text-dark-900 dark:text-white leading-snug line-clamp-2 mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+        <h3 className="text-base sm:text-lg font-black text-dark-900 dark:text-white leading-snug line-clamp-2 mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors font-display">
           {series.title}
         </h3>
 
@@ -196,21 +152,24 @@ export default function TestSeriesCatalog() {
             'Complete chapter tests, full-length mocks, and previous year papers with instant solutions.'}
         </p>
 
-        <div className="flex items-center gap-3 text-xs font-bold text-dark-500 dark:text-dark-400 mb-4 bg-dark-50 dark:bg-dark-800/60 p-3 rounded-2xl border border-dark-100 dark:border-dark-700/50">
-          <span className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400">
-            <HiClipboardList className="h-4 w-4" />
-            {series.testsCount || 15} Tests
-          </span>
-          <span className="w-px h-3.5 bg-dark-200 dark:bg-dark-700" />
-          <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-            <HiQuestionMarkCircle className="h-4 w-4" />
-            {series.questionsCount || 500}+ Qs
-          </span>
-          <span className="w-px h-3.5 bg-dark-200 dark:bg-dark-700" />
-          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-            <HiGlobe className="h-4 w-4" />
-            En / Hi
-          </span>
+        {/* Specs Box - 2 Rows Multiline */}
+        <div className="space-y-2 text-xs font-bold text-dark-600 dark:text-dark-300 mb-4 bg-dark-50 dark:bg-dark-800/60 p-3.5 rounded-2xl border border-dark-100 dark:border-dark-700/50">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400">
+              <HiClipboardList className="h-4 w-4" />
+              {series.testsCount || 0} Tests
+            </span>
+            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+              <HiQuestionMarkCircle className="h-4 w-4" />
+              {series.questionsCount || 0}+ Qs
+            </span>
+          </div>
+          <div className="pt-2 border-t border-dark-100 dark:border-dark-700/60 flex items-center justify-between text-[11px] text-dark-500 dark:text-dark-400">
+            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+              <HiGlobe className="h-3.5 w-3.5" /> Bilingual (En / Hi)
+            </span>
+            <span className="font-semibold text-dark-400">Instant Solution</span>
+          </div>
         </div>
       </div>
 
@@ -252,6 +211,10 @@ export default function TestSeriesCatalog() {
 
   return (
     <div className="min-h-screen bg-dark-50/50 dark:bg-dark-950">
+      <SeoHead
+        title="Mock Test Series — RPSC, RAS, RJS & Political Science"
+        description="Take proctored mock tests for RPSC RAS Prelims & Mains, RJS, EO/RO, and Political Science. Full-length tests, PYQ papers, and topic-wise practice."
+      />
       {/* ════════ HERO ════════ */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-700 via-indigo-800 to-dark-900">
         <div
@@ -268,7 +231,7 @@ export default function TestSeriesCatalog() {
             <div>
               <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-xs font-extrabold mb-4 border border-white/10">
                 <HiLightningBolt className="h-3.5 w-3.5 text-amber-300" /> {testSeriesList.length}+
-                Test Series · {allExamsList.length} Exam Portals
+                Test Series · {allExamsList.length} Exams
               </div>
               <h1 className="text-3xl md:text-5xl font-black font-display text-white tracking-tight">
                 Online Mock Test Series
@@ -408,7 +371,7 @@ export default function TestSeriesCatalog() {
                               {exam.name}
                             </span>
                             <span className="text-[11px] text-dark-400 dark:text-dark-500 block truncate">
-                              {exam.parentCategory?.name || 'Exam Portal'}
+                              {exam.parentCategory?.name || 'Exam'}
                             </span>
                           </div>
                         </div>

@@ -1,30 +1,61 @@
-import { Input } from '@/components/ui';
-import { Button } from '@/components/ui';
-import { Link } from 'react-router-dom';
+import { Input, Button } from '@/components/ui';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiUser, HiMail, HiLockClosed, HiExclamationCircle, HiCheckCircle } from 'react-icons/hi';
-import { register } from '@/features/auth/authSlice';
+import { register as registerUser } from '@/features/auth/authSlice';
 import { authAPI } from '@/services/api';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const registerSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.string().email('Enter a valid email address'),
+    phone: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^\d{10}$/.test(val), 'Phone must be exactly 10 digits'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(6, 'Please confirm your password'),
+    role: z.enum(['student', 'teacher', 'parent']).default('student'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export default function RegisterPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'student',
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      role: 'student',
+    },
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [serverError, setServerError] = useState('');
   const [emailStatus, setEmailStatus] = useState({ loading: false, available: null, message: '' });
 
-  // Real-time password strength indicator
+  const passwordValue = watch('password');
+  const roleValue = watch('role');
+
   const getPasswordStrength = (password) => {
     if (!password) return { score: 0, label: '', color: 'bg-dark-200 dark:bg-dark-700' };
     let score = 0;
@@ -38,30 +69,25 @@ export default function RegisterPage() {
     return { score, label: 'Strong', color: 'bg-green-500' };
   };
 
-  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordStrength = getPasswordStrength(passwordValue);
 
   useEffect(() => {
     if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (serverError) setServerError('');
-    if (e.target.name === 'email') setEmailStatus({ loading: false, available: null, message: '' });
-  };
+  const handleEmailBlur = async (e) => {
+    const emailVal = e.target.value;
+    if (!emailVal) return;
 
-  const handleEmailBlur = async () => {
-    if (!formData.email) return;
-
-    // Basic email validation regex
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    const isValid = await trigger('email');
+    if (!isValid) {
       setEmailStatus({ loading: false, available: false, message: 'Invalid email format' });
       return;
     }
 
     setEmailStatus({ loading: true, available: null, message: '' });
     try {
-      const res = await authAPI.checkEmail(formData.email);
+      const res = await authAPI.checkEmail(emailVal);
       if (res.data.data.available) {
         setEmailStatus({ loading: false, available: true, message: 'Email is available' });
       } else {
@@ -76,37 +102,23 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      setServerError('Passwords do not match');
-      return;
-    }
-    if (formData.password.length < 6) {
-      setServerError('Password must be at least 6 characters');
-      return;
-    }
-    setIsSubmitting(true);
+  const onSubmit = async (data) => {
+    if (emailStatus.available === false) return;
     setServerError('');
-    const { confirmPassword, ...data } = formData;
     try {
-      const result = await dispatch(register(data));
-      if (register.rejected.match(result)) {
+      const result = await dispatch(registerUser(data));
+      if (registerUser.rejected.match(result)) {
         setServerError(result.payload || 'Registration failed. Please try again.');
       }
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      setServerError('Registration failed');
     }
   };
 
   return (
-    <div className="bg-white dark:bg-dark-900 shadow-2xl rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-dark-800 animate-fade-in relative overflow-hidden">
-      {/* Decorative gradient blur */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-500/10 blur-3xl rounded-full -z-10 pointer-events-none"></div>
-
+    <div className="bg-white dark:bg-slate-950 shadow-premium rounded-2xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 animate-fade-in relative overflow-hidden transition-all duration-300">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-extrabold text-dark-900 dark:text-white font-display">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
           Create Account
         </h1>
         <p className="text-slate-500 mt-2 font-medium">Start your learning journey today</p>
@@ -114,7 +126,7 @@ export default function RegisterPage() {
 
       <a
         href={`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/google`}
-        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-750 hover:shadow-md rounded-2xl text-sm font-bold transition-all mb-6 group"
+        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-premium rounded-xl text-sm font-medium transition-all duration-300 mb-6 group"
       >
         <svg
           viewBox="0 0 24 24"
@@ -142,48 +154,51 @@ export default function RegisterPage() {
             />
           </g>
         </svg>
-        <span className="text-dark-900 dark:text-white">Sign up with Google</span>
+        <span className="text-slate-900 dark:text-slate-50 font-medium">Sign up with Google</span>
       </a>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200 dark:border-dark-700"></div>
+          <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-3 bg-white dark:bg-dark-900 text-slate-500 font-medium">
+          <span className="px-3 bg-white dark:bg-slate-950 text-slate-500 font-medium">
             Or register with email
           </span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Full Name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="John Doe"
-          icon={HiUser}
-          required
-        />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <Input
+            label="Full Name"
+            {...register('name')}
+            placeholder="John Doe"
+            icon={HiUser}
+            error={errors.name?.message}
+          />
+        </div>
 
         <div className="relative">
           <Input
             label="Email"
             type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            onBlur={handleEmailBlur}
+            {...register('email')}
+            onBlur={(e) => {
+              register('email').onBlur(e);
+              handleEmailBlur(e);
+            }}
             placeholder="john@example.com"
             icon={HiMail}
-            required
-            error={emailStatus.available === false ? emailStatus.message : undefined}
+            error={
+              errors.email?.message ||
+              (emailStatus.available === false ? emailStatus.message : undefined)
+            }
           />
           {emailStatus.loading && (
             <div className="absolute right-3 top-[38px] text-xs text-dark-400">Checking...</div>
           )}
-          {emailStatus.available === true && (
+          {emailStatus.available === true && !errors.email && (
             <HiCheckCircle className="absolute right-3 top-[36px] h-5 w-5 text-green-500" />
           )}
         </div>
@@ -192,24 +207,24 @@ export default function RegisterPage() {
           <Input
             label="Password"
             type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Min 8 characters"
+            {...register('password')}
+            placeholder="Min 6 characters"
             icon={HiLockClosed}
-            required
+            error={errors.password?.message}
           />
-          {formData.password && (
+          {passwordValue && (
             <div className="mt-2">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-dark-500 dark:text-dark-400">Password strength:</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Password strength:
+                </span>
                 <span
                   className={`text-xs font-medium ${passwordStrength.label === 'Weak' ? 'text-red-500' : passwordStrength.label === 'Fair' ? 'text-orange-500' : 'text-green-500'}`}
                 >
                   {passwordStrength.label}
                 </span>
               </div>
-              <div className="flex gap-1 h-1.5 w-full bg-dark-100 dark:bg-dark-800 rounded-full overflow-hidden">
+              <div className="flex gap-1 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${passwordStrength.score >= 1 ? passwordStrength.color : 'bg-transparent'} w-1/4 transition-all`}
                 ></div>
@@ -227,19 +242,19 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <Input
-          label="Confirm Password"
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          placeholder="Repeat password"
-          icon={HiLockClosed}
-          required
-        />
+        <div>
+          <Input
+            label="Confirm Password"
+            type="password"
+            {...register('confirmPassword')}
+            placeholder="Repeat password"
+            icon={HiLockClosed}
+            error={errors.confirmPassword?.message}
+          />
+        </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             I want to
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -251,17 +266,17 @@ export default function RegisterPage() {
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setFormData({ ...formData, role: option.value })}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  formData.role === option.value
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                    : 'border-dark-200 dark:border-dark-700 hover:border-dark-300'
+                onClick={() => setValue('role', option.value)}
+                className={`p-3 rounded-xl border-2 text-left transition-all duration-300 ${
+                  roleValue === option.value
+                    ? 'border-primary-500 bg-primary-50 dark:bg-slate-900'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
                 }`}
               >
-                <div className="text-sm font-medium text-dark-900 dark:text-white">
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-50">
                   {option.label}
                 </div>
-                <div className="text-[10px] text-dark-400 leading-tight mt-0.5">{option.desc}</div>
+                <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{option.desc}</div>
               </button>
             ))}
           </div>
@@ -277,14 +292,14 @@ export default function RegisterPage() {
         <Button
           type="submit"
           variant="primary"
-          className="w-full !py-3.5 !rounded-2xl text-base shadow-lg shadow-primary-500/20 mt-4"
+          className="w-full !py-3 !rounded-xl text-base shadow-sm transition-all duration-300 hover:shadow-premium mt-4"
           loading={isSubmitting}
         >
           Create Account
         </Button>
       </form>
 
-      <p className="text-center text-sm text-dark-500 mt-6">
+      <p className="text-center text-sm text-slate-500 mt-6">
         Already have an account?{' '}
         <Link
           to="/login"

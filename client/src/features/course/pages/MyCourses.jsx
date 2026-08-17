@@ -21,10 +21,10 @@ export default function MyCourses() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-dark-900 dark:text-white font-display mb-2">
-            My Enrollments
+            My Courses
           </h1>
           <p className="text-slate-500 mt-1 font-medium text-sm">
-            Track your progress and resume active batches.
+            Track your progress and resume your enrolled courses.
           </p>
         </div>
       </div>
@@ -33,10 +33,10 @@ export default function MyCourses() {
         <div className="bg-white dark:bg-dark-900 p-8 sm:p-16 rounded-3xl border border-dashed border-slate-300 dark:border-dark-700 text-center shadow-sm">
           <div className="text-5xl mb-4">📚</div>
           <h2 className="text-xl font-extrabold text-dark-900 dark:text-white mb-2">
-            You haven't purchased any courses yet
+            You haven't enrolled in any courses yet
           </h2>
           <p className="text-slate-500 mb-6 text-sm sm:text-base font-medium">
-            Start your preparation by enrolling in a targeted batch.
+            Start your preparation by enrolling in a course.
           </p>
           <Link
             to="/courses"

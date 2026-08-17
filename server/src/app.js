@@ -69,6 +69,7 @@ import parentRoutes from './modules/parent/parent.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import settingsRoutes from './modules/admin/settings.routes.js';
+import supportRoutes from './modules/support/support.routes.js';
 import { auditLog } from './middleware/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -244,6 +245,7 @@ app.use(`${API_PREFIX}/parent`, requireTenant, parentRoutes);
 app.use(`${API_PREFIX}/attendance`, requireTenant, attendanceRoutes);
 app.use(`${API_PREFIX}/uploads`, requireTenant, uploadRoutes);
 app.use(`${API_PREFIX}/search`, optionalTenant, searchRoutes);
+app.use(`${API_PREFIX}/support`, optionalTenant, supportRoutes);
 
 // ===== AUDIT LOG =====
 app.use(`${API_PREFIX}`, auditLog);
@@ -275,6 +277,95 @@ app.get(`${API_PREFIX}`, (req, res) => {
       blogs: `${API_PREFIX}/blogs`,
     },
   });
+});
+
+// Dynamic Sitemap
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const BASE_URL = process.env.CLIENT_URL || 'https://edurportal.in';
+    // Import models dynamically to avoid circular deps
+    const Course = require('./models/course.model').default || require('./models/course.model');
+    const Blog = require('./models/blog.model').default || require('./models/blog.model');
+    const ExamCategory =
+      require('./models/examCategory.model').default || require('./models/examCategory.model');
+
+    const [courses, blogs, exams] = await Promise.all([
+      Course.find({ isPublished: true })
+        .select('_id updatedAt')
+        .lean()
+        .limit(200)
+        .catch(() => []),
+      Blog.find({ status: 'published' })
+        .select('slug updatedAt')
+        .lean()
+        .limit(200)
+        .catch(() => []),
+      ExamCategory.find({ isActive: true })
+        .select('slug updatedAt')
+        .lean()
+        .limit(50)
+        .catch(() => []),
+    ]);
+
+    const staticUrls = [
+      { loc: '/', priority: '1.0', changefreq: 'daily' },
+      { loc: '/exams', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/courses', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/test-series', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/free-resources', priority: '0.8', changefreq: 'weekly' },
+      { loc: '/blog', priority: '0.8', changefreq: 'daily' },
+      { loc: '/jobs', priority: '0.8', changefreq: 'daily' },
+      { loc: '/daily-quiz', priority: '0.7', changefreq: 'daily' },
+      { loc: '/faculty', priority: '0.6', changefreq: 'monthly' },
+      { loc: '/about', priority: '0.5', changefreq: 'monthly' },
+      { loc: '/success-stories', priority: '0.5', changefreq: 'monthly' },
+      { loc: '/leaderboard', priority: '0.6', changefreq: 'weekly' },
+    ];
+
+    const toUrl = ({ loc, priority = '0.5', changefreq = 'weekly', lastmod }) =>
+      `<url><loc>${BASE_URL}${loc}</loc>${lastmod ? `<lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>` : ''}<changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
+
+    const xml = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+      ...staticUrls.map(toUrl),
+      ...exams.map((e) =>
+        toUrl({
+          loc: `/exams/${e.slug || e._id}`,
+          priority: '0.8',
+          changefreq: 'weekly',
+          lastmod: e.updatedAt,
+        })
+      ),
+      ...courses.map((c) =>
+        toUrl({
+          loc: `/courses/${c._id}`,
+          priority: '0.7',
+          changefreq: 'weekly',
+          lastmod: c.updatedAt,
+        })
+      ),
+      ...blogs.map((b) =>
+        toUrl({
+          loc: `/blog/${b.slug}`,
+          priority: '0.7',
+          changefreq: 'monthly',
+          lastmod: b.updatedAt,
+        })
+      ),
+      '</urlset>',
+    ].join('\n');
+
+    res.header('Content-Type', 'application/xml');
+    res.header('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  } catch (err) {
+    res
+      .status(500)
+      .send(
+        '<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+      );
+  }
 });
 
 // ===== SERVE FRONTEND IN PRODUCTION =====

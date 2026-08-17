@@ -192,7 +192,7 @@ export class AuthService {
     user.refreshTokens = user.refreshTokens.filter((t) => t.expiresAt > new Date());
     user.refreshTokens.push({
       token: hashToken(rawRefreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + (input.rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000),
       device: userAgent,
     });
     user.lastActiveAt = new Date();
@@ -226,7 +226,12 @@ export class AuthService {
     };
   }
 
-  async verifyMfaLogin(userId: string, token: string, userAgent: string): Promise<AuthResponseDto> {
+  async verifyMfaLogin(
+    userId: string,
+    token: string,
+    userAgent: string,
+    rememberMe: boolean = false
+  ): Promise<AuthResponseDto> {
     const user = await runWithTenant(null, true, () => this.authRepository.findByIdWithMfa(userId));
 
     if (!user || !user.isActive || !user.mfaEnabled || !user.mfaSecret) {
@@ -250,7 +255,7 @@ export class AuthService {
     user.refreshTokens = user.refreshTokens.filter((t) => t.expiresAt > new Date());
     user.refreshTokens.push({
       token: hashToken(rawRefreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000),
       device: userAgent,
     });
     user.lastActiveAt = new Date();

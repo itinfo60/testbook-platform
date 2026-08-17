@@ -1,3 +1,4 @@
+import SeoHead from '@/components/SeoHead';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '@/services/api';
@@ -200,6 +201,11 @@ export default function BlogList() {
   return (
     <div className="min-h-screen bg-dark-25 dark:bg-dark-950 py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SeoHead
+          title="Blog, Job Alerts & Preparation Strategies"
+          description="Latest RPSC job alerts, RAS preparation strategies, current affairs, and Political Science subject discussions."
+          type="website"
+        />
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider text-xs bg-blue-50 dark:bg-blue-950 px-3 py-1 rounded-full mb-3">
@@ -270,10 +276,61 @@ export default function BlogList() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBlogs.map((blog) => (
-              <BlogCard key={blog._id} blog={blog} />
-            ))}
+          <div className="space-y-6">
+            {/* Featured Article */}
+            {activeTab === 'all' &&
+              filteredBlogs.length > 0 &&
+              filteredBlogs[0].type !== 'job_alert' && (
+                <Link
+                  to={`/blog/${filteredBlogs[0].slug}`}
+                  className="group block bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 hover:border-amber-400 shadow-sm hover:shadow-xl transition-all overflow-hidden mb-2"
+                >
+                  <div className="flex flex-col lg:flex-row">
+                    <div className="lg:w-1/2 h-52 lg:h-auto bg-gradient-to-br from-blue-500 to-indigo-700 relative overflow-hidden flex-shrink-0">
+                      {filteredBlogs[0].coverImage?.url && (
+                        <img
+                          src={filteredBlogs[0].coverImage.url}
+                          alt={filteredBlogs[0].title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                      <span className="absolute top-4 left-4 bg-amber-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                        ⭐ Featured
+                      </span>
+                    </div>
+                    <div className="p-6 lg:p-8 flex flex-col justify-center lg:w-1/2">
+                      {filteredBlogs[0].examCategory?.name && (
+                        <span className="text-xs font-bold text-amber-600 mb-2 inline-block">
+                          🎯 {filteredBlogs[0].examCategory.name}
+                        </span>
+                      )}
+                      <h2 className="text-xl lg:text-2xl font-extrabold text-dark-900 dark:text-white mb-3 group-hover:text-amber-600 transition-colors line-clamp-3">
+                        {filteredBlogs[0].title}
+                      </h2>
+                      {filteredBlogs[0].excerpt && (
+                        <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">
+                          {filteredBlogs[0].excerpt}
+                        </p>
+                      )}
+                      <span className="text-amber-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Read Full Article <HiArrowRight className="h-4 w-4" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            {/* Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(activeTab === 'all' &&
+              filteredBlogs.length > 0 &&
+              filteredBlogs[0].type !== 'job_alert'
+                ? filteredBlogs.slice(1)
+                : filteredBlogs
+              ).map((blog) => (
+                <BlogCard key={blog._id} blog={blog} />
+              ))}
+            </div>
           </div>
         )}
       </div>

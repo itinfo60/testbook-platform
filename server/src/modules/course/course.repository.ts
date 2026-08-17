@@ -14,12 +14,24 @@ export class CourseRepository extends TenantRepository<ICourse> {
     const filter: any = {};
 
     if (query.category) {
-      const subcats = await ExamCategory.find({ parent: query.category }).distinct('_id');
-      if (subcats.length > 0) {
-        filter.category = { $in: [query.category, ...subcats] };
-      } else {
-        filter.category = query.category;
-      }
+      const categoryInputs = query.category.split(',').filter(Boolean);
+      // Find matching categories by either _id or slug
+      const matchedCats = await ExamCategory.find({
+        $or: [
+          { _id: { $in: categoryInputs.filter((id) => id.match(/^[0-9a-fA-F]{24}$/)) } },
+          { slug: { $in: categoryInputs } },
+        ],
+      }).distinct('_id');
+
+      const subcats = await ExamCategory.find({ parent: { $in: matchedCats } }).distinct('_id');
+      const allCategoryIds = [
+        ...new Set([
+          ...matchedCats.map((id) => id.toString()),
+          ...subcats.map((id) => id.toString()),
+        ]),
+      ];
+
+      filter.category = { $in: allCategoryIds.length > 0 ? allCategoryIds : categoryInputs };
     }
 
     if (query.level) {

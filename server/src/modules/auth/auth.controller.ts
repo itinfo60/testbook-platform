@@ -14,12 +14,12 @@ interface CustomRequest extends Request {
   user?: any;
 }
 
-const cookieOptions = {
+const getCookieOptions = (rememberMe: boolean = false) => ({
   httpOnly: true,
   secure: config.env === 'production',
   sameSite: (config.env === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-};
+  maxAge: (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000,
+});
 
 export class AuthController extends BaseController {
   private readonly authService: AuthService;
@@ -40,7 +40,7 @@ export class AuthController extends BaseController {
       userAgent
     );
 
-    res.cookie('refreshToken', result.tokens.refreshToken, cookieOptions);
+    res.cookie('refreshToken', result.tokens.refreshToken, getCookieOptions());
 
     return this.created(
       res,
@@ -65,7 +65,11 @@ export class AuthController extends BaseController {
     }
 
     const mfaResult = result as any;
-    res.cookie('refreshToken', mfaResult.tokens.refreshToken, cookieOptions);
+    res.cookie(
+      'refreshToken',
+      mfaResult.tokens.refreshToken,
+      getCookieOptions(req.body.rememberMe)
+    );
 
     return this.ok(
       res,
@@ -87,11 +91,15 @@ export class AuthController extends BaseController {
     if (!userId || !token) {
       throw ApiError.badRequest('User ID and MFA token are required');
     }
-
     const userAgent = req.headers['user-agent'] || 'unknown';
-    const result = await this.authService.verifyMfaLogin(userId, token, userAgent);
+    const result = await this.authService.verifyMfaLogin(
+      userId,
+      token,
+      userAgent,
+      req.body.rememberMe
+    );
 
-    res.cookie('refreshToken', result.tokens.refreshToken, cookieOptions);
+    res.cookie('refreshToken', result.tokens.refreshToken, getCookieOptions(req.body.rememberMe));
 
     return this.ok(
       res,
@@ -109,7 +117,7 @@ export class AuthController extends BaseController {
 
     const result = await this.authService.refreshToken(rawToken, userAgent);
 
-    res.cookie('refreshToken', result.newRefreshToken, cookieOptions);
+    res.cookie('refreshToken', result.newRefreshToken, getCookieOptions(req.body.rememberMe));
 
     return this.ok(res, { accessToken: result.accessToken }, 'Token refreshed');
   });
@@ -122,7 +130,7 @@ export class AuthController extends BaseController {
       await this.authService.logout(req.userId, rawRefreshToken, accessToken);
     }
 
-    res.clearCookie('refreshToken', cookieOptions);
+    res.clearCookie('refreshToken', getCookieOptions());
 
     return this.ok(res, null, 'Logged out successfully');
   });
@@ -172,7 +180,7 @@ export class AuthController extends BaseController {
     const userAgent = req.headers['user-agent'] || 'unknown';
     const result = await this.authService.changePassword(req.userId, req.body, userAgent);
 
-    res.cookie('refreshToken', result.newRefreshToken, cookieOptions);
+    res.cookie('refreshToken', result.newRefreshToken, getCookieOptions());
 
     return this.ok(res, { accessToken: result.accessToken }, 'Password changed successfully');
   });
@@ -251,7 +259,7 @@ export class AuthController extends BaseController {
       user.save({ validateBeforeSave: false })
     );
 
-    res.cookie('refreshToken', rawRefreshTokenStr, cookieOptions);
+    res.cookie('refreshToken', rawRefreshTokenStr, getCookieOptions(true));
 
     const redirectUrl = `${config.clientUrl}/auth/callback?token=${accessToken}`;
     return res.redirect(redirectUrl);

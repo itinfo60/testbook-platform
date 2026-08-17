@@ -62,7 +62,7 @@ export default function SearchResultsPage() {
         {loading && (
           <div className="py-20 text-center">
             <LoadingSpinner size="lg" />
-            <p className="text-slate-500 mt-4">Searching across EduPortal...</p>
+            <p className="text-slate-500 mt-4">Searching across EduHub...</p>
           </div>
         )}
 
@@ -96,7 +96,7 @@ export default function SearchResultsPage() {
               <section>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                   <HiAcademicCap className="h-6 w-6 text-primary-600" />
-                  Exam Portals ({results.exams.length})
+                  Exams ({results.exams.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {results.exams.map((exam) => (

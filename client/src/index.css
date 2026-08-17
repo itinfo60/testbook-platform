@@ -58,6 +58,35 @@
   ::selection {
     @apply bg-primary-100 text-primary-900 dark:bg-primary-900/40 dark:text-primary-200;
   }
+
+  /* Typography Optical Tracking (Premium Feel) */
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  }
+
+  h1 {
+    @apply text-[30px] sm:text-[40px] md:text-[48px] font-bold tracking-tight leading-tight;
+  }
+  h2 {
+    @apply text-[24px] sm:text-[30px] md:text-[36px] font-bold tracking-tight leading-tight;
+  }
+  h3 {
+    @apply text-[20px] sm:text-[22px] md:text-[26px] font-semibold tracking-tight leading-snug;
+  }
+
+  /* Smooth Interactive Defaults */
+  button, a {
+    @apply transition-all duration-200 ease-out;
+  }
+}
+
+@layer utilities {
+  .shadow-premium {
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.05), 0 2px 8px -2px rgba(0, 0, 0, 0.03);
+  }
+  .dark .shadow-premium {
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.2), 0 2px 8px -2px rgba(0, 0, 0, 0.1);
+  }
 }
 
 @layer components {
@@ -78,10 +107,10 @@
            transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .btn-accent {
-    @apply inline-flex items-center justify-center px-5 py-2.5 bg-accent-500 text-white font-semibold rounded-full
-           hover:bg-accent-600 active:bg-accent-700 active:scale-[0.98]
-           focus:outline-none focus:ring-2 focus:ring-accent-400/40 focus:ring-offset-2
+  .btn-warning {
+    @apply inline-flex items-center justify-center px-5 py-2.5 bg-warning-500 text-white font-semibold rounded-full
+           hover:bg-warning-600 active:bg-warning-700 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-warning-400/40 focus:ring-offset-2
            dark:focus:ring-offset-dark-900 transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
   }
@@ -108,9 +137,9 @@
   }
 
   .btn-success {
-    @apply inline-flex items-center justify-center px-5 py-2.5 bg-secondary-600 text-white font-semibold rounded-full
-           hover:bg-secondary-700 active:bg-secondary-800 active:scale-[0.98]
-           focus:outline-none focus:ring-2 focus:ring-secondary-500/40 focus:ring-offset-2
+    @apply inline-flex items-center justify-center px-5 py-2.5 bg-success-600 text-white font-semibold rounded-full
+           hover:bg-success-700 active:bg-success-800 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-success-500/40 focus:ring-offset-2
            transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -141,7 +170,7 @@
   }
 
   .badge-success {
-    @apply badge bg-secondary-50 text-secondary-700 dark:bg-secondary-900/30 dark:text-secondary-400;
+    @apply badge bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-400;
   }
 
   .badge-warning {
@@ -226,4 +255,26 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
+
+  /* ─── Continuous Marquee Animation ─────────────────────── */
+  @keyframes marqueeContinuous {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  .marquee-scroll-track {
+    display: flex !important;
+    width: max-content !important;
+    animation: marqueeContinuous 45s linear infinite !important;
+    will-change: transform;
+  }
+
+  .marquee-scroll-track:hover {
+    animation-play-state: paused !important;
+  }
 }
+

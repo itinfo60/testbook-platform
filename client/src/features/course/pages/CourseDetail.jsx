@@ -1,16 +1,7 @@
+import SeoHead from '@/components/SeoHead';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  HiClock,
-  HiBookOpen,
-  HiGlobe,
-  HiAcademicCap,
-  HiUsers,
-  HiHeart,
-  HiCheck,
-  HiPlay,
-} from 'react-icons/hi';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchCourseById } from '@/features/course/courseSlice';
 import { fetchCourseReviews } from '@/features/review/reviewSlice';
@@ -23,7 +14,20 @@ import Tabs from '@/components/common/Tabs';
 import Accordion from '@/components/common/Accordion';
 import { enrollmentAPI } from '@/services/api';
 import toast from 'react-hot-toast';
-import { HiVideoCamera, HiDocumentDownload } from 'react-icons/hi';
+import {
+  HiAcademicCap,
+  HiBadgeCheck,
+  HiBookOpen,
+  HiCheck,
+  HiClock,
+  HiDocumentDownload,
+  HiGlobe,
+  HiHeart,
+  HiPlay,
+  HiUsers,
+  HiVideoCamera,
+} from 'react-icons/hi';
+import { Link } from 'react-router-dom';
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -38,6 +42,7 @@ export default function CourseDetail() {
   const [checkingEnrollment, setCheckingEnrollment] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     dispatch(fetchCourseById(id));
     dispatch(fetchCourseReviews({ courseId: id }));
     if (isAuthenticated) {
@@ -82,7 +87,27 @@ export default function CourseDetail() {
     toast.success(wishlistMap[id] ? 'Removed from wishlist' : 'Added to wishlist');
   };
 
-  if (loading || checkingEnrollment || !course) return <LoadingSpinner fullScreen />;
+  if (loading || checkingEnrollment) return <LoadingSpinner fullScreen />;
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-5xl mb-4">📚</div>
+        <h2 className="text-2xl font-black text-dark-900 dark:text-white mb-2 font-display">
+          Course Not Found
+        </h2>
+        <p className="text-slate-500 max-w-md mb-6 text-sm">
+          The course you are looking for may have been updated or moved.
+        </p>
+        <Link
+          to="/courses"
+          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm"
+        >
+          Browse All Courses
+        </Link>
+      </div>
+    );
+  }
 
   const lessons = (course.sections || []).flatMap((s) => s.lessons || []);
 
@@ -100,95 +125,113 @@ export default function CourseDetail() {
     { key: 'instructor', label: 'Instructor' },
   ];
 
+  const rawTeacherName = course.teacher?.name;
+  const teacherName = rawTeacherName || 'Instructor';
+
   return (
     <div>
+      <SeoHead
+        title={course?.title || 'Course Detail'}
+        description={
+          course?.description?.substring(0, 160) ||
+          'Detailed course information, curriculum, and pricing.'
+        }
+        image={course?.thumbnail?.url || course?.thumbnail}
+        type="product"
+        jsonLd={
+          course
+            ? {
+                '@context': 'https://schema.org',
+                '@type': 'Course',
+                name: course.title,
+                description: course.description,
+                provider: { '@type': 'Organization', name: 'EduHub' },
+                offers: {
+                  '@type': 'Offer',
+                  price: course.discountedPrice || course.price || 0,
+                  priceCurrency: 'INR',
+                },
+              }
+            : null
+        }
+      />
       {/* Hero Section */}
-      <div className="bg-dark-900 dark:bg-dark-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+      <div className="bg-[#172554] relative overflow-hidden border-b border-blue-900/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 relative z-10">
+          <div className="grid lg:grid-cols-3 gap-8 lg:gap-12 mt-6">
             <div className="lg:col-span-2">
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {course.category && (
-                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950 px-2 py-1 rounded uppercase tracking-wider">
+                  <span className="text-[11px] font-bold text-white bg-blue-600/40 border border-blue-500/30 px-2.5 py-1 rounded uppercase tracking-widest backdrop-blur-sm">
                     {typeof course.category === 'string' ? course.category : course.category.name}
                   </span>
                 )}
                 {course.level && (
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950 px-2 py-1 rounded capitalize">
+                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded capitalize">
                     {course.level}
                   </span>
                 )}
-                <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-950 px-2 py-1 rounded flex items-center gap-1">
-                  <HiVideoCamera className="h-3 w-3" /> Live & Recorded
+                <span className="text-[11px] font-bold text-white bg-white/10 border border-white/10 px-2.5 py-1 rounded flex items-center gap-1.5 backdrop-blur-sm">
+                  <HiVideoCamera className="h-3.5 w-3.5" /> Live & Recorded
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-display text-white mb-4 leading-tight">
+
+              <h1 className="text-[30px] md:text-[42px] lg:text-[48px] font-extrabold text-white mb-5 leading-[1.15] tracking-tight">
                 {course.title}
               </h1>
-              <p className="text-slate-300 dark:text-slate-400 mb-6 text-sm sm:text-base line-clamp-3 leading-relaxed max-w-3xl">
+
+              <p className="text-blue-100/80 mb-8 text-[15px] sm:text-[17px] leading-relaxed max-w-3xl font-medium">
                 {course.description}
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6 bg-slate-800/50 p-4 rounded-2xl w-fit border border-slate-700/50">
-                <RatingStars
-                  rating={course.averageRating || 0}
-                  count={course.totalReviews}
-                  size="md"
-                />
-                <div className="w-px h-6 bg-slate-700 hidden sm:block"></div>
-                <span className="text-slate-300 flex items-center gap-1.5 text-sm font-medium">
-                  <HiUsers className="h-4 w-4 text-amber-500" />
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-8 bg-black/20 p-4 rounded-xl w-fit border border-white/5 backdrop-blur-sm">
+                <div className="flex items-center gap-1.5">
+                  <RatingStars
+                    rating={course.averageRating || 0}
+                    count={course.totalReviews}
+                    size="md"
+                  />
+                  <span className="text-white font-bold text-[14px] ml-1">
+                    {Number(course.averageRating || 0).toFixed(1)}
+                  </span>
+                </div>
+                <div className="w-px h-5 bg-white/10 hidden sm:block"></div>
+                <span className="text-blue-100 flex items-center gap-2 text-[14px] font-semibold">
+                  <HiUsers className="h-4 w-4 text-emerald-400" />
                   {course.enrollmentCount || 0} Aspirants
                 </span>
-                <div className="w-px h-6 bg-slate-700 hidden sm:block"></div>
-                <span className="text-slate-300 flex items-center gap-1.5 text-sm font-medium">
-                  <HiGlobe className="h-4 w-4 text-amber-500" />
+                <div className="w-px h-5 bg-white/10 hidden sm:block"></div>
+                <span className="text-blue-100 flex items-center gap-2 text-[14px] font-semibold">
+                  <HiGlobe className="h-4 w-4 text-emerald-400" />
                   {course.language || 'Hindi & English'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold flex-shrink-0 text-lg shadow-md">
-                  {course.teacher?.name?.charAt(0) || 'T'}
+              <div className="flex items-center gap-3.5">
+                <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 text-xl shadow-lg border-2 border-white/10">
+                  {teacherName.charAt(0)}
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm sm:text-base">
-                    {course.teacher?.name || 'Expert Faculty'}
-                  </p>
-                  <p className="text-amber-400 text-xs sm:text-sm font-medium">
-                    Subject Specialist
-                  </p>
+                  <p className="text-white font-bold text-[15px]">{teacherName}</p>
+                  <p className="text-blue-300 text-[13px] font-semibold">Expert Faculty</p>
                 </div>
               </div>
             </div>
 
             {/* Sidebar Card - Desktop */}
             <div className="hidden lg:block">
-              <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 border border-slate-200 dark:border-dark-800 shadow-xl sticky top-24">
-                {course.thumbnail?.url || course.thumbnail ? (
-                  <img
-                    src={course.thumbnail?.url || course.thumbnail}
-                    alt={course.title}
-                    className="w-full h-48 object-cover rounded-2xl mb-6 shadow-md"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-slate-100 dark:bg-dark-800 rounded-2xl mb-6 flex items-center justify-center text-slate-400 shadow-inner">
-                    <HiPlay className="h-12 w-12" />
-                  </div>
-                )}
-
-                <div className="mb-6">
+              <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 border border-dark-200 dark:border-dark-800 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] sticky top-24 transition-all duration-300">
+                <div className="mb-6 flex items-baseline gap-2">
                   <PriceTag
                     price={course.effectivePrice ?? course.price}
                     originalPrice={course.discountPrice > 0 ? course.price : undefined}
-                    size="lg"
+                    size="xl"
                   />
-                  <p className="text-xs text-red-500 font-bold mt-2">🔥 Limited Time Offer!</p>
                 </div>
 
                 <button
                   onClick={handleEnroll}
-                  className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all text-sm mb-3"
+                  className="w-full bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl shadow-md transition-all duration-300 text-[15px] mb-3 flex items-center justify-center gap-2"
                 >
                   {isEnrolled
                     ? 'Resume Learning'
@@ -198,34 +241,36 @@ export default function CourseDetail() {
                 </button>
                 <button
                   onClick={handleWishlist}
-                  className={`w-full py-3 flex items-center justify-center gap-2 rounded-xl border transition-colors text-sm font-bold ${wishlistMap[id] ? 'bg-red-50 text-red-500 border-red-200 dark:bg-red-900/20 dark:border-red-900/30' : 'bg-slate-50 dark:bg-dark-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-dark-700 hover:bg-slate-100 dark:hover:bg-dark-700'}`}
+                  className={`w-full py-3.5 flex items-center justify-center gap-2 rounded-xl border transition-colors text-[14px] font-bold ${wishlistMap[id] ? 'bg-red-50 text-red-500 border-red-200 dark:bg-red-900/20 dark:border-red-900/30' : 'bg-dark-50 dark:bg-dark-800 text-dark-700 dark:text-dark-300 border-dark-200 dark:border-dark-700 hover:bg-dark-100 dark:hover:bg-dark-700'}`}
                 >
                   <HiHeart className={`h-5 w-5 ${wishlistMap[id] ? 'fill-current' : ''}`} />
                   {wishlistMap[id] ? 'Wishlisted' : 'Add to Wishlist'}
                 </button>
 
-                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-dark-800 space-y-4">
-                  <h4 className="font-bold text-sm text-dark-900 dark:text-white">
-                    This course includes:
-                  </h4>
-                  {[
-                    {
-                      icon: HiVideoCamera,
-                      text: `${course.totalLessons || lessons.length} Live & Recorded Classes`,
-                    },
-                    { icon: HiClock, text: formatDuration(course.totalDuration) },
-                    { icon: HiDocumentDownload, text: 'Downloadable PDFs & Notes' },
-                    { icon: HiCheck, text: 'Test Series Included' },
-                    { icon: HiGlobe, text: '1 Year Validity' },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400"
-                    >
-                      <item.icon className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                      <span>{item.text}</span>
+                <div className="mt-6 border-t border-dark-100 dark:border-dark-800 pt-5">
+                  <p className="text-[12px] font-bold text-dark-400 dark:text-dark-500 uppercase tracking-wider mb-4">
+                    This course includes
+                  </p>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+                    <div className="flex items-center gap-2 text-[13px] text-dark-700 dark:text-dark-300 font-medium">
+                      <HiGlobe className="h-4 w-4 text-emerald-500 shrink-0" />
+                      <span className="truncate">{course.language || 'English & Hindi'}</span>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2 text-[13px] text-dark-700 dark:text-dark-300 font-medium">
+                      <HiVideoCamera className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span className="truncate">
+                        {course.totalLessons || lessons.length || '40+'} Lectures
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[13px] text-dark-700 dark:text-dark-300 font-medium">
+                      <HiBookOpen className="h-4 w-4 text-indigo-500 shrink-0" />
+                      <span className="truncate">Mock Tests</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[13px] text-dark-700 dark:text-dark-300 font-medium">
+                      <HiBadgeCheck className="h-4 w-4 text-amber-500 shrink-0" />
+                      <span className="truncate">Certificate</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -234,27 +279,26 @@ export default function CourseDetail() {
       </div>
 
       {/* Mobile Buy Bar (Sticky Bottom CTA) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-dark-900 border-t border-slate-200 dark:border-dark-800 p-4 pb-safe shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-dark-900 border-t border-dark-200 dark:border-dark-800 p-4 pb-safe shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4">
         <div>
           <PriceTag
             price={course.effectivePrice ?? course.price}
             originalPrice={course.discountPrice > 0 ? course.price : undefined}
             size="md"
           />
-          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">1 Year Validity</p>
         </div>
         <div className="flex gap-2.5 flex-1 justify-end max-w-[200px]">
           <button
             onClick={handleWishlist}
-            className="p-3.5 rounded-xl border border-slate-200 dark:border-dark-700 bg-slate-50 dark:bg-dark-800 active:scale-95 transition-transform flex-shrink-0"
+            className="p-3.5 rounded-xl border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 active:scale-95 transition-transform flex-shrink-0"
           >
             <HiHeart
-              className={`h-5 w-5 ${wishlistMap[id] ? 'text-red-500 fill-current' : 'text-slate-500'}`}
+              className={`h-5 w-5 ${wishlistMap[id] ? 'text-red-500 fill-current' : 'text-dark-500'}`}
             />
           </button>
           <button
             onClick={handleEnroll}
-            className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm whitespace-nowrap active:scale-95"
+            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all duration-300 text-sm whitespace-nowrap active:scale-95"
           >
             {isEnrolled ? 'Resume' : 'Buy Course'}
           </button>
@@ -267,26 +311,33 @@ export default function CourseDetail() {
           <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-8" />
 
           {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-3">
+            <div className="space-y-8">
+              <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80">
+                <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white mb-4">
                   About this Course
                 </h3>
-                <p className="text-dark-600 dark:text-dark-400 leading-relaxed">
+                <p className="text-[15px] text-dark-600 dark:text-dark-400 leading-relaxed">
                   {course.description}
                 </p>
               </div>
 
               {course.whatYouLearn?.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-3">
+                <div className="bg-[#F8FAFC] dark:bg-dark-900/50 rounded-[24px] p-6 sm:p-8 border border-dark-100 dark:border-dark-800">
+                  <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white mb-6">
                     What You'll Learn
                   </h3>
-                  <div className="grid sm:grid-cols-2 gap-2">
+                  <div className="grid sm:grid-cols-2 gap-4">
                     {course.whatYouLearn.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <HiCheck className="h-5 w-5 text-secondary-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-dark-600 dark:text-dark-400">{item}</span>
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 bg-white dark:bg-dark-900 p-4 rounded-xl border border-dark-100 dark:border-dark-800 shadow-sm"
+                      >
+                        <div className="bg-emerald-100 dark:bg-emerald-900/30 p-1 rounded-full flex-shrink-0 mt-0.5">
+                          <HiCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <span className="text-[14px] font-medium text-dark-700 dark:text-dark-300 leading-relaxed">
+                          {item}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -294,21 +345,21 @@ export default function CourseDetail() {
               )}
 
               {course.requirements && (
-                <div>
-                  <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-3">
+                <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80">
+                  <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white mb-4">
                     Requirements
                   </h3>
-                  <ul className="space-y-1">
+                  <ul className="space-y-3">
                     {(Array.isArray(course.requirements)
                       ? course.requirements
                       : [course.requirements]
                     ).map((req, i) => (
                       <li
                         key={i}
-                        className="text-sm text-dark-600 dark:text-dark-400 flex items-center gap-2"
+                        className="text-[15px] text-dark-600 dark:text-dark-400 flex items-start gap-3"
                       >
-                        <span className="h-1.5 w-1.5 bg-dark-400 rounded-full" />
-                        {req}
+                        <span className="h-2 w-2 bg-blue-600 rounded-full mt-2 flex-shrink-0" />
+                        <span className="leading-relaxed">{req}</span>
                       </li>
                     ))}
                   </ul>
@@ -318,10 +369,12 @@ export default function CourseDetail() {
           )}
 
           {activeTab === 'curriculum' && (
-            <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-dark-800">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-extrabold font-display">Course Curriculum</h3>
-                <span className="text-sm font-bold text-amber-600 bg-amber-50 dark:bg-amber-950 px-3 py-1 rounded-full">
+            <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80 transition-all duration-300">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b border-dark-100 dark:border-dark-800 pb-6">
+                <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white">
+                  Course Curriculum
+                </h3>
+                <span className="text-[13px] font-bold text-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:text-primary-400 px-4 py-1.5 rounded-full">
                   {course.totalLessons || lessons.length} lessons •{' '}
                   {formatDuration(course.totalDuration)}
                 </span>
@@ -333,27 +386,27 @@ export default function CourseDetail() {
                     title: section.title,
                     subtitle: `${section.lessons?.length || 0} lessons`,
                     content: (
-                      <div className="space-y-2 py-2">
+                      <div className="space-y-2 py-3 px-2">
                         {(section.lessons || []).map((lesson, li) => (
                           <div
                             key={li}
-                            className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors group cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-dark-700"
+                            className="flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-[#F8FAFC] dark:hover:bg-dark-800/50 transition-colors group cursor-pointer border border-transparent hover:border-dark-100 dark:hover:border-dark-700"
                           >
                             <div
-                              className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${lesson.isFree ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600' : 'bg-slate-100 dark:bg-dark-800 text-slate-400'}`}
+                              className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${lesson.isFree ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 group-hover:bg-primary-200' : 'bg-dark-50 dark:bg-dark-800 text-dark-400 group-hover:bg-dark-100 dark:group-hover:bg-dark-700'}`}
                             >
-                              <HiPlay className="h-4 w-4 ml-0.5" />
+                              <HiPlay className="h-5 w-5 ml-0.5" />
                             </div>
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-dark-900 dark:group-hover:text-white transition-colors">
+                            <span className="text-[15px] font-semibold text-dark-700 dark:text-dark-300 group-hover:text-[#172554] dark:group-hover:text-white transition-colors">
                               {lesson.title}
                             </span>
 
                             {lesson.isFree ? (
-                              <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded">
+                              <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-1 rounded-md">
                                 Demo Class
                               </span>
                             ) : (
-                              <HiClock className="ml-auto h-4 w-4 text-slate-300" />
+                              <HiClock className="ml-auto h-4 w-4 text-dark-300 dark:text-dark-600" />
                             )}
                           </div>
                         ))}
@@ -362,9 +415,9 @@ export default function CourseDetail() {
                   }))}
                 />
               ) : (
-                <div className="text-center py-10 bg-slate-50 dark:bg-dark-800 rounded-2xl border border-dashed border-slate-200 dark:border-dark-700">
-                  <HiBookOpen className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500 font-medium text-sm">
+                <div className="text-center py-16 bg-[#F8FAFC] dark:bg-dark-900/50 rounded-2xl border border-dashed border-dark-200 dark:border-dark-800">
+                  <HiBookOpen className="h-12 w-12 text-dark-300 dark:text-dark-600 mx-auto mb-4" />
+                  <p className="text-dark-500 font-medium text-[15px]">
                     Curriculum is being updated by the faculty.
                   </p>
                 </div>
@@ -386,21 +439,23 @@ export default function CourseDetail() {
           )}
 
           {activeTab === 'instructor' && (
-            <div className="card p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-2xl font-bold">
-                  {course.teacher?.name?.charAt(0) || 'T'}
+            <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80 transition-all duration-300">
+              <div className="flex items-center gap-5 mb-6 pb-6 border-b border-dark-100 dark:border-dark-800">
+                <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-lg border-4 border-blue-50">
+                  {teacherName.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-dark-900 dark:text-white">
-                    {course.teacher?.name || 'Instructor'}
+                  <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white mb-1">
+                    {teacherName}
                   </h3>
-                  <p className="text-dark-500">Expert Instructor</p>
+                  <p className="text-primary-600 dark:text-primary-400 font-medium text-[15px]">
+                    Expert Instructor
+                  </p>
                 </div>
               </div>
-              <p className="text-dark-600 dark:text-dark-400">
+              <p className="text-[15px] text-dark-600 dark:text-dark-400 leading-relaxed max-w-3xl">
                 {course.teacher?.bio ||
-                  'An experienced educator passionate about helping students achieve their goals.'}
+                  'An experienced educator passionate about helping students achieve their goals through structured learning and comprehensive test series.'}
               </p>
             </div>
           )}

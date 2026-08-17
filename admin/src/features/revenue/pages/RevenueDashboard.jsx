@@ -16,6 +16,7 @@ import {
 
 // Actions
 import { fetchRevenue, fetchMonthlyRevenue } from '@/features/revenue/revenueSlice';
+import { revenueAPI } from '@/services/api';
 
 // Components
 import StatsCard from '@/components/StatsCard';
@@ -26,13 +27,18 @@ import { formatCurrency, formatNumber } from '@/utils';
 
 export default function RevenueDashboard() {
   const dispatch = useDispatch();
-  const { data, monthly, loading } = useSelector((s) => s.revenue);
+  const { data, loading } = useSelector((s) => s.revenue);
   const [period, setPeriod] = useState('30');
+  const [localMonthly, setLocalMonthly] = useState([]);
 
-  // In RevenueDashboard.jsx, change the useEffect to handle errors:
   useEffect(() => {
     dispatch(fetchRevenue({ period })).catch(() => {});
-    dispatch(fetchMonthlyRevenue({ months: 12 })).catch(() => {});
+    revenueAPI
+      .getMonthly()
+      .then((res) => {
+        setLocalMonthly(res.data?.data || []);
+      })
+      .catch(() => {});
   }, [dispatch, period]);
 
   if (loading && !data)
@@ -61,27 +67,18 @@ export default function RevenueDashboard() {
     'Nov',
     'Dec',
   ];
-  const hasDaily = Array.isArray(d.dailyRevenue) && d.dailyRevenue.length > 0;
-  const monthlyData = hasDaily
-    ? d.dailyRevenue.map((r) => ({
-        month: r._id || r.date || '',
-        revenue: r.revenue || 0,
-        orders: r.orders || 0,
-      }))
-    : [
-        { month: 'Jan', revenue: 45000, orders: 32 },
-        { month: 'Feb', revenue: 52000, orders: 41 },
-        { month: 'Mar', revenue: 48000, orders: 38 },
-        { month: 'Apr', revenue: 61000, orders: 55 },
-        { month: 'May', revenue: 55000, orders: 48 },
-        { month: 'Jun', revenue: 67000, orders: 62 },
-        { month: 'Jul', revenue: 72000, orders: 68 },
-        { month: 'Aug', revenue: 68000, orders: 59 },
-        { month: 'Sep', revenue: 75000, orders: 71 },
-        { month: 'Oct', revenue: 82000, orders: 78 },
-        { month: 'Nov', revenue: 79000, orders: 74 },
-        { month: 'Dec', revenue: 91000, orders: 85 },
-      ];
+  const monthlyData = Array.isArray(localMonthly)
+    ? localMonthly.map((r) => {
+        let m = r.month || r._id;
+        if (typeof m === 'object' && m.month) m = m.month;
+        const monthName = typeof m === 'number' ? MONTH_ABBR[m - 1] : m;
+        return {
+          month: monthName || '',
+          revenue: r.revenue || 0,
+          orders: r.orders || r.count || 0,
+        };
+      })
+    : [];
 
   return (
     <div className="space-y-6 animate-fade-in">

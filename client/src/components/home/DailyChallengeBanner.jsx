@@ -12,11 +12,18 @@ export default function DailyChallengeBanner() {
                 <HiLightningBolt className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
               </div>
               <div>
-                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Daily Challenge</h3>
-                <p className="text-sm sm:text-base text-white/80">Complete today's challenge and earn bonus points!</p>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+                  Daily Challenge
+                </h3>
+                <p className="text-sm sm:text-base text-white/80">
+                  Complete today's challenge and earn bonus points!
+                </p>
               </div>
             </div>
-            <Link to="/tests" className="inline-flex items-center gap-2 bg-white text-accent-600 font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-white/90 transition-all flex-shrink-0 w-full sm:w-auto justify-center">
+            <Link
+              to="/daily-quiz"
+              className="inline-flex items-center gap-2 bg-white text-accent-600 font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-white/90 transition-all flex-shrink-0 w-full sm:w-auto justify-center"
+            >
               Start Challenge <HiArrowRight className="h-4 w-4" />
             </Link>
           </div>

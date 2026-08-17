@@ -123,6 +123,9 @@ export class PaymentController extends BaseController {
   });
 
   dummyCheckout = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ success: false, message: 'Not found' });
+    }
     const { courseId, testId, couponCode } = req.body;
     if (!req.userId) throw ApiError.unauthorized();
 
@@ -134,27 +137,42 @@ export class PaymentController extends BaseController {
     let amount = 0;
 
     if (courseId) {
-      item = await Course.findById(courseId);
+      if (typeof courseId === 'string' && courseId.match(/^[0-9a-fA-F]{24}$/)) {
+        item = await Course.findById(courseId);
+      }
+      if (!item) {
+        item = await Course.findOne({ slug: courseId });
+      }
       if (!item) throw ApiError.notFound('Course not found');
       amount = item.effectivePrice;
 
       const existing = await Enrollment.findOne({
         user: req.userId,
-        course: courseId,
+        course: item._id,
         status: { $in: ['active', 'completed'] },
       });
       if (existing) throw ApiError.conflict('Already enrolled in this course');
     } else {
-      item = await Test.findById(testId);
+      if (typeof testId === 'string' && testId.match(/^[0-9a-fA-F]{24}$/)) {
+        item = await Test.findById(testId);
+      }
       if (!item) {
-        item = await TestSeries.findById(testId);
+        item = await Test.findOne({ slug: testId });
+      }
+      if (!item) {
+        if (typeof testId === 'string' && testId.match(/^[0-9a-fA-F]{24}$/)) {
+          item = await TestSeries.findById(testId);
+        }
+        if (!item) {
+          item = await TestSeries.findOne({ slug: testId });
+        }
       }
       if (!item || !item.isPublished) throw ApiError.notFound('Test or Test Series not found');
       amount = item.price || 0;
 
       const existing = await Enrollment.findOne({
         user: req.userId,
-        $or: [{ test: testId }, { testSeries: testId }],
+        $or: [{ test: item._id }, { testSeries: item._id }],
         status: { $in: ['active', 'completed'] },
       });
       if (existing) throw ApiError.conflict('Already purchased test or test series');
@@ -190,10 +208,10 @@ export class PaymentController extends BaseController {
       metadata: { demo: true },
       tenantId: new mongoose.Types.ObjectId(req.tenantId || undefined),
     };
-    if (courseId) paymentData.course = new mongoose.Types.ObjectId(courseId);
+    if (courseId) paymentData.course = item._id;
     if (testId) {
-      paymentData.test = new mongoose.Types.ObjectId(testId);
-      paymentData.testSeries = new mongoose.Types.ObjectId(testId);
+      paymentData.test = item._id;
+      paymentData.testSeries = item._id;
     }
 
     if (appliedCoupon) {
@@ -210,10 +228,10 @@ export class PaymentController extends BaseController {
       paymentId: payment._id,
       status: 'active',
     };
-    if (courseId) enrollmentData.course = new mongoose.Types.ObjectId(courseId);
+    if (courseId) enrollmentData.course = item._id;
     if (testId) {
-      enrollmentData.test = new mongoose.Types.ObjectId(testId);
-      enrollmentData.testSeries = new mongoose.Types.ObjectId(testId);
+      enrollmentData.test = item._id;
+      enrollmentData.testSeries = item._id;
     }
 
     const enrollment = await Enrollment.create(enrollmentData);
@@ -226,7 +244,7 @@ export class PaymentController extends BaseController {
     }
 
     if (courseId) {
-      await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
+      await Course.findByIdAndUpdate(item._id, { $inc: { enrollmentCount: 1 } });
       await User.findByIdAndUpdate(req.userId, { $inc: { enrolledCourses: 1 } });
       await redis.delPattern('courses:*');
       await transactionalEmailQueue
@@ -243,7 +261,7 @@ export class PaymentController extends BaseController {
           tenantId: req.tenantId,
           title: 'Payment Successful',
           message: `You are now enrolled in "${item.title}"`,
-          data: { courseId },
+          data: { courseId: item._id },
         })
         .catch(() => {});
     }

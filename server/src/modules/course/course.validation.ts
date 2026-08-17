@@ -74,7 +74,7 @@ export const courseQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(12),
   search: z.string().trim().max(100).optional(),
-  category: objectId.optional(),
+  category: z.string().optional(),
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   priceMin: z.coerce.number().min(0).optional(),
   priceMax: z.coerce.number().min(0).optional(),

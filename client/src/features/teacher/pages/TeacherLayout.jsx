@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import {
-  HiChartBar,
-  HiBookOpen,
-  HiClipboardList,
-  HiPuzzle,
-  HiUsers,
-  HiCurrencyRupee,
-  HiChat,
-  HiCalendar,
   HiArrowLeft,
+  HiBookOpen,
+  HiCalendar,
+  HiChartBar,
+  HiChat,
+  HiClipboardList,
+  HiCurrencyRupee,
   HiMenu,
-  HiX,
-  HiVideoCamera,
+  HiNewspaper,
+  HiPuzzle,
   HiSparkles,
+  HiUsers,
+  HiVideoCamera,
+  HiX,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -21,14 +22,10 @@ const navItems = [
   { path: '/teacher/courses', icon: HiBookOpen, label: 'Courses' },
   { path: '/teacher/tests', icon: HiClipboardList, label: 'Tests' },
   { path: '/teacher/quizzes', icon: HiPuzzle, label: 'Quizzes' },
-  { path: '/teacher/students', icon: HiUsers, label: 'Students' },
-  { path: '/teacher/attendance', icon: HiCalendar, label: 'Attendance' },
   { path: '/teacher/live-classes', icon: HiVideoCamera, label: 'Live Classes' },
-  { path: '/teacher/revenue', icon: HiCurrencyRupee, label: 'Revenue' },
+  { path: '/teacher/blogs', icon: HiNewspaper, label: 'Blogs & Updates' },
+  { path: '/teacher/students', icon: HiUsers, label: 'Students' },
   { path: '/teacher/discussions', icon: HiChat, label: 'Discussions' },
-  { path: '/messages', icon: HiChat, label: 'Parent Messages' },
-  { path: '/ai/questions', icon: HiSparkles, label: 'AI Questions' },
-  { path: '/ai/quiz-generator', icon: HiSparkles, label: 'AI Quiz Generator' },
 ];
 
 export default function TeacherLayout() {

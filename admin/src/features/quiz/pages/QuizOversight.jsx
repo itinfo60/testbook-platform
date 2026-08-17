@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Brain, Eye, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Actions
 import { fetchQuizzes, deleteQuiz } from '@/features/quiz/quizSlice';
@@ -14,6 +15,7 @@ import { getStatusColor, formatDate, truncate } from '@/utils';
 import useDebounce from '@/hooks/useDebounce';
 
 export default function QuizOversight() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { list, pagination, loading } = useSelector((s) => s.quizzes);
   const [page, setPage] = useState(1);
@@ -24,18 +26,28 @@ export default function QuizOversight() {
   const debouncedSearch = useDebounce(search);
 
   const load = useCallback(() => {
-    dispatch(fetchQuizzes({ page, limit: 10, search: debouncedSearch, sort: sortField, order: sortOrder }));
+    dispatch(
+      fetchQuizzes({ page, limit: 10, search: debouncedSearch, sort: sortField, order: sortOrder })
+    );
   }, [dispatch, page, debouncedSearch, sortField, sortOrder]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortOrder('asc'); }
+    else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
   };
 
   const handleDelete = async () => {
-    if (deleteTarget) { await dispatch(deleteQuiz(deleteTarget)); setDeleteTarget(null); }
+    if (deleteTarget) {
+      await dispatch(deleteQuiz(deleteTarget));
+      setDeleteTarget(null);
+    }
   };
 
   const columns = [
@@ -64,7 +76,7 @@ export default function QuizOversight() {
     {
       key: 'passingScore',
       label: 'Pass %',
-      render: (val) => val ? `${val}%` : 'N/A',
+      render: (val) => (val ? `${val}%` : 'N/A'),
     },
     {
       key: 'status',
@@ -83,7 +95,9 @@ export default function QuizOversight() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Quiz Oversight</h2>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Monitor all quizzes across the platform</p>
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
+          Monitor all quizzes across the platform
+        </p>
       </div>
 
       <DataTable
@@ -94,7 +108,10 @@ export default function QuizOversight() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search quizzes..."
         sortField={sortField}
         sortOrder={sortOrder}
@@ -103,10 +120,18 @@ export default function QuizOversight() {
         emptyIcon={Brain}
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="View">
+            <button
+              onClick={() => navigate(`/quizzes/${row._id}`)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="View"
+            >
               <Eye className="w-4 h-4 text-blue-600" />
             </button>
-            <button onClick={() => setDeleteTarget(row._id)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Delete">
+            <button
+              onClick={() => setDeleteTarget(row._id)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Delete"
+            >
               <Trash2 className="w-4 h-4 text-red-600" />
             </button>
           </div>

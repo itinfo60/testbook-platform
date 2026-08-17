@@ -1,5 +1,5 @@
 export const EDU_PORTAL_DATA = {
-  portalName: 'EduPortal',
+  portalName: 'EduHub',
   tagline: 'RPSC & Political Science Specialist Academy',
   subTagline: 'Rajasthan State Exams & Assistant Professor / PGT Exam Preparation Platform',
 

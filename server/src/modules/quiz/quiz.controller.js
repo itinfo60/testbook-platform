@@ -7,6 +7,37 @@ import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import { buildPaginationQuery } from '../../utils/pagination.js';
 
+export const getAllQuizzes = catchAsync(async (req, res) => {
+  const pagination = buildPaginationQuery(req.query);
+
+  const filter = { isPublished: true };
+  if (req.query.type) filter.type = req.query.type;
+  if (req.query.courseId) filter.course = req.query.courseId;
+  if (req.query.search) {
+    filter.$or = [
+      { title: { $regex: req.query.search, $options: 'i' } },
+      { description: { $regex: req.query.search, $options: 'i' } },
+    ];
+  }
+
+  const result = await Quiz.paginate(filter, {
+    ...pagination,
+    select: '-questions.options.isCorrect',
+    populate: [
+      { path: 'course', select: 'title slug thumbnail' },
+      { path: 'examCategory', select: 'name slug' },
+    ],
+    sort: '-createdAt',
+  });
+
+  ApiResponse.paginated(res, {
+    docs: result.docs,
+    page: result.pagination.page,
+    limit: result.pagination.limit,
+    total: result.pagination.total,
+  });
+});
+
 export const getCourseQuizzes = catchAsync(async (req, res) => {
   const quizzes = await Quiz.find({
     course: req.params.courseId,
@@ -61,10 +92,10 @@ export const submitQuiz = catchAsync(async (req, res) => {
     let isCorrect = false;
 
     if (typeof selectedOptionVal === 'number' && selectedOptionVal < question.options.length) {
-       isCorrect = question.options[selectedOptionVal].isCorrect;
+      isCorrect = question.options[selectedOptionVal].isCorrect;
     } else {
-       const option = question.options.id(selectedOptionVal);
-       isCorrect = option ? option.isCorrect : false;
+      const option = question.options.id(selectedOptionVal);
+      isCorrect = option ? option.isCorrect : false;
     }
 
     if (isCorrect) correctCount++;
@@ -103,13 +134,29 @@ export const submitQuiz = catchAsync(async (req, res) => {
     averageScore: Math.round(avgScore[0]?.avg || 0),
   });
 
-  ApiResponse.ok(res, {
-    score: correctCount,
-    totalQuestions,
-    percentage,
-    isPassed,
-    answers: gradedAnswers,
-  }, 'Quiz submitted');
+  ApiResponse.ok(
+    res,
+    {
+      score: correctCount,
+      totalQuestions,
+      percentage,
+      isPassed,
+      answers: gradedAnswers,
+    },
+    'Quiz submitted'
+  );
+});
+
+export const getQuizById = catchAsync(async (req, res) => {
+  const quiz = await Quiz.findOne({ _id: req.params.id, isPublished: true })
+    .select('-questions.options.isCorrect')
+    .lean();
+
+  if (!quiz) throw ApiError.notFound('Quiz not found or not published');
+
+  // We could also check enrollment here if needed, but for now just return the quiz
+
+  ApiResponse.ok(res, { quiz });
 });
 
 // Teacher
@@ -129,11 +176,10 @@ export const createQuiz = catchAsync(async (req, res) => {
 });
 
 export const updateQuiz = catchAsync(async (req, res) => {
-  const quiz = await Quiz.findOneAndUpdate(
-    { _id: req.params.id, teacher: req.userId },
-    req.body,
-    { new: true, runValidators: true }
-  );
+  const quiz = await Quiz.findOneAndUpdate({ _id: req.params.id, teacher: req.userId }, req.body, {
+    new: true,
+    runValidators: true,
+  });
   if (!quiz) throw ApiError.notFound('Quiz not found');
   ApiResponse.ok(res, { quiz }, 'Quiz updated');
 });

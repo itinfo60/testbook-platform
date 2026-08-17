@@ -67,49 +67,8 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
       // Fetch from DB
       tenant = await Institute.findById(tenantIdHeader).lean();
       if (!tenant) {
-        // Ensure a starter subscription plan exists
-        let plan = await SubscriptionPlan.findOne({ name: 'starter' });
-        if (!plan) {
-          plan = await SubscriptionPlan.create({
-            name: 'starter',
-            price: 0,
-            studentLimit: 100,
-            teacherLimit: 5,
-            storageLimit: 10 * 1024 * 1024 * 1024,
-            features: [],
-          });
-        }
-        // Create a dummy admin user for the institute owner
-        const dummyOwnerEmail = `auto-owner-${tenantIdHeader}@example.com`;
-        const existingOwner = await User.findOne({ email: dummyOwnerEmail });
-        const ownerId = existingOwner
-          ? existingOwner._id
-          : (
-              await User.create({
-                name: 'Auto Owner',
-                email: dummyOwnerEmail,
-                password: 'TempPass123!',
-                role: 'admin',
-                tenantId: tenantIdHeader,
-                isEmailVerified: true,
-              })
-            )._id;
-
-        tenant = (
-          await Institute.create({
-            _id: new Types.ObjectId(tenantIdHeader),
-            name: 'Auto-Created Institute',
-            subdomain: `auto-${tenantIdHeader}`,
-            isActive: true,
-            owner: ownerId,
-            subscription: {
-              plan: plan._id,
-              status: 'active',
-              expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-            },
-            limits: { studentLimit: 1000, teacherLimit: 100, storageLimit: 10_737_418_240 },
-          })
-        ).toObject();
+        // If tenant not found, return error - do not auto-create
+        return res.status(404).json({ success: false, message: 'Institute not found' });
       }
       // Cache the result (whether newly created or fetched)
       await setTenantCache(`id:${tenantIdHeader}`, tenant);

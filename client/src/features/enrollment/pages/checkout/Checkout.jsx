@@ -16,6 +16,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import PriceTag from '@/components/common/PriceTag';
 import { Button, Input } from '@/components/ui';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 export default function Checkout() {
   const { id } = useParams();
@@ -87,19 +88,20 @@ export default function Checkout() {
   const handleFreeEnroll = async () => {
     if (isTest) {
       // Free tests can be started directly, so we just redirect them to start test
-      navigate(`/tests/${id}/take`);
+      navigate(`/tests/${item?.slug || id}/take`);
       return;
     }
+    const resolvedCourseId = item?._id || id;
     try {
-      await dispatch(enrollInCourse({ courseId: id })).unwrap();
+      await dispatch(enrollInCourse({ courseId: resolvedCourseId })).unwrap();
       toast.success('Enrolled successfully!');
       navigate('/checkout/success', {
-        state: { courseId: id, itemName: item.title, free: true, isTest: false },
+        state: { courseId: resolvedCourseId, itemName: item?.title, free: true, isTest: false },
       });
     } catch (err) {
       if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
         toast.success('You are already enrolled in this course!');
-        navigate(`/courses/${id}/learn`);
+        navigate(`/courses/${item?.slug || id}/learn`);
       } else {
         toast.error(err || 'Enrollment failed');
       }
@@ -112,7 +114,8 @@ export default function Checkout() {
       return;
     }
     try {
-      const payload = isTest ? { testId: id } : { courseId: id };
+      const resolvedId = item?._id || id;
+      const payload = isTest ? { testId: resolvedId } : { courseId: resolvedId };
       if (coupon) {
         payload.couponCode = coupon.coupon?.code || coupon.code;
       }
@@ -120,13 +123,13 @@ export default function Checkout() {
       toast.success(`Payment successful! Purchased ${isTest ? 'test' : 'course'}.`);
       navigate('/checkout/success', {
         state: isTest
-          ? { testId: id, itemName: item.title, isTest: true }
-          : { courseId: id, itemName: item.title, isTest: false },
+          ? { testId: resolvedId, itemName: item?.title, isTest: true }
+          : { courseId: resolvedId, itemName: item?.title, isTest: false },
       });
     } catch (err) {
       if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
         toast.success(`You are already enrolled in this ${isTest ? 'test' : 'course'}!`);
-        navigate(isTest ? `/tests/${id}/take` : `/courses/${id}/learn`);
+        navigate(isTest ? `/tests/${item?.slug || id}/take` : `/courses/${item?.slug || id}/learn`);
       } else {
         toast.error(err || 'Payment failed');
       }
@@ -139,35 +142,96 @@ export default function Checkout() {
         Secure Checkout
       </h1>
 
-      {/* Course card */}
-      <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 mb-6 border border-slate-200 dark:border-dark-800 shadow-sm flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start text-center sm:text-left">
-        <div className="h-24 w-36 sm:h-28 sm:w-40 rounded-2xl bg-slate-100 dark:bg-dark-800 flex-shrink-0 overflow-hidden relative shadow-sm">
-          {item.thumbnail?.url || item.thumbnail ? (
+      {/* Informative & Clickable Course/Test Card */}
+      <Link
+        to={
+          isTest
+            ? item?.isSeries
+              ? `/test-series/${item?.slug || id}`
+              : `/tests/${item?.slug || id}`
+            : `/courses/${item?.slug || id}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group bg-white dark:bg-dark-900 rounded-3xl p-5 sm:p-6 mb-6 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start text-left block"
+      >
+        <div className="h-28 w-44 sm:h-32 sm:w-48 rounded-2xl bg-amber-50 dark:bg-dark-800 flex-shrink-0 overflow-hidden relative shadow-sm border border-slate-100 dark:border-dark-700">
+          {item.thumbnail?.url || (typeof item.thumbnail === 'string' && item.thumbnail) ? (
             <img
               src={item.thumbnail?.url || item.thumbnail}
               alt={item.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-4xl">📘</div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+          <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md">
+            {isTest ? 'Test Series' : 'Course'}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-dark-900 dark:text-white line-clamp-2 text-lg sm:text-xl">
-            {item.title}
-          </h3>
-          <p className="text-sm font-bold text-amber-600 dark:text-amber-500 mt-1 uppercase tracking-wider">
-            {item.teacher?.name || 'EduPortal Faculty'}
+
+        <div className="flex-1 min-w-0 w-full space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-extrabold text-dark-900 dark:text-white line-clamp-2 text-base sm:text-lg group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+              {item.title}
+            </h3>
+            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 group-hover:underline flex-shrink-0 hidden sm:inline-block">
+              View details ↗
+            </span>
+          </div>
+
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+            By{' '}
+            <span className="text-dark-900 dark:text-white font-black">
+              {item.teacher?.name || 'EduPortal Expert Faculty'}
+            </span>
           </p>
-          <PriceTag
-            price={effectivePrice}
-            originalPrice={item.discountPrice > 0 ? item.price : undefined}
-            size="md"
-            className="mt-3 justify-center sm:justify-start"
-          />
+
+          {/* High-Yield Meta Chips */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            {!isTest && (
+              <>
+                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
+                  📚{' '}
+                  {item.totalLessons ||
+                    item.sections?.reduce((acc, s) => acc + (s.lessons?.length || 0), 0) ||
+                    24}{' '}
+                  Lessons
+                </span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
+                  📄 PDF Notes & Handouts
+                </span>
+              </>
+            )}
+            {isTest && (
+              <>
+                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
+                  📝 {item.questionsCount || item.tests?.length || 10} Mock Tests
+                </span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
+                  🎯 Full Solutions & Rank
+                </span>
+              </>
+            )}
+            <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold">
+              ⚡ Instant Access
+            </span>
+          </div>
+
+          <div className="pt-2">
+            <PriceTag
+              price={effectivePrice}
+              originalPrice={
+                item.discountPrice > 0 || (item.price && item.price > effectivePrice)
+                  ? item.price
+                  : undefined
+              }
+              size="md"
+              className="justify-start"
+            />
+          </div>
         </div>
-      </div>
+      </Link>
 
       {/* Coupon — only for paid courses/tests */}
       {!isFree && (

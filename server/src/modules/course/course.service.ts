@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { CourseRepository } from './course.repository.js';
 import { ICourse } from './course.model.js';
 import { CreateCourseInput, UpdateCourseInput, CourseQueryInput } from './course.validation.js';
@@ -70,6 +71,11 @@ export class CourseService {
             dripDays: lesson.dripDays,
             content: lesson.isFree ? lesson.content : undefined,
             videoUrl: lesson.isFree ? lesson.videoUrl : undefined,
+            resources: lesson.isFree
+              ? lesson.resources
+              : lesson.resources?.map((r: any) => ({ title: r.title, type: r.type })),
+            quizId: lesson.quizId,
+            testSeriesSlug: lesson.testSeriesSlug,
           };
         }
 
@@ -94,12 +100,23 @@ export class CourseService {
   }
 
   async getCourseById(id: string, userId: string | null): Promise<any> {
-    const course = await this.courseRepository.findById(id, null, {
-      populate: [
-        { path: 'teacher', select: 'name avatar' },
-        { path: 'category', select: 'name slug' },
-      ],
-    });
+    let course: any = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      course = await this.courseRepository.findById(id, null, {
+        populate: [
+          { path: 'teacher', select: 'name avatar' },
+          { path: 'category', select: 'name slug' },
+        ],
+      });
+    }
+    if (!course) {
+      course = await this.courseRepository.findOne({ slug: id } as any, null, {
+        populate: [
+          { path: 'teacher', select: 'name avatar' },
+          { path: 'category', select: 'name slug' },
+        ],
+      });
+    }
 
     if (!course) {
       throw ApiError.notFound('Course not found');
@@ -139,6 +156,11 @@ export class CourseService {
             dripDays: lesson.dripDays,
             content: lesson.isFree ? lesson.content : undefined,
             videoUrl: lesson.isFree ? lesson.videoUrl : undefined,
+            resources: lesson.isFree
+              ? lesson.resources
+              : lesson.resources?.map((r: any) => ({ title: r.title, type: r.type })),
+            quizId: lesson.quizId,
+            testSeriesSlug: lesson.testSeriesSlug,
           };
         }
 
@@ -303,6 +325,50 @@ export class CourseService {
 
     await redis.set(cacheKey, { courses }, 1800); // 30 min cache
     return courses;
+  }
+
+  async getSampleClasses(): Promise<any[]> {
+    const cacheKey = 'courses:samples';
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return (cached as any).samples;
+    }
+
+    // Find courses with at least one free lesson
+    const courses = await this.courseRepository.find(
+      { isPublished: true, 'sections.lessons.isFree': true },
+      'title slug thumbnail teacher sections',
+      {
+        populate: [{ path: 'teacher', select: 'name avatar' }],
+        limit: 10,
+      }
+    );
+
+    const samples: any[] = [];
+    courses.forEach((course: any) => {
+      course.sections.forEach((section: any) => {
+        section.lessons.forEach((lesson: any) => {
+          if (lesson.isFree && lesson.type === 'video') {
+            samples.push({
+              _id: lesson._id,
+              courseId: course._id,
+              courseTitle: course.title,
+              courseSlug: course.slug,
+              teacher: course.teacher,
+              thumbnail: course.thumbnail,
+              title: lesson.title,
+              duration: lesson.duration,
+              videoUrl: lesson.videoUrl,
+            });
+          }
+        });
+      });
+    });
+
+    // Shuffle or limit if needed, here just returning top 6
+    const topSamples = samples.slice(0, 6);
+    await redis.set(cacheKey, { samples: topSamples }, 3600);
+    return topSamples;
   }
 }
 export default CourseService;

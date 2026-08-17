@@ -1,42 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RatingStars from '@/components/common/RatingStars';
-
-const testimonials = [
-  {
-    name: 'Priya Sharma',
-    exam: 'SBI PO',
-    rating: 5,
-    text: 'LearnHub helped me crack SBI PO in my first attempt! The test series and mock tests were incredibly helpful.',
-    avatar: 'PS',
-  },
-  {
-    name: 'Rahul Kumar',
-    exam: 'SSC CGL',
-    rating: 5,
-    text: 'The best platform for SSC preparation. The quality of content and the test analysis feature is outstanding.',
-    avatar: 'RK',
-  },
-  {
-    name: 'Anita Verma',
-    exam: 'IBPS Clerk',
-    rating: 4,
-    text: 'I love the structured approach and detailed solutions. The teachers are excellent and always helpful.',
-    avatar: 'AV',
-  },
-  {
-    name: 'Mohit Singh',
-    exam: 'RRB NTPC',
-    rating: 5,
-    text: 'Affordable and comprehensive. The mock tests mirror the actual exam pattern perfectly.',
-    avatar: 'MS',
-  },
-];
+import api from '@/services/api';
 
 export default function TestimonialSection() {
+  const [testimonials, setTestimonials] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const res = await api.get('/reviews/testimonials');
+        setTestimonials(res.data?.data || []);
+      } catch (error) {
+        setTestimonials([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTestimonials();
+  }, []);
 
   const next = () => setCurrent((current + 1) % testimonials.length);
   const prev = () => setCurrent((current - 1 + testimonials.length) % testimonials.length);
+
+  if (!loading && testimonials.length === 0) return null;
 
   return (
     <section className="py-12 sm:py-16">
@@ -47,21 +35,43 @@ export default function TestimonialSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {testimonials.map((t, i) => (
-            <div key={i} className="card p-6">
-              <RatingStars rating={t.rating} size="sm" showValue={false} />
-              <p className="text-sm text-dark-600 dark:text-dark-400 mt-3 mb-4 line-clamp-3">{t.text}</p>
-              <div className="flex items-center gap-3 pt-3 border-t border-dark-100 dark:border-dark-700">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
-                  {t.avatar}
+          {loading
+            ? Array(4)
+                .fill(0)
+                .map((_, i) => (
+                  <div key={i} className="card p-6 animate-pulse">
+                    <div className="h-4 bg-slate-200 dark:bg-dark-700 rounded w-24 mb-4"></div>
+                    <div className="h-3 bg-slate-200 dark:bg-dark-700 rounded w-full mb-2"></div>
+                    <div className="h-3 bg-slate-200 dark:bg-dark-700 rounded w-full mb-2"></div>
+                    <div className="h-3 bg-slate-200 dark:bg-dark-700 rounded w-2/3 mb-4"></div>
+                    <div className="flex items-center gap-3 pt-3 border-t border-dark-100 dark:border-dark-700">
+                      <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-dark-700"></div>
+                      <div>
+                        <div className="h-3 bg-slate-200 dark:bg-dark-700 rounded w-20 mb-1.5"></div>
+                        <div className="h-2 bg-slate-200 dark:bg-dark-700 rounded w-16"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+            : testimonials.map((t, i) => (
+                <div key={i} className="card p-6">
+                  <RatingStars rating={t.rating} size="sm" showValue={false} />
+                  <p className="text-sm text-dark-600 dark:text-dark-400 mt-3 mb-4 line-clamp-3">
+                    {t.text || t.comment}
+                  </p>
+                  <div className="flex items-center gap-3 pt-3 border-t border-dark-100 dark:border-dark-700">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
+                      {t.avatar || t.user?.name?.charAt(0) || 'U'}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-dark-900 dark:text-white">
+                        {t.name || t.user?.name}
+                      </div>
+                      <div className="text-xs text-dark-400">{t.exam || 'Student'}</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-dark-900 dark:text-white">{t.name}</div>
-                  <div className="text-xs text-dark-400">Cleared {t.exam}</div>
-                </div>
-              </div>
-            </div>
-          ))}
+              ))}
         </div>
       </div>
     </section>

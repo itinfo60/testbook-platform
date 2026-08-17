@@ -5,7 +5,8 @@ import { useLocation } from 'react-router-dom';
 const scrollPositions = {};
 
 export default function ScrollManager() {
-  const { pathname, key } = useLocation();
+  const location = useLocation();
+  const { pathname, key, state } = location;
   const prevKey = useRef(key);
 
   useEffect(() => {
@@ -20,6 +21,11 @@ export default function ScrollManager() {
     scrollPositions[prevKey.current] = window.scrollY;
     prevKey.current = key;
 
+    // Check if this navigation explicitly opts out of scrolling
+    if (state?.preventScroll) {
+      return;
+    }
+
     // Determine if this is a back/forward navigation (POP) by checking if we
     // already have a saved position for this key
     const saved = scrollPositions[key];
@@ -33,7 +39,7 @@ export default function ScrollManager() {
       // New navigation — go to top
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
-  }, [key, pathname]);
+  }, [key, pathname, state]);
 
   return null;
 }

@@ -1,7 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiArrowLeft, HiTrash, HiDownload, HiMenu, HiX } from 'react-icons/hi';
+import {
+  HiArrowLeft,
+  HiArrowRight,
+  HiCheck,
+  HiDownload,
+  HiMenu,
+  HiTrash,
+  HiX,
+} from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 import { fetchCourseById } from '@/features/course/courseSlice';
@@ -18,6 +26,29 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Tabs from '@/components/common/Tabs';
 import LessonContent from '../components/learning/LessonContent';
 import LessonSidebar from '../components/learning/LessonSidebar';
+
+function ResourceItem({ resource }) {
+  const isLink = resource?.type === 'link' || resource?.url?.startsWith('http');
+  return (
+    <a
+      href={resource?.url || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-dark-700 hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
+    >
+      <span className="text-xl">{isLink ? '🔗' : '📄'}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-dark-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          {resource?.title || 'Resource'}
+        </p>
+        {resource?.description && (
+          <p className="text-xs text-dark-400 truncate">{resource.description}</p>
+        )}
+      </div>
+      <HiDownload className="w-4 h-4 text-dark-400 group-hover:text-blue-500 flex-shrink-0 transition-colors" />
+    </a>
+  );
+}
 
 export default function CourseLearning() {
   const { id } = useParams();
@@ -39,6 +70,7 @@ export default function CourseLearning() {
   const sessionWatchTime = useRef(0);
   const lastHeartbeatTime = useRef(0);
   const [attachTimestamp, setAttachTimestamp] = useState(true);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
@@ -101,23 +133,30 @@ export default function CourseLearning() {
     [id, currentSection, currentLesson, currentProgress]
   );
 
-  const handleLessonComplete = useCallback(async () => {
-    if (!currentLesson) return;
-    try {
-      await dispatch(
-        completeLesson({
-          courseId: id,
-          lessonId: currentLesson._id,
-          sectionId: currentSection?._id,
-        })
-      ).unwrap();
-      // Optimistically mark done in local progress
-      dispatch(markLessonDone(currentLesson._id));
-      toast.success('Lesson marked as complete!');
-    } catch (err) {
-      toast.error(err || 'Failed to mark complete');
-    }
-  }, [dispatch, id, currentLesson, currentSection]);
+  const handleLessonComplete = useCallback(
+    async (targetCompletedState = true) => {
+      if (!currentLesson || completing) return;
+      setCompleting(true);
+      try {
+        await dispatch(
+          completeLesson({
+            courseId: id,
+            lessonId: currentLesson._id,
+            sectionId: currentSection?._id,
+            completed: targetCompletedState,
+          })
+        ).unwrap();
+        // Optimistically mark done in local progress
+        dispatch(markLessonDone({ lessonId: currentLesson._id, completed: targetCompletedState }));
+        toast.success(targetCompletedState ? 'Lesson marked as complete!' : 'Lesson unmarked');
+      } catch (err) {
+        toast.error(err || 'Failed to update progress');
+      } finally {
+        setCompleting(false);
+      }
+    },
+    [dispatch, id, currentLesson, currentSection, completing]
+  );
 
   const handleVideoComplete = useCallback(async () => {
     const isCompleted =
@@ -160,7 +199,12 @@ export default function CourseLearning() {
     e.preventDefault();
     if (!discussionText.trim()) return;
     await dispatch(
-      createDiscussion({ course: id, content: discussionText, lessonId: currentLesson?._id })
+      createDiscussion({
+        course: id,
+        title: discussionText.slice(0, 50) + (discussionText.length > 50 ? '...' : ''),
+        content: discussionText,
+        lessonId: currentLesson?._id,
+      })
     );
     setDiscussionText('');
     toast.success('Discussion posted');
@@ -172,15 +216,37 @@ export default function CourseLearning() {
     }
   };
 
-  if (loading || !course) return <LoadingSpinner fullScreen />;
+  if (loading) return <LoadingSpinner fullScreen />;
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-5xl mb-4">📚</div>
+        <h2 className="text-2xl font-black text-dark-900 dark:text-white mb-2 font-display">
+          Course Not Found
+        </h2>
+        <p className="text-slate-500 max-w-md mb-6 text-sm">
+          The course you are looking for might have been updated or moved.
+        </p>
+        <Link
+          to="/courses"
+          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm"
+        >
+          Explore Courses
+        </Link>
+      </div>
+    );
+  }
 
   const sections = course.sections || [];
-  const allLessons = sections.flatMap((s) => s.lessons || []);
+  const allLessons = sections.flatMap((s) => (s.lessons || []).filter((l) => l.type !== 'quiz'));
   const totalLessons = allLessons.length;
+
+  const validLessonIds = new Set(allLessons.map((l) => String(l._id)));
 
   // Completed lesson IDs from progress (normalize to strings for comparison)
   const completedLessonIds = (currentProgress?.progress || [])
-    .filter((p) => p.completed)
+    .filter((p) => p.completed && validLessonIds.has(String(p.lessonId || p.lesson)))
     .map((p) => String(p.lessonId || p.lesson));
   const totalCompleted = completedLessonIds.length;
 
@@ -190,7 +256,9 @@ export default function CourseLearning() {
   // Navigate to next lesson
   const goToNext = () => {
     if (!currentLesson) return;
-    const flatLessons = sections.flatMap((s) => s.lessons.map((l) => ({ lesson: l, section: s })));
+    const flatLessons = sections.flatMap((s) =>
+      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
+    );
     const idx = flatLessons.findIndex(({ lesson }) => lesson._id === currentLesson._id);
     if (idx < flatLessons.length - 1) {
       const next = flatLessons[idx + 1];
@@ -200,16 +268,29 @@ export default function CourseLearning() {
 
   const hasNext = () => {
     if (!currentLesson) return false;
-    const flatLessons = sections.flatMap((s) => s.lessons.map((l) => ({ lesson: l, section: s })));
+    const flatLessons = sections.flatMap((s) =>
+      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
+    );
     const idx = flatLessons.findIndex(({ lesson }) => lesson._id === currentLesson._id);
     return idx < flatLessons.length - 1;
   };
 
-  const tabs = [
-    { key: 'content', label: 'Description' },
-    { key: 'notes', label: 'My Notes', count: notes.length },
-    { key: 'discussions', label: 'Doubt & Discussion', count: discussions.length },
-  ];
+  const tabs = [{ key: 'content', label: 'Description' }];
+  if (currentLesson?.resources?.length > 0) {
+    tabs.push({
+      key: 'resources',
+      label: 'Attachments & Notes',
+      count: currentLesson.resources.length,
+    });
+  }
+  if (currentSection?.lessons?.filter((l) => l.type === 'quiz')?.length > 0) {
+    tabs.push({
+      key: 'quizzes',
+      label: 'Tests & Quizzes',
+      count: currentSection.lessons.filter((l) => l.type === 'quiz').length,
+    });
+  }
+  tabs.push({ key: 'discussions', label: 'Doubt & Discussion', count: discussions.length });
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-950 flex flex-col">
@@ -237,6 +318,46 @@ export default function CourseLearning() {
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-3 pr-4 border-r border-slate-200 dark:border-dark-800">
+            {currentLesson && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleLessonComplete(!isCurrentCompleted)}
+                  disabled={completing}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isCurrentCompleted
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                  }`}
+                >
+                  {isCurrentCompleted ? (
+                    <>
+                      <HiCheck className="h-3.5 w-3.5" />
+                      {completing ? 'Saving...' : 'Completed'}
+                    </>
+                  ) : (
+                    <>{completing ? 'Saving...' : 'Mark as Complete'}</>
+                  )}
+                </button>
+
+                {hasNext() ? (
+                  <button
+                    onClick={() => {
+                      goToNext();
+                    }}
+                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                  >
+                    Next Lesson
+                  </button>
+                ) : isCurrentCompleted ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800">
+                    Course Completed!
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Course Progress
@@ -313,118 +434,98 @@ export default function CourseLearning() {
                 {currentSection && (
                   <p className="text-xs text-primary-500 mb-3">{currentSection.title}</p>
                 )}
-                <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed">
+                <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed mb-4">
                   {currentLesson.content || 'No additional description for this lesson.'}
                 </p>
+
+                {currentLesson.type === 'quiz' && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 border-t border-slate-200 dark:border-dark-800">
+                    {currentLesson.quizId && (
+                      <Link
+                        to={`/quiz/${currentLesson.quizId}`}
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all inline-flex items-center justify-center gap-2 text-sm"
+                      >
+                        Start Lesson Quiz <HiArrowRight className="h-4 w-4" />
+                      </Link>
+                    )}
+                    {currentLesson.testSeriesSlug && (
+                      <Link
+                        to={`/test-series/${currentLesson.testSeriesSlug}`}
+                        className="bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-6 rounded-xl transition-all inline-flex items-center justify-center gap-2 text-sm"
+                      >
+                        View Full Test Series
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {activeTab === 'notes' && (
-              <div className="space-y-6">
-                <form
-                  onSubmit={handleAddNote}
-                  className="bg-amber-50 dark:bg-amber-900/10 p-4 sm:p-6 rounded-2xl border border-amber-200 dark:border-amber-900/30"
-                >
-                  <h4 className="font-bold text-sm text-amber-800 dark:text-amber-500 mb-3 flex items-center gap-2">
-                    <span className="text-lg">✍️</span> Take a Note
-                  </h4>
-                  <textarea
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder={
-                      currentLesson
-                        ? `Jot down important points for "${currentLesson.title}"...`
-                        : 'Add a note...'
-                    }
-                    className="w-full bg-white dark:bg-dark-900 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none resize-none min-h-[100px] mb-3"
-                  />
-                  {currentLesson?.type === 'video' && (
-                    <div className="flex items-center gap-2 mb-4 bg-white dark:bg-dark-900 w-fit px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-900/30">
-                      <input
-                        type="checkbox"
-                        id="attachTimestamp"
-                        checked={attachTimestamp}
-                        onChange={(e) => setAttachTimestamp(e.target.checked)}
-                        className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                      />
-                      <label
-                        htmlFor="attachTimestamp"
-                        className="text-xs font-bold text-slate-600 dark:text-slate-400 cursor-pointer"
-                      >
-                        Attach video timestamp at{' '}
-                        <span className="text-amber-600">
-                          {(() => {
-                            const m = Math.floor(videoTime / 60);
-                            const s = Math.floor(videoTime % 60);
-                            return `${m}:${s < 10 ? '0' : ''}${s}`;
-                          })()}
-                        </span>
-                      </label>
-                    </div>
-                  )}
-                  <button
-                    type="submit"
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm shadow-sm"
-                  >
-                    Save Note
-                  </button>
-                </form>
-
-                {notes.length === 0 ? (
-                  <div className="text-center py-8 text-dark-400">
-                    <div className="text-3xl mb-2">📝</div>
-                    <p className="text-sm">No notes yet. Add one above!</p>
+            {activeTab === 'resources' && (
+              <div className="card p-4 sm:p-6">
+                <h3 className="font-semibold text-dark-900 dark:text-white mb-4 text-sm sm:text-base flex items-center gap-2">
+                  <span className="text-lg">📎</span> Lesson Attachments & Notes
+                </h3>
+                {currentLesson?.resources?.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {currentLesson.resources.map((r, i) => (
+                      <ResourceItem key={r._id || i} resource={r} />
+                    ))}
                   </div>
                 ) : (
-                  notes.map((note) => (
-                    <div key={note._id} className="card p-4">
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          {note.timestamp !== undefined && note.timestamp > 0 && (
-                            <button
-                              onClick={() => handleSeekTo(note.timestamp)}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 mb-2 transition-colors border border-indigo-100 dark:border-indigo-900/50"
+                  <p className="text-dark-400 text-sm italic">
+                    No resources attached to this lesson.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'quizzes' && (
+              <div className="card p-4 sm:p-6">
+                <h3 className="font-semibold text-dark-900 dark:text-white mb-4 text-sm sm:text-base flex items-center gap-2">
+                  <span className="text-lg">📝</span> Tests & Quizzes for {currentSection?.title}
+                </h3>
+                {currentSection?.lessons?.filter((l) => l.type === 'quiz').length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {currentSection.lessons
+                      .filter((l) => l.type === 'quiz')
+                      .map((quizLesson) => (
+                        <div
+                          key={quizLesson._id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-dark-800 hover:border-amber-400 dark:hover:border-amber-600 transition-colors gap-4"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-bold text-dark-800 dark:text-dark-200">
+                                {quizLesson.title}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-dark-500 line-clamp-1">
+                              {quizLesson.content || 'Assessment Quiz'}
+                            </p>
+                          </div>
+                          {quizLesson.quizId ? (
+                            <Link
+                              to={`/quiz/${quizLesson.quizId}`}
+                              className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap block sm:inline-block text-center"
                             >
-                              ⏱️{' '}
-                              {(() => {
-                                const m = Math.floor(note.timestamp / 60);
-                                const s = Math.floor(note.timestamp % 60);
-                                return `${m}:${s < 10 ? '0' : ''}${s}`;
-                              })()}
+                              Take Quiz
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => handleLessonSelect(quizLesson, currentSection)}
+                              className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap"
+                            >
+                              View Details
                             </button>
                           )}
-                          <p className="text-dark-700 dark:text-dark-300 text-sm leading-relaxed break-words">
-                            {note.content}
-                          </p>
                         </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => handleDownloadNote(note)}
-                            title="Download note"
-                            className="p-1.5 text-dark-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                          >
-                            <HiDownload className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => dispatch(deleteNote(note._id))}
-                            title="Delete note"
-                            className="p-1.5 text-dark-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          >
-                            <HiTrash className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-dark-400 mt-2">
-                        {note.createdAt
-                          ? new Date(note.createdAt).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                          : ''}
-                      </p>
-                    </div>
-                  ))
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-dark-400 text-sm italic">
+                    No assessments available in this unit.
+                  </p>
                 )}
               </div>
             )}

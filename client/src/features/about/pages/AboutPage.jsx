@@ -16,7 +16,7 @@ export default function AboutPage() {
         {/* Hero */}
         <div className="text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider text-xs bg-amber-50 dark:bg-amber-950 px-3 py-1 rounded-full mb-3">
-            <HiAcademicCap className="h-4 w-4" /> About EduPortal
+            <HiAcademicCap className="h-4 w-4" /> About EduHub
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold font-display">
             Rajasthan’s Premier RPSC & Political Science Academy
@@ -55,10 +55,10 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Why EduPortal */}
+        {/* Why EduHub */}
         <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-amber-950 rounded-3xl p-8 sm:p-12 text-white shadow-xl">
           <h2 className="text-2xl sm:text-4xl font-extrabold text-center mb-8">
-            Why Choose EduPortal?
+            Why Choose EduHub?
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

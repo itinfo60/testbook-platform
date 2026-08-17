@@ -35,6 +35,7 @@ import CouponList from '@/features/coupon/pages/CouponList';
 import CouponForm from '@/features/coupon/pages/CouponForm';
 import BlogList from '@/features/blog/pages/BlogList';
 import BlogForm from '@/features/blog/pages/BlogForm';
+import JobAlertList from '@/features/blog/pages/JobAlertList';
 import AnnouncementCenter from '@/features/notification/pages/AnnouncementCenter';
 import BrandingSettings from '@/features/institute/pages/BrandingSettings';
 import LiveClassesPage from '@/features/liveclass/pages/LiveClassesPage';
@@ -95,7 +96,7 @@ export default function App() {
           <Route path="blogs" element={<BlogList />} />
           <Route path="blogs/create" element={<BlogForm />} />
           <Route path="blogs/:id/edit" element={<BlogForm />} />
-          <Route path="job-alerts" element={<BlogList />} />
+          <Route path="job-alerts" element={<JobAlertList />} />
           <Route path="announcements" element={<AnnouncementCenter />} />
           <Route path="library" element={<LibraryAdmin />} />
           <Route path="branding" element={<BrandingSettings />} />

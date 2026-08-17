@@ -14,42 +14,111 @@ import { buildPaginationQuery } from '../../utils/pagination.js';
 import { runWithTenant } from '../../utils/TenantContext.js';
 
 export const getCategories = catchAsync(async (req, res) => {
-  const [categories, courseCounts, testCounts] = await runWithTenant(null, true, async () => {
-    return await Promise.all([
-      ExamCategory.find({ isActive: true, parent: null })
-        .populate({
-          path: 'subcategories',
-          match: { isActive: true },
-          select: 'name slug description icon latestStatus courseCount testCount',
-        })
-        .sort('order name')
-        .lean(),
-      Course.aggregate([
-        { $match: { isPublished: true } },
-        { $group: { _id: '$category', count: { $sum: 1 } } },
-      ]),
-      Test.aggregate([
-        { $match: { isPublished: true } },
-        { $group: { _id: '$category', count: { $sum: 1 } } },
-      ]),
-    ]);
-  });
+  const isFlat = req.query.flat === 'true';
+
+  const [allCats, courseCounts, testCounts, seriesCounts, blogCounts] = await runWithTenant(
+    null,
+    true,
+    async () => {
+      return await Promise.all([
+        ExamCategory.find({ isActive: true })
+          .populate({
+            path: 'subcategories',
+            match: { isActive: true },
+            select: 'name slug description icon latestStatus courseCount testCount order',
+          })
+          .sort('order name')
+          .lean(),
+        Course.aggregate([
+          { $match: { isPublished: true } },
+          {
+            $project: {
+              cat: { $ifNull: ['$examCategory', '$category'] },
+            },
+          },
+          { $match: { cat: { $ne: null } } },
+          { $group: { _id: '$cat', count: { $sum: 1 } } },
+        ]),
+        Test.aggregate([
+          { $match: { isPublished: true } },
+          {
+            $project: {
+              cat: { $ifNull: ['$category', '$testSeries'] },
+            },
+          },
+          { $match: { cat: { $ne: null } } },
+          { $group: { _id: '$cat', count: { $sum: 1 } } },
+        ]),
+        TestSeries.aggregate([
+          { $match: { isPublished: { $ne: false } } },
+          { $match: { examCategory: { $ne: null } } },
+          { $group: { _id: '$examCategory', count: { $sum: 1 } } },
+        ]),
+        Blog.aggregate([
+          { $match: { status: 'published' } },
+          { $match: { examCategory: { $ne: null } } },
+          { $group: { _id: '$examCategory', count: { $sum: 1 } } },
+        ]),
+      ]);
+    }
+  );
 
   const courseCountMap = Object.fromEntries(courseCounts.map((c) => [c._id?.toString(), c.count]));
   const testCountMap = Object.fromEntries(testCounts.map((c) => [c._id?.toString(), c.count]));
+  const seriesCountMap = Object.fromEntries(seriesCounts.map((c) => [c._id?.toString(), c.count]));
+  const blogCountMap = Object.fromEntries(blogCounts.map((c) => [c._id?.toString(), c.count]));
 
-  const enriched = categories.map((cat) => ({
-    ...cat,
-    courseCount: courseCountMap[cat._id.toString()] ?? cat.courseCount ?? 0,
-    testCount: testCountMap[cat._id.toString()] ?? cat.testCount ?? 0,
-    subcategories: (cat.subcategories || []).map((sub) => ({
-      ...sub,
-      courseCount: courseCountMap[sub._id.toString()] ?? sub.courseCount ?? 0,
-      testCount: testCountMap[sub._id.toString()] ?? sub.testCount ?? 0,
-    })),
-  }));
+  const enrichCat = (cat) => {
+    const catId = cat._id?.toString();
+    const subIds = (cat.subcategories || []).map((s) => s._id?.toString());
 
-  const data = { categories: enriched };
+    // Rollup child subcategory counts into parent category
+    let rolledCourseCount = courseCountMap[catId] || cat.courseCount || 0;
+    let rolledTestCount = testCountMap[catId] || cat.testCount || 0;
+    let rolledSeriesCount = seriesCountMap[catId] || 0;
+    let rolledBlogCount = blogCountMap[catId] || 0;
+
+    subIds.forEach((sId) => {
+      if (courseCountMap[sId]) rolledCourseCount += courseCountMap[sId];
+      if (testCountMap[sId]) rolledTestCount += testCountMap[sId];
+      if (seriesCountMap[sId]) rolledSeriesCount += seriesCountMap[sId];
+      if (blogCountMap[sId]) rolledBlogCount += blogCountMap[sId];
+    });
+
+    return {
+      ...cat,
+      courseCount: rolledCourseCount,
+      testCount: rolledTestCount,
+      testSeriesCount: rolledSeriesCount,
+      blogCount: rolledBlogCount,
+      coursesCount: rolledCourseCount,
+      testsCount: rolledTestCount,
+      subcategories: (cat.subcategories || []).map((sub) => {
+        const subId = sub._id?.toString();
+        const cCount = courseCountMap[subId] || sub.courseCount || 0;
+        const tCount = testCountMap[subId] || sub.testCount || 0;
+        const sCount = seriesCountMap[subId] || 0;
+        const bCount = blogCountMap[subId] || 0;
+        return {
+          ...sub,
+          courseCount: cCount,
+          testCount: tCount,
+          testSeriesCount: sCount,
+          blogCount: bCount,
+          coursesCount: cCount,
+          testsCount: tCount,
+        };
+      }),
+    };
+  };
+
+  const enrichedAll = allCats.map(enrichCat);
+  const rootCategories = enrichedAll.filter((c) => !c.parent);
+
+  const data = {
+    categories: isFlat ? enrichedAll : rootCategories,
+    allCategories: enrichedAll,
+  };
 
   ApiResponse.ok(res, data);
 });

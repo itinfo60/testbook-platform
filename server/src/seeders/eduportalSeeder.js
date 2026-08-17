@@ -39,13 +39,51 @@ const seedData = async () => {
 
     const tenantId = adminUser.tenantId || adminUser._id;
 
-    // 2. Exam Categories List (Rajasthan Specific + Political Science Special)
-    const examCategoriesData = [
-      // 🟢 RAJASTHAN SPECIFIC
+    // 2. Hierarchical Exam Categories: 2 Root Parent Categories + Child Subcategories
+    const rootParents = [
+      {
+        name: 'Rajasthan State Exams',
+        slug: 'rajasthan-state-exams',
+        icon: '🏛️',
+        description:
+          'Target coaching and test series for all major RPSC and RSMSSB recruitment exams in Rajasthan.',
+        conductingBody: 'RPSC & RSMSSB',
+        order: 1,
+        isActive: true,
+        parent: null,
+        tenantId,
+      },
+      {
+        name: 'Political Science Special',
+        slug: 'political-science-special',
+        icon: '🎓',
+        description:
+          'Comprehensive preparation for Assistant Professor (RPSC, UPHESC, MPPSC) and PGT / 1st Grade Political Science.',
+        conductingBody: 'Higher Education & Public Service Commissions',
+        order: 2,
+        isActive: true,
+        parent: null,
+        tenantId,
+      },
+    ];
+
+    // Delete existing categories and re-seed
+    await ExamCategory.deleteMany({});
+    console.log('Cleared existing exam categories.');
+
+    const createdParents = await ExamCategory.insertMany(rootParents);
+    const parentMap = {};
+    createdParents.forEach((p) => {
+      parentMap[p.slug] = p._id;
+    });
+
+    const childExamsData = [
+      // 🟢 CHILD EXAMS UNDER: Rajasthan State Exams
       {
         name: 'RAS (Prelims & Mains)',
         slug: 'ras',
         icon: '🏛️',
+        parent: parentMap['rajasthan-state-exams'],
         description:
           'Complete Preparation for Rajasthan Administrative Service (RAS) Prelims & Mains Exam conducted by RPSC.',
         conductingBody: 'RPSC (Rajasthan Public Service Commission)',
@@ -73,11 +111,13 @@ const seedData = async () => {
         ],
         order: 1,
         isActive: true,
+        tenantId,
       },
       {
         name: 'RPSC EO & RO (Part A + Part B Special)',
         slug: 'rpsc-eo-ro',
         icon: '🏢',
+        parent: parentMap['rajasthan-state-exams'],
         description:
           'Dedicated guidance for Revenue Officer (RO Grade II) & Executive Officer (EO Grade IV) exam.',
         conductingBody: 'RPSC',
@@ -95,11 +135,13 @@ const seedData = async () => {
         ],
         order: 2,
         isActive: true,
+        tenantId,
       },
       {
         name: 'RPSC SI (Sub-Inspector)',
         slug: 'rpsc-si',
         icon: '👮',
+        parent: parentMap['rajasthan-state-exams'],
         description:
           'Complete course and test series for Rajasthan Police Sub Inspector (SI) Combined Competitive Exam.',
         conductingBody: 'RPSC & Rajasthan Police',
@@ -116,11 +158,13 @@ const seedData = async () => {
         importantDates: [],
         order: 3,
         isActive: true,
+        tenantId,
       },
       {
         name: '1st Grade & 2nd Grade (Teacher)',
         slug: 'rpsc-1st-2nd-grade',
         icon: '👨‍🏫',
+        parent: parentMap['rajasthan-state-exams'],
         description:
           'RPSC School Lecturer (1st Grade) & Senior Teacher (2nd Grade) Competitive Examination.',
         conductingBody: 'RPSC',
@@ -135,11 +179,13 @@ const seedData = async () => {
         importantDates: [],
         order: 4,
         isActive: true,
+        tenantId,
       },
       {
         name: 'Rajasthan CET (Graduation & 10+2)',
         slug: 'rajasthan-cet',
         icon: '📝',
+        parent: parentMap['rajasthan-state-exams'],
         description:
           'Common Eligibility Test for various Rajasthan Subordinate Services (Graduation & Secondary Level).',
         conductingBody: 'RSMSSB (Rajasthan Staff Selection Board)',
@@ -153,11 +199,13 @@ const seedData = async () => {
         importantDates: [],
         order: 5,
         isActive: true,
+        tenantId,
       },
       {
         name: 'Patwari',
         slug: 'patwari',
         icon: '📐',
+        parent: parentMap['rajasthan-state-exams'],
         description: 'Rajasthan Revenue Board Patwari Direct Recruitment Examination.',
         conductingBody: 'RSMSSB',
         latestStatus: 'New Vacancy Announcement Soon',
@@ -176,11 +224,13 @@ const seedData = async () => {
         ],
         order: 6,
         isActive: true,
+        tenantId,
       },
       {
         name: 'VDO (Village Development Officer)',
         slug: 'vdo',
         icon: '🌾',
+        parent: parentMap['rajasthan-state-exams'],
         description:
           'Gram Vikas Adhikari (VDO) Recruitment Examination in Panchayati Raj Department.',
         conductingBody: 'RSMSSB',
@@ -194,13 +244,15 @@ const seedData = async () => {
         importantDates: [],
         order: 7,
         isActive: true,
+        tenantId,
       },
 
-      // 🔵 POLITICAL SCIENCE SPECIAL
+      // 🔵 CHILD EXAMS UNDER: Political Science Special
       {
         name: 'Assistant Professor (RPSC Rajasthan)',
         slug: 'rpsc-assistant-professor-political-science',
         icon: '🎓',
+        parent: parentMap['political-science-special'],
         description:
           'Specialized preparation for RPSC Assistant Professor Political Science (College Education Dept).',
         conductingBody: 'RPSC',
@@ -222,11 +274,13 @@ const seedData = async () => {
         ],
         order: 8,
         isActive: true,
+        tenantId,
       },
       {
         name: 'Assistant Professor (UPHESC Uttar Pradesh)',
         slug: 'uphesc-assistant-professor-political-science',
         icon: '🏛️',
+        parent: parentMap['political-science-special'],
         description:
           'UP Higher Education Services Commission Assistant Professor Political Science.',
         conductingBody: 'UPHESC',
@@ -240,11 +294,13 @@ const seedData = async () => {
         importantDates: [],
         order: 9,
         isActive: true,
+        tenantId,
       },
       {
         name: 'Assistant Professor (MPPSC Madhya Pradesh)',
         slug: 'mppsc-assistant-professor-political-science',
         icon: '📜',
+        parent: parentMap['political-science-special'],
         description:
           'Madhya Pradesh Public Service Commission Assistant Professor Political Science.',
         conductingBody: 'MPPSC',
@@ -258,11 +314,13 @@ const seedData = async () => {
         importantDates: [],
         order: 10,
         isActive: true,
+        tenantId,
       },
       {
         name: 'PGT / 1st Grade (UP, KVS, NVS, Delhi)',
         slug: 'pgt-political-science',
         icon: '📚',
+        parent: parentMap['political-science-special'],
         description:
           'Post Graduate Teacher (PGT) Political Science for KVS, NVS, DSSSB & State Boards.',
         conductingBody: 'KVS / NVS / DSSSB / UP Secondary Board',
@@ -276,22 +334,17 @@ const seedData = async () => {
         importantDates: [],
         order: 11,
         isActive: true,
+        tenantId,
       },
     ];
 
-    // Delete existing categories and re-seed
-    await ExamCategory.deleteMany({});
-    console.log('Cleared existing exam categories.');
-
-    examCategoriesData.forEach((c) => {
-      c.tenantId = tenantId;
-    });
-
-    const createdCategories = await ExamCategory.insertMany(examCategoriesData);
-    console.log(`Successfully seeded ${createdCategories.length} Exam Categories!`);
+    const createdChildren = await ExamCategory.insertMany(childExamsData);
+    console.log(
+      `Successfully seeded ${createdParents.length} Parent Categories and ${createdChildren.length} Child Exams!`
+    );
 
     const categoryMap = {};
-    createdCategories.forEach((c) => {
+    [...createdParents, ...createdChildren].forEach((c) => {
       categoryMap[c.slug] = c._id;
     });
 
@@ -391,7 +444,7 @@ const seedData = async () => {
                 type: 'video',
                 duration: 75,
                 isFree: true,
-                videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                videoUrl: 'https://www.youtube.com/watch?v=GX9x62kFsVU',
               },
               {
                 title: 'Aristotle: Theory of State, Slavery & Revolution',

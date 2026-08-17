@@ -22,11 +22,12 @@ export default function TestNavigator({ questions, onSubmit }) {
   };
 
   const statusStyles = {
-    current: 'bg-amber-500 text-white ring-4 ring-amber-500/30 font-black shadow-md scale-105 z-10',
-    answered: 'bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-sm',
-    marked: 'bg-purple-500 hover:bg-purple-600 text-white font-bold shadow-sm',
+    current:
+      'bg-primary-600 text-white ring-4 ring-primary-600/30 font-black shadow-premium scale-105 z-10',
+    answered: 'bg-success-600 hover:bg-success-700 text-white font-bold shadow-sm',
+    marked: 'bg-warning-500 hover:bg-warning-600 text-white font-bold shadow-sm',
     'marked-answered':
-      'bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-sm ring-2 ring-purple-400',
+      'bg-warning-500 hover:bg-warning-600 text-white font-bold shadow-sm ring-2 ring-success-400',
     unanswered:
       'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-600 dark:text-slate-400 font-semibold',
   };

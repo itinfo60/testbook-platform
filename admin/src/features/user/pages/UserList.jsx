@@ -5,6 +5,8 @@ import { Plus, Users, ToggleRight, ToggleLeft, Edit, Trash2, BookOpen } from 'lu
 
 // Actions
 import { fetchUsers, deleteUser, toggleUserStatus } from '@/features/user/userSlice';
+import { enrollmentsAPI } from '@/services/api';
+import toast from 'react-hot-toast';
 
 // Components
 import DataTable from '@/components/DataTable';
@@ -271,17 +273,24 @@ export default function UserList() {
             <button
               className="btn-primary font-bold shadow-md"
               disabled={!assignItemId || assigning}
-              onClick={() => {
+              onClick={async () => {
                 setAssigning(true);
-                // Mock API call for bulk assign
-                setTimeout(() => {
+                try {
+                  await enrollmentsAPI.bulkAssign({
+                    userIds: selectedUsers,
+                    entityId: assignItemId,
+                    entityType: assignType,
+                  });
                   toast.success(
                     `Successfully assigned ${assignType} to ${selectedUsers.length} users`
                   );
-                  setAssigning(false);
                   setAssignModalOpen(false);
                   setSelectedUsers([]);
-                }, 1500);
+                } catch (error) {
+                  // Handled by axios interceptor
+                } finally {
+                  setAssigning(false);
+                }
               }}
             >
               {assigning ? 'Assigning...' : 'Assign Content'}

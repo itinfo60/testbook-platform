@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Download, GraduationCap } from 'lucide-react';
+import { Download, GraduationCap, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // Actions
 import { fetchEnrollments, exportEnrollments } from '@/features/enrollment/enrollmentSlice';
 
 // Components
 import DataTable from '@/components/DataTable';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { enrollmentsAPI } from '@/services/api';
 
 // Utils
 import { getStatusColor, formatDate, truncate } from '@/utils';
@@ -18,6 +21,7 @@ export default function EnrollmentList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const debouncedSearch = useDebounce(search);
 
   const load = useCallback(() => {
@@ -30,6 +34,18 @@ export default function EnrollmentList() {
 
   const handleExport = () => {
     dispatch(exportEnrollments({ search: debouncedSearch, status: statusFilter }));
+  };
+
+  const handleRevoke = async () => {
+    if (!deleteTarget) return;
+    try {
+      await enrollmentsAPI.revokeEnrollment(deleteTarget);
+      toast.success('Enrollment revoked successfully');
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to revoke enrollment');
+    }
   };
 
   const columns = [
@@ -78,6 +94,19 @@ export default function EnrollmentList() {
       label: 'Completed',
       render: (val) => (val ? formatDate(val) : '-'),
     },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <button
+          onClick={() => setDeleteTarget(row._id)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600"
+          title="Revoke"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -125,6 +154,15 @@ export default function EnrollmentList() {
         searchPlaceholder="Search enrollments..."
         emptyMessage="No enrollments found"
         emptyIcon={GraduationCap}
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleRevoke}
+        title="Revoke Enrollment"
+        message="Are you sure you want to revoke this enrollment? The student will lose access to this course."
+        confirmText="Revoke"
       />
     </div>
   );

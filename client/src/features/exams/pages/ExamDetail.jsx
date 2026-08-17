@@ -1,3 +1,4 @@
+import SeoHead from '@/components/SeoHead';
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -55,12 +56,6 @@ export default function ExamDetail() {
       fetchExamData();
     }
   }, [slug]);
-
-  useEffect(() => {
-    if (data?.category?.name) {
-      document.title = `${data.category.name} Preparation - Syllabus, Test Series & Courses`;
-    }
-  }, [data]);
 
   // Scrollspy to automatically highlight active tab as user scrolls down
   useEffect(() => {
@@ -130,8 +125,22 @@ export default function ExamDetail() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
+      <SeoHead
+        title={`${category?.name || 'Exam'} — Syllabus, Tests & Courses`}
+        description={`Complete preparation hub for ${category?.name || 'this exam'}. Access syllabus, previous year papers, mock test series, and specialized courses.`}
+        type="website"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Course',
+          name: category?.name,
+          description: category?.description || `Preparation hub for ${category?.name}`,
+          provider: { '@type': 'Organization', name: 'EduHub' },
+        }}
+      />
       {/* ════════ HERO SECTION (Without Key Dates Widget) ════════ */}
-      <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-red-700 text-white pt-14 pb-14 relative overflow-hidden shadow-lg">
+      <div className="bg-slate-950 dark:bg-slate-950 text-white pt-14 pb-14 relative overflow-hidden shadow-premium">
+        {/* Ambient Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-amber-600/15 rounded-full blur-[120px] pointer-events-none"></div>
         <div className="container mx-auto px-4 relative z-10 max-w-7xl">
           <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
             <div className="flex items-start md:items-center gap-6">
@@ -151,7 +160,7 @@ export default function ExamDetail() {
                     </span>
                   )}
                 </div>
-                <h1 className="text-3xl md:text-5xl font-black font-display mb-3">
+                <h1 className="text-3xl md:text-5xl font-black font-display mb-3 tracking-tight">
                   {category.name}
                 </h1>
                 <p className="text-sm md:text-base text-amber-100 max-w-3xl leading-relaxed line-clamp-2">
@@ -221,7 +230,7 @@ export default function ExamDetail() {
         {/* ── Section 1: Overview ── */}
         <section
           id="section-overview"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl font-bold">
@@ -250,10 +259,10 @@ export default function ExamDetail() {
           </div>
         </section>
 
-        {/* ── Section 2: Courses & Batches ── */}
+        {/* ── Section 2: Courses ── */}
         <section
           id="section-courses"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="flex items-center gap-3">
@@ -262,7 +271,7 @@ export default function ExamDetail() {
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                  Target Batches & Courses ({courses.length})
+                  Courses ({courses.length})
                 </h2>
                 <p className="text-xs text-slate-500">
                   Live & recorded classes tailored for {category.name}
@@ -281,10 +290,10 @@ export default function ExamDetail() {
             <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
               <div className="text-3xl mb-2">🎓</div>
               <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1">
-                New Target Batch Starting Soon
+                New Courses Coming Soon
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-                Our faculty is finalizing the live foundation batch for {category.name}.
+                Our faculty is finalizing new course materials for {category.name}.
               </p>
               <Link to="/courses" className="btn-primary text-xs font-bold px-4 py-2">
                 Explore Available Courses
@@ -302,7 +311,7 @@ export default function ExamDetail() {
         {/* ── Section 3: Test Series ── */}
         <section
           id="section-tests"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="flex items-center gap-3">
@@ -352,7 +361,7 @@ export default function ExamDetail() {
         {/* ── Section 4: Official Syllabus ── */}
         <section
           id="section-syllabus"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl font-bold">
@@ -406,7 +415,7 @@ export default function ExamDetail() {
         {/* ── Section 5: Exam Pattern & Scheme ── */}
         <section
           id="section-pattern"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl font-bold">
@@ -467,7 +476,7 @@ export default function ExamDetail() {
         {/* ── Section 6: Eligibility Criteria & Selection Process ── */}
         <section
           id="section-eligibility"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="h-10 w-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center text-xl font-bold">
@@ -522,7 +531,7 @@ export default function ExamDetail() {
         {/* ── Section 7: Solved Previous Year Papers (PYQs) ── */}
         <section
           id="section-pyqs"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="flex items-center gap-3">
@@ -595,7 +604,7 @@ export default function ExamDetail() {
         {/* ── Section 8: Free Study Material & Handwritten Notes ── */}
         <section
           id="section-resources"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="flex items-center gap-3">
@@ -664,7 +673,7 @@ export default function ExamDetail() {
         {/* ── Section 9: Updates & Articles ── */}
         <section
           id="section-updates"
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 md:p-8"
+          className="bg-white dark:bg-slate-950 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 p-6 md:p-8 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div className="flex items-center gap-3">

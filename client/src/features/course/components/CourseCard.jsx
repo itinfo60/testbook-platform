@@ -1,27 +1,46 @@
 import { Link } from 'react-router-dom';
-import { HiBookOpen, HiUser, HiClock } from 'react-icons/hi';
+import {
+  HiBadgeCheck,
+  HiBookOpen,
+  HiClock,
+  HiGlobe,
+  HiStar,
+  HiUser,
+  HiVideoCamera,
+} from 'react-icons/hi';
 import PriceTag from '@/components/common/PriceTag';
 import RatingStars from '@/components/common/RatingStars';
 export default function CourseCard({ course }) {
   const {
     _id,
+    slug,
     title,
     thumbnail,
     teacher,
+    author,
+    creator,
     price,
     discountPrice,
     effectivePrice,
     averageRating,
     totalReviews,
     totalDuration,
-    level,
     category,
     totalLessons,
+    description,
+    shortDescription,
   } = course;
 
   const displayThumbnail = thumbnail?.url || thumbnail;
   const displayPrice = effectivePrice ?? price;
   const originalPrice = discountPrice > 0 ? price : undefined;
+
+  const displayDesc =
+    shortDescription ||
+    description ||
+    'Comprehensive course material and expert guidance to help you master this subject.';
+  const rawAuthorName = author?.name || creator?.name || teacher?.name;
+  const authorName = rawAuthorName || 'Instructor';
 
   const formatDuration = (secs) => {
     if (!secs) return null;
@@ -30,21 +49,18 @@ export default function CourseCard({ course }) {
     return h > 0 ? `${h}h ${m}m` : `${m} min`;
   };
 
-  const levelColors = {
-    beginner: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    intermediate: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    advanced: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  };
-
   return (
-    <Link to={`/courses/${_id}`} className="card-hover overflow-hidden group">
+    <Link
+      to={`/courses/${slug || _id}`}
+      className="group bg-white dark:bg-dark-900 rounded-[20px] border border-dark-200 dark:border-dark-800 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative"
+    >
       {/* Thumbnail */}
-      <div className="relative h-40 sm:h-44 bg-dark-100 dark:bg-dark-700 overflow-hidden">
+      <div className="relative aspect-[16/9] w-full bg-dark-50 dark:bg-dark-950 overflow-hidden shrink-0 border-b border-dark-100 dark:border-dark-800">
         {displayThumbnail ? (
           <img
             src={displayThumbnail}
             alt={title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.style.display = 'none';
@@ -54,58 +70,96 @@ export default function CourseCard({ course }) {
             }}
           />
         ) : null}
+
+        {/* Fallback Icon */}
         <div
-          className={`fallback-icon w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center absolute inset-0 ${displayThumbnail ? 'hidden' : ''}`}
+          className={`fallback-icon w-full h-full bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 flex flex-col items-center justify-center absolute inset-0 ${displayThumbnail ? 'hidden' : ''}`}
         >
-          <HiBookOpen className="h-10 w-10 sm:h-12 sm:w-12 text-white/50" />
+          <HiBookOpen className="h-10 w-10 text-white/40 mb-2" />
+          <span className="text-white/30 text-[10px] font-black tracking-widest uppercase">
+            Course
+          </span>
         </div>
-        {level && (
-          <span
-            className={`absolute top-2 sm:top-3 left-2 sm:left-3 badge ${levelColors[level] || levelColors.beginner} text-xs`}
-          >
-            {level}
-          </span>
-        )}
-        {category && (
-          <span className="absolute top-2 sm:top-3 right-2 sm:right-3 badge bg-white/90 dark:bg-dark-800/90 text-dark-700 dark:text-dark-300 backdrop-blur-sm text-xs truncate max-w-[100px]">
-            {typeof category === 'string' ? category : category.name}
-          </span>
+
+        {/* Floating Rating Badge */}
+        {averageRating > 0 && (
+          <div className="absolute top-3 left-3 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm border border-dark-200/50 dark:border-dark-700/50">
+            <HiStar className="h-3.5 w-3.5 text-amber-500" />
+            <span className="text-[11px] font-black text-dark-900 dark:text-white">
+              {Number(averageRating).toFixed(1)}
+            </span>
+            <span className="text-[10px] font-bold text-dark-400">({totalReviews || 0})</span>
+          </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="p-4 sm:p-5">
-        <h3 className="font-semibold text-dark-900 dark:text-white line-clamp-2 mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm sm:text-base">
+      {/* Content Body */}
+      <div className="p-5 flex flex-col flex-1">
+        {/* Category */}
+        {category && (
+          <span className="text-[11px] font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider mb-2 block truncate">
+            {typeof category === 'string' ? category : category.name}
+          </span>
+        )}
+
+        {/* Title */}
+        <h3 className="text-[17px] sm:text-lg font-black text-dark-900 dark:text-white line-clamp-2 mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-tight">
           {title}
         </h3>
 
-        <div className="flex items-center gap-2 mb-2 sm:mb-3">
-          <div className="h-5 w-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-            <HiUser className="h-3 w-3 text-primary-600 dark:text-primary-400" />
+        {/* Description */}
+        <p className="text-[13px] text-dark-500 dark:text-dark-400 line-clamp-2 mb-4 leading-relaxed">
+          {displayDesc}
+        </p>
+
+        {/* Meta Stats: Teacher, Duration, Lessons */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] font-medium text-dark-500 dark:text-dark-400 mb-4">
+          <div className="flex items-center gap-1.5 max-w-[120px] sm:max-w-[150px]">
+            <HiUser className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{authorName}</span>
           </div>
-          <span className="text-xs sm:text-sm text-dark-500 dark:text-dark-400 truncate">
-            {teacher?.name || 'Instructor'}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-3 text-xs text-dark-400">
-          {totalLessons > 0 && (
-            <span className="flex items-center gap-1">
-              <HiBookOpen className="h-3.5 w-3.5" />
-              {totalLessons} lessons
-            </span>
-          )}
           {formatDuration(totalDuration) && (
-            <span className="flex items-center gap-1">
-              <HiClock className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5">
+              <HiClock className="h-3.5 w-3.5 shrink-0" />
               {formatDuration(totalDuration)}
-            </span>
+            </div>
+          )}
+          {totalLessons > 0 && (
+            <div className="flex items-center gap-1.5">
+              <HiBookOpen className="h-3.5 w-3.5 shrink-0" />
+              {totalLessons} lessons
+            </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-dark-100 dark:border-dark-700">
+        {/* Course Includes (Grid Layout spanning full width of the container) */}
+        <div className="mt-auto border-t border-dark-100 dark:border-dark-800 pt-4 mb-4">
+          <p className="text-[11px] font-bold text-dark-400 dark:text-dark-500 uppercase tracking-wider mb-3">
+            This course includes
+          </p>
+          <div className="grid grid-cols-2 gap-y-3 gap-x-4 w-full">
+            <div className="flex items-center gap-2 text-[12px] text-dark-700 dark:text-dark-300 font-medium w-full">
+              <HiGlobe className="h-4 w-4 text-emerald-500 shrink-0" />
+              <span className="truncate">{course.language || 'English & Hindi'}</span>
+            </div>
+            <div className="flex items-center gap-2 text-[12px] text-dark-700 dark:text-dark-300 font-medium w-full">
+              <HiVideoCamera className="h-4 w-4 text-blue-500 shrink-0" />
+              <span className="truncate">{totalLessons || '40+'} Lectures</span>
+            </div>
+            <div className="flex items-center gap-2 text-[12px] text-dark-700 dark:text-dark-300 font-medium w-full">
+              <HiBookOpen className="h-4 w-4 text-indigo-500 shrink-0" />
+              <span className="truncate">Mock Tests</span>
+            </div>
+            <div className="flex items-center gap-2 text-[12px] text-dark-700 dark:text-dark-300 font-medium w-full">
+              <HiBadgeCheck className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="truncate">Certificate</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: Price */}
+        <div className="pt-4 border-t border-dashed border-dark-200 dark:border-dark-800 flex items-center justify-between gap-3">
           <PriceTag price={displayPrice} originalPrice={originalPrice} size="sm" />
-          <RatingStars rating={averageRating || 0} count={totalReviews} size="sm" />
         </div>
       </div>
     </Link>

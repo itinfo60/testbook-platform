@@ -1,3 +1,4 @@
+import SeoHead from '@/components/SeoHead';
 import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -45,9 +46,38 @@ export default function BlogDetail() {
 
   const isJobAlert = currentBlog.type === 'job_alert';
   const jobAlert = currentBlog.jobAlert || {};
+  const blog = currentBlog;
 
   return (
     <article className="min-h-screen bg-slate-50 dark:bg-dark-950 pb-20 text-dark-900 dark:text-dark-100">
+      <SeoHead
+        title={blog?.title || 'Article'}
+        description={blog?.excerpt?.substring(0, 160) || 'Read the full article on EduHub.'}
+        image={blog?.coverImage?.url}
+        type="article"
+        jsonLd={
+          blog
+            ? {
+                '@context': 'https://schema.org',
+                '@type': blog?.type === 'job_alert' ? 'JobPosting' : 'Article',
+                headline: blog.title,
+                description: blog.excerpt,
+                datePublished: blog.publishedAt,
+                author: { '@type': 'Person', name: blog.author?.name || 'EduHub Team' },
+                ...(blog.type === 'job_alert' && blog.jobAlert
+                  ? {
+                      hiringOrganization: {
+                        '@type': 'Organization',
+                        name: blog.jobAlert.organization,
+                      },
+                      totalJobOpenings: blog.jobAlert.totalVacancies,
+                      validThrough: blog.jobAlert.applicationEnd,
+                    }
+                  : {}),
+              }
+            : null
+        }
+      />
       {/* Hero Section */}
       <div className="relative h-[280px] sm:h-[380px] w-full bg-slate-900">
         {currentBlog.coverImage?.url ? (
@@ -62,7 +92,7 @@ export default function BlogDetail() {
         <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/60 to-transparent" />
 
         <div className="absolute bottom-0 left-0 w-full p-4 sm:p-6 md:p-12">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <Link
               to="/blog"
               className="inline-flex items-center gap-2 text-amber-300 font-bold mb-4 hover:text-white transition-colors text-xs sm:text-sm"
@@ -92,7 +122,7 @@ export default function BlogDetail() {
                   {currentBlog.author?.name?.charAt(0) || 'A'}
                 </div>
                 <span className="font-semibold text-white">
-                  {currentBlog.author?.name || 'EduPortal Team'}
+                  {currentBlog.author?.name || 'EduHub Team'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md">
@@ -109,7 +139,7 @@ export default function BlogDetail() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8 sm:mt-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8 sm:mt-12">
         <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-10 shadow-sm border border-slate-200 dark:border-dark-800">
           {/* 🔔 Job Alert Notification Card (if job_alert) */}
           {isJobAlert && (

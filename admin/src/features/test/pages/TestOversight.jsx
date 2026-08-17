@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Eye, Trash2, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { fetchTests, deleteTest } from '@/features/test/testSlice';
 import useDebounce from '@/hooks/useDebounce';
 import DataTable from '@/components/DataTable';
@@ -8,6 +9,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { truncate, formatDate, getStatusColor } from '@/utils';
 
 export default function TestOversight() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { list, pagination, loading } = useSelector((s) => s.tests);
   const [page, setPage] = useState(1);
@@ -122,6 +124,7 @@ export default function TestOversight() {
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
             <button
+              onClick={() => navigate(`/tests/${row._id}`)}
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               title="View"
             >

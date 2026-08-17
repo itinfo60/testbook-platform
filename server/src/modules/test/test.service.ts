@@ -86,6 +86,9 @@ export class TestService extends BaseService<ITest, TestRepository> {
     if (query.category) {
       filter.category = new mongoose.Types.ObjectId(query.category);
     }
+    if (query.testSeries) {
+      filter.testSeries = new mongoose.Types.ObjectId(query.testSeries);
+    }
     if (query.difficulty) {
       filter.difficulty = query.difficulty;
     }

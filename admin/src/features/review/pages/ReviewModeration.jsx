@@ -25,10 +25,15 @@ export default function ReviewModeration() {
     dispatch(fetchReviews({ page, limit: 10, search: debouncedSearch }));
   }, [dispatch, page, debouncedSearch]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleDelete = async () => {
-    if (deleteTarget) { await dispatch(deleteReview(deleteTarget)); setDeleteTarget(null); }
+    if (deleteTarget) {
+      await dispatch(deleteReview(deleteTarget));
+      setDeleteTarget(null);
+    }
   };
 
   const renderStars = (rating) => {
@@ -75,7 +80,10 @@ export default function ReviewModeration() {
     {
       key: 'status',
       label: 'Status',
-      render: (val) => <span className={getStatusColor(val || 'pending')}>{val || 'pending'}</span>,
+      render: (_, row) => {
+        const stat = row.isApproved ? 'approved' : 'pending';
+        return <span className={getStatusColor(stat)}>{stat}</span>;
+      },
     },
     {
       key: 'createdAt',
@@ -100,7 +108,9 @@ export default function ReviewModeration() {
           </div>
           <div>
             <p className="text-sm text-gray-500">Total Reviews</p>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">{pagination?.total || list.length}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">
+              {pagination?.total || list.length}
+            </p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
@@ -110,7 +120,7 @@ export default function ReviewModeration() {
           <div>
             <p className="text-sm text-gray-500">Pending</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {list.filter((r) => r.status === 'pending').length}
+              {list.filter((r) => !r.isApproved).length}
             </p>
           </div>
         </div>
@@ -121,7 +131,7 @@ export default function ReviewModeration() {
           <div>
             <p className="text-sm text-gray-500">Approved</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {list.filter((r) => r.status === 'approved').length}
+              {list.filter((r) => r.isApproved).length}
             </p>
           </div>
         </div>
@@ -135,22 +145,27 @@ export default function ReviewModeration() {
         onPageChange={setPage}
         searchable
         searchValue={search}
-        onSearch={(val) => { setSearch(val); setPage(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
         searchPlaceholder="Search reviews..."
         emptyMessage="No reviews found"
         emptyIcon={Star}
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            {row.status !== 'approved' && (
-              <button 
-                onClick={() => dispatch(toggleReviewApproval(row._id))} 
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" 
-                title={row.isApproved ? "Hide Review" : "Approve Review"}
-              >
-                <CheckCircle className={`w-4 h-4 ${row.isApproved ? 'text-gray-400' : 'text-emerald-600'}`} />
-              </button>
-            )}
-            <button onClick={() => setDeleteTarget(row._id)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Delete">
+            <button
+              onClick={() => dispatch(toggleReviewApproval(row._id))}
+              className={`px-2 py-1 rounded text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-700 ${row.isApproved ? 'text-amber-600' : 'text-emerald-600'}`}
+              title={row.isApproved ? 'Unapprove Review' : 'Approve Review'}
+            >
+              {row.isApproved ? 'Unapprove' : 'Approve'}
+            </button>
+            <button
+              onClick={() => setDeleteTarget(row._id)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Delete"
+            >
               <Trash2 className="w-4 h-4 text-red-600" />
             </button>
           </div>

@@ -115,7 +115,7 @@ class EmailService {
   }
 
   async sendVerificationEmail(user, token) {
-    const verifyUrl = `${config.clientUrl}/verify-email?token=${token}`;
+    const verifyUrl = `${config.clientUrl}/verify-email/${token}`;
     return this.send({
       to: user.email,
       subject: 'Verify Your Email - TestBook',
@@ -132,7 +132,7 @@ class EmailService {
   }
 
   async sendResetPasswordEmail(user, token) {
-    const resetUrl = `${config.clientUrl}/reset-password?token=${token}`;
+    const resetUrl = `${config.clientUrl}/reset-password/${token}`;
     return this.send({
       to: user.email,
       subject: 'Reset Password - TestBook',

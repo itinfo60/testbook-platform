@@ -1,3 +1,4 @@
+import SeoHead from '@/components/SeoHead';
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -241,6 +242,10 @@ export default function FreeResourcesPage() {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 pb-20">
+      <SeoHead
+        title="Free Study Resources — PYQs, Syllabus, Notes & Current Affairs"
+        description="Download free RPSC & RAS study material: solved PYQs, official syllabus, handwritten notes, current affairs, and mind maps. 100% free."
+      />
       {/* ════════ HERO BANNER ════════ */}
       <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white py-14 px-4 sm:px-6 lg:px-8 relative overflow-hidden shadow-lg">
         <div className="max-w-5xl mx-auto text-center relative z-10">
