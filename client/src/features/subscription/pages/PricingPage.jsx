@@ -119,7 +119,7 @@ export default function PricingPage() {
           <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white mb-4">
             Choose your plan
           </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
             Scale from small institutes to enterprise deployments. All plans include core LMS
             features.
           </p>
@@ -156,7 +156,7 @@ export default function PricingPage() {
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                     {meta.label || plan.name}
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                     {meta.description}
                   </p>
                 </div>
@@ -165,7 +165,7 @@ export default function PricingPage() {
                   <span className="text-4xl font-extrabold text-slate-900 dark:text-white">
                     ₹{plan.price.toLocaleString()}
                   </span>
-                  <span className="text-slate-500 dark:text-slate-400 ml-1">
+                  <span className="text-slate-600 dark:text-slate-400 ml-1">
                     /{plan.billingCycle === 'yearly' ? 'yr' : 'mo'}
                   </span>
                 </div>
@@ -188,7 +188,7 @@ export default function PricingPage() {
                 </ul>
 
                 {isCurrent ? (
-                  <div className="py-3 px-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-dark-600 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="py-3 px-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-dark-600 text-center text-sm font-semibold text-slate-600 dark:text-slate-400">
                     Current Plan
                   </div>
                 ) : (

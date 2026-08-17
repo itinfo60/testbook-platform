@@ -52,7 +52,16 @@ api.interceptors.request.use(
       config.headers['X-Tenant-Subdomain'] = subdomain;
     } else {
       const tenantId = localStorage.getItem('adminTenantId');
-      if (tenantId) config.headers['X-Tenant-Id'] = tenantId;
+      const devTenantId = import.meta.env.VITE_TENANT_ID;
+      const devTenantSubdomain = import.meta.env.VITE_TENANT_SUBDOMAIN;
+
+      if (tenantId) {
+        config.headers['X-Tenant-Id'] = tenantId;
+      } else if (devTenantId) {
+        config.headers['X-Tenant-Id'] = devTenantId;
+      } else if (devTenantSubdomain) {
+        config.headers['X-Tenant-Subdomain'] = devTenantSubdomain;
+      }
     }
     return config;
   },

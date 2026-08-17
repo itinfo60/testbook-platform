@@ -38,7 +38,6 @@ vi.mock('@/services/api', () => {
 });
 
 import api from '@/services/api';
-import { High } from 'react-icons/hi';
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: false }),

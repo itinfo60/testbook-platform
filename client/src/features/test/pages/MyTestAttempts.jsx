@@ -52,7 +52,7 @@ export default function MyTestAttempts() {
             <p className="text-dark-900 dark:text-white font-bold text-lg mb-2">
               You haven't unlocked any exclusive tests.
             </p>
-            <p className="text-slate-500 mb-6 font-medium">
+            <p className="text-slate-600 mb-6 font-medium">
               Get a test series pass to unlock premium mock tests and PYQs.
             </p>
             <Link
@@ -76,9 +76,9 @@ export default function MyTestAttempts() {
                   <h3 className="font-extrabold text-lg text-dark-900 dark:text-white mb-3 line-clamp-2 group-hover:text-primary-600 transition-colors">
                     {test.title}
                   </h3>
-                  <div className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-6 flex flex-wrap items-center gap-3">
+                  <div className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-6 flex flex-wrap items-center gap-3">
                     <span className="flex items-center gap-1 bg-slate-50 dark:bg-dark-800 px-2 py-1 rounded-md">
-                      <HiClock className="h-4 w-4 text-amber-500" /> {test.duration} mins
+                      <HiClock className="h-4 w-4 text-amber-800" /> {test.duration} mins
                     </span>
                     <span className="flex items-center gap-1 bg-slate-50 dark:bg-dark-800 px-2 py-1 rounded-md">
                       <HiCheckCircle className="h-4 w-4 text-emerald-500" /> {test.questionsCount}{' '}
@@ -111,7 +111,7 @@ export default function MyTestAttempts() {
             <p className="text-dark-900 dark:text-white font-bold text-lg mb-2">
               No attempt history found.
             </p>
-            <p className="text-slate-500 mb-6 font-medium">
+            <p className="text-slate-600 mb-6 font-medium">
               Your test attempts and performance analysis will appear here.
             </p>
             <Link
@@ -132,8 +132,8 @@ export default function MyTestAttempts() {
                   <h3 className="font-extrabold text-lg text-dark-900 dark:text-white mb-1.5 truncate group-hover:text-secondary-600 transition-colors">
                     {attempt.test?.title || 'Unknown Test'}
                   </h3>
-                  <div className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    <HiClock className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                  <div className="text-sm font-bold text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                    <HiClock className="h-4 w-4 flex-shrink-0 text-slate-600" />
                     {new Date(attempt.startedAt).toLocaleDateString()} •{' '}
                     {new Date(attempt.startedAt).toLocaleTimeString([], {
                       hour: '2-digit',
@@ -143,7 +143,7 @@ export default function MyTestAttempts() {
                 </div>
                 <div className="flex items-center justify-between sm:justify-end gap-6 bg-slate-50 dark:bg-dark-800/50 rounded-2xl p-4 border border-slate-100 dark:border-dark-700 flex-shrink-0 w-full sm:w-auto">
                   <div className="text-center">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">
                       Score
                     </div>
                     <div className="font-extrabold text-2xl text-dark-900 dark:text-white">
@@ -152,7 +152,7 @@ export default function MyTestAttempts() {
                   </div>
                   <div className="w-px h-10 bg-slate-200 dark:bg-dark-700"></div>
                   <div className="text-center">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">
                       Status
                     </div>
                     <div
@@ -163,7 +163,7 @@ export default function MyTestAttempts() {
                   </div>
                   <Link
                     to={`/tests/${attempt.test?._id}/result`}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600 hover:bg-secondary-50 hover:text-secondary-600 hover:border-secondary-200 transition-colors text-slate-500 shadow-sm flex-shrink-0"
+                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600 hover:bg-secondary-50 hover:text-secondary-600 hover:border-secondary-200 transition-colors text-slate-600 shadow-sm flex-shrink-0"
                   >
                     <HiArrowRight className="h-5 w-5" />
                   </Link>

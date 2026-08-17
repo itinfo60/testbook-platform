@@ -13,7 +13,7 @@ export default function ErrorState({ title = 'Something went wrong', message, on
       <HiExclamationCircle className="h-14 w-14 text-red-400 mb-4" />
       <h3 className="text-xl font-extrabold text-dark-900 dark:text-white mb-2">{title}</h3>
       {message && (
-        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed mb-6">
+        <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm leading-relaxed mb-6">
           {message}
         </p>
       )}

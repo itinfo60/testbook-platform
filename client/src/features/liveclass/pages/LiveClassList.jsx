@@ -37,14 +37,14 @@ export default function LiveClassList() {
         </div>
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Live Classes</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Upcoming and active live sessions
           </p>
         </div>
       </div>
 
       {classes.length === 0 ? (
-        <div className="text-center py-16 text-slate-500 dark:text-slate-400">
+        <div className="text-center py-16 text-slate-600 dark:text-slate-400">
           <HiVideoCamera className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p>No upcoming classes scheduled</p>
         </div>
@@ -74,7 +74,7 @@ export default function LiveClassList() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
                   <span className="flex items-center gap-1">
                     <HiClock className="h-3.5 w-3.5" /> {formatDate(cls.scheduledAt)}
                   </span>

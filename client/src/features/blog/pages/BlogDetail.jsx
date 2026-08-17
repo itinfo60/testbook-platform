@@ -52,7 +52,7 @@ export default function BlogDetail() {
     <article className="min-h-screen bg-slate-50 dark:bg-dark-950 pb-20 text-dark-900 dark:text-dark-100">
       <SeoHead
         title={blog?.title || 'Article'}
-        description={blog?.excerpt?.substring(0, 160) || 'Read the full article on EduHub.'}
+        description={blog?.excerpt?.substring(0, 160) || 'Read the full article on CivicsEdu.'}
         image={blog?.coverImage?.url}
         type="article"
         jsonLd={
@@ -63,7 +63,7 @@ export default function BlogDetail() {
                 headline: blog.title,
                 description: blog.excerpt,
                 datePublished: blog.publishedAt,
-                author: { '@type': 'Person', name: blog.author?.name || 'EduHub Team' },
+                author: { '@type': 'Person', name: blog.author?.name || 'CivicsEdu Team' },
                 ...(blog.type === 'job_alert' && blog.jobAlert
                   ? {
                       hiringOrganization: {
@@ -118,11 +118,11 @@ export default function BlogDetail() {
             </h1>
             <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold">
+                <div className="h-8 w-8 rounded-full bg-amber-800 flex items-center justify-center text-white font-bold">
                   {currentBlog.author?.name?.charAt(0) || 'A'}
                 </div>
                 <span className="font-semibold text-white">
-                  {currentBlog.author?.name || 'EduHub Team'}
+                  {currentBlog.author?.name || 'CivicsEdu Team'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md">
@@ -236,7 +236,7 @@ export default function BlogDetail() {
             </div>
             <button
               onClick={() => navigator.clipboard?.writeText(window.location.href)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-dark-800 hover:bg-amber-500 hover:text-white text-dark-900 dark:text-white font-bold rounded-xl transition-all text-xs cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-dark-800 hover:bg-amber-800 hover:text-white text-dark-900 dark:text-white font-bold rounded-xl transition-all text-xs cursor-pointer"
             >
               <HiShare className="h-4 w-4" /> Share Link
             </button>

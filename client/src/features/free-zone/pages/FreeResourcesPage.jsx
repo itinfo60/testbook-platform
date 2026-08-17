@@ -343,7 +343,7 @@ export default function FreeResourcesPage() {
           </div>
 
           {/* Sort By & Results Count */}
-          <div className="flex items-center justify-between md:justify-end gap-4 text-xs font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between md:justify-end gap-4 text-xs font-bold text-slate-600 dark:text-slate-400">
             <span>
               Showing{' '}
               <strong className="text-slate-900 dark:text-white">{filteredItems.length}</strong>{' '}
@@ -412,7 +412,7 @@ export default function FreeResourcesPage() {
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                   No free study materials found
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-6">
                   No documents match your current filter or search criteria.
                 </p>
                 <button
@@ -462,7 +462,7 @@ export default function FreeResourcesPage() {
                         </h3>
 
                         {/* Description */}
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">
                           {resource.description ||
                             'Verified study PDF document for competitive exam preparation and revision.'}
                         </p>

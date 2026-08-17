@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureStore } from '@reduxjs/toolkit';
+import { HelmetProvider } from 'react-helmet-async';
 import authReducer from '@/features/auth/authSlice';
 
 export function makeStore(preloadedState = {}) {
@@ -27,11 +28,13 @@ export function renderWithProviders(
 
   function Wrapper({ children }) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <Provider store={store}>
-          <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
-        </Provider>
-      </QueryClientProvider>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <Provider store={store}>
+            <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+          </Provider>
+        </QueryClientProvider>
+      </HelmetProvider>
     );
   }
 

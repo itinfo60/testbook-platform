@@ -56,16 +56,18 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 flex-shrink-0">
           {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center font-bold text-sm">
-                T
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-slate-950 rounded flex items-center justify-center border-l-2 border-yellow-500 shadow-sm">
+                <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold">Admin</span>
+              <span className="text-xl font-bold uppercase tracking-tight">
+                Civics<span className="text-yellow-500">Edu</span>
+              </span>
             </div>
           )}
           {collapsed && (
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center font-bold text-sm mx-auto">
-              T
+            <div className="w-8 h-8 bg-slate-950 rounded flex items-center justify-center border-l-2 border-yellow-500 shadow-sm mx-auto">
+              <GraduationCap className="w-5 h-5 text-white" />
             </div>
           )}
           <button onClick={onClose} className="lg:hidden p-1 rounded hover:bg-white/10">
@@ -109,7 +111,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
         {/* Footer */}
         {!collapsed && (
           <div className="p-4 border-t border-white/10 flex-shrink-0">
-            <p className="text-xs text-gray-400 text-center">© 2024 Testbook Admin</p>
+            <p className="text-xs text-gray-400 text-center">© 2024 CivicsEdu Admin</p>
           </div>
         )}
       </aside>

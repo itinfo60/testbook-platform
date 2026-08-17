@@ -96,7 +96,7 @@ function BlogCard({ blog }) {
         </h3>
 
         {blog.excerpt && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed">
             {blog.excerpt}
           </p>
         )}
@@ -212,9 +212,9 @@ export default function BlogList() {
             <HiNewspaper className="h-4 w-4" /> Blog & Job Alerts
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold text-dark-900 dark:text-white mb-3 font-display">
-            Updates, Strategies & <span className="text-amber-500">Job Alerts</span>
+            Updates, Strategies & <span className="text-amber-800">Job Alerts</span>
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
+          <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
             Latest RPSC recruitment notices, admit cards, topper strategies, and Political Science
             subject discussions.
           </p>
@@ -230,7 +230,7 @@ export default function BlogList() {
                 onClick={() => handleTabChange(tab.id)}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   activeTab === tab.id
-                    ? 'bg-amber-500 text-white shadow-md'
+                    ? 'bg-amber-800 text-white shadow-md'
                     : 'bg-slate-50 dark:bg-dark-800 text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-600 border border-slate-200 dark:border-dark-700'
                 }`}
               >
@@ -261,8 +261,8 @@ export default function BlogList() {
         ) : filteredBlogs.length === 0 ? (
           <div className="py-20 text-center bg-white dark:bg-dark-900 rounded-3xl border border-dashed border-slate-200 dark:border-dark-800">
             <HiSearch className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-dark-900 dark:text-white mb-2">No posts found</h3>
-            <p className="text-slate-500 dark:text-slate-400 mb-6">
+            <h2 className="text-xl font-bold text-dark-900 dark:text-white mb-2">No posts found</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
               Try a different filter or search.
             </p>
             <button
@@ -295,7 +295,7 @@ export default function BlogList() {
                         />
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                      <span className="absolute top-4 left-4 bg-amber-500 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                      <span className="absolute top-4 left-4 bg-amber-800 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full">
                         ⭐ Featured
                       </span>
                     </div>

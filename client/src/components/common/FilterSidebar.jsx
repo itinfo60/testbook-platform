@@ -21,7 +21,7 @@ export default function FilterSidebar({
   const content = (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h2>
         {onClear && hasActiveFilters && (
           <button
             onClick={onClear}
@@ -34,9 +34,9 @@ export default function FilterSidebar({
 
       {filters.map((filter) => (
         <div key={filter.key}>
-          <h4 className="text-[15px] font-bold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-[15px] font-bold text-gray-900 dark:text-white mb-4">
             {filter.label}
-          </h4>
+          </h3>
           <div className="space-y-3">
             {filter.options.map((option) => (
               <div key={option.value} className="space-y-2">

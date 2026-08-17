@@ -215,7 +215,7 @@ export default function RegisterPage() {
           {passwordValue && (
             <div className="mt-2">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
+                <span className="text-xs text-slate-600 dark:text-slate-400">
                   Password strength:
                 </span>
                 <span

@@ -94,12 +94,12 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
             )}
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <HiAcademicCap className="h-6 w-6 text-amber-500" />
+                <HiAcademicCap className="h-6 w-6 text-amber-800" />
                 {selectedExam
                   ? `${selectedExam.name} — Test Series Packages`
                   : 'Select Your Target Competitive Exam'}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                 {selectedExam
                   ? 'Choose from available Mock Test Series, PYP Papers, Subject & Chapter Series'
                   : 'Access full mock series, PYP papers, and subject target packages'}
@@ -109,7 +109,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-full transition-colors cursor-pointer"
+            className="p-2 text-slate-600 hover:text-slate-600 dark:hover:text-white rounded-full transition-colors cursor-pointer"
           >
             <HiX className="h-6 w-6" />
           </button>
@@ -121,7 +121,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
             {/* Search & Category Filter Pills */}
             <div className="p-6 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 space-y-4">
               <div className="relative">
-                <HiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+                <HiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 h-5 w-5" />
                 <input
                   type="text"
                   value={search}
@@ -142,7 +142,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
                     onClick={() => setActiveTab(t.id)}
                     className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === t.id
-                        ? 'bg-amber-500 text-white shadow-md'
+                        ? 'bg-amber-800 text-white shadow-md'
                         : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -155,7 +155,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
             {/* Exam Cards Grid */}
             <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
               {filteredExams.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 text-sm">
+                <div className="text-center py-12 text-slate-600 text-sm">
                   No exams found matching your search.
                 </div>
               ) : (
@@ -176,19 +176,19 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
                           </span>
                         </div>
 
-                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-amber-800 dark:group-hover:text-amber-400 transition-colors">
                           {exam.name}
                         </h3>
                         {exam.description && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
                             {exam.description}
                           </p>
                         )}
                       </div>
 
-                      <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+                      <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
                         <span>55 Total Tests • Official PYPs</span>
-                        <span className="text-amber-600 dark:text-amber-400 font-extrabold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                        <span className="text-amber-800 dark:text-amber-400 font-extrabold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                           Select Exam <HiArrowRight className="h-4 w-4" />
                         </span>
                       </div>
@@ -202,7 +202,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
           /* Step 2: Multiple Test Series Packages View for Selected Exam */
           <div className="p-6 overflow-y-auto max-h-[70vh]">
             {loadingPackages ? (
-              <div className="py-16 text-center text-slate-500">
+              <div className="py-16 text-center text-slate-600">
                 Loading test series packages...
               </div>
             ) : examPackages.length === 0 ? (
@@ -213,7 +213,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
                 </h3>
                 <button
                   onClick={() => handleSelectExam(selectedExam)}
-                  className="text-xs text-amber-600 font-bold hover:underline"
+                  className="text-xs text-amber-800 font-bold hover:underline"
                 >
                   Reload Packages
                 </button>
@@ -237,17 +237,17 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
                         )}
                       </div>
 
-                      <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2 group-hover:text-amber-800 dark:group-hover:text-amber-400 transition-colors">
                         {series.title}
                       </h3>
 
-                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed">
                         {series.description}
                       </p>
 
-                      <div className="flex items-center gap-4 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl mb-4">
+                      <div className="flex items-center gap-4 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl mb-4">
                         <span className="flex items-center gap-1">
-                          <HiClipboardList className="h-4 w-4 text-amber-500" />{' '}
+                          <HiClipboardList className="h-4 w-4 text-amber-800" />{' '}
                           {series.testsCount || 15} Tests
                         </span>
                         <span className="flex items-center gap-1">
@@ -270,7 +270,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
 
                       <button
                         onClick={() => handleSelectPackage(series)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        className="bg-amber-800 hover:bg-amber-900 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                       >
                         <span>View Series</span>
                         <HiArrowRight className="h-4 w-4" />

@@ -41,11 +41,11 @@ export default function QuestionReview({ question, index, userAnswer }) {
             {index + 1}
           </span>
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
               Question {index + 1}
             </span>
             {question.subjectTag && (
-              <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+              <span className="text-[11px] font-bold text-amber-800 dark:text-amber-400">
                 {question.subjectTag}
               </span>
             )}
@@ -93,7 +93,7 @@ export default function QuestionReview({ question, index, userAnswer }) {
           let optionStyle =
             'border-slate-200 dark:border-dark-800 bg-slate-50/50 dark:bg-dark-800/40 text-slate-700 dark:text-slate-300';
           let badgeStyle =
-            'bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-500';
+            'bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-600';
 
           if (isCorrectOption) {
             optionStyle =

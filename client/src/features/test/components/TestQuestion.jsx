@@ -27,15 +27,15 @@ export default function TestQuestion({ question, index, total, onNext, onPrev })
       {/* Question Top Header Bar */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-dark-800">
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-amber-500 text-white text-base font-extrabold shadow-sm">
+          <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-amber-800 text-white text-base font-extrabold shadow-sm">
             {index + 1}
           </span>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
               Question {index + 1} of {total}
             </span>
             {question.subjectTag && (
-              <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+              <span className="text-[11px] font-bold text-amber-800 dark:text-amber-400">
                 {question.subjectTag}
               </span>
             )}
@@ -46,7 +46,7 @@ export default function TestQuestion({ question, index, total, onNext, onPrev })
           {selectedAnswer !== undefined && (
             <button
               onClick={handleClear}
-              className="text-xs font-bold text-slate-400 hover:text-rose-500 px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-slate-600 hover:text-rose-500 px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center gap-1 cursor-pointer"
             >
               <HiTrash className="h-3.5 w-3.5" /> Clear Response
             </button>
@@ -99,8 +99,8 @@ export default function TestQuestion({ question, index, total, onNext, onPrev })
               <span
                 className={`flex-shrink-0 h-9 w-9 rounded-xl flex items-center justify-center text-sm font-black transition-all shadow-sm ${
                   isSelected
-                    ? 'bg-amber-500 text-white scale-105'
-                    : 'bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-500 dark:text-slate-400 group-hover:border-amber-400 group-hover:text-amber-600'
+                    ? 'bg-amber-800 text-white scale-105'
+                    : 'bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-600 dark:text-slate-400 group-hover:border-amber-400 group-hover:text-amber-800'
                 }`}
               >
                 {String.fromCharCode(65 + i)}
@@ -115,7 +115,7 @@ export default function TestQuestion({ question, index, total, onNext, onPrev })
                 {optionText}
               </span>
               {isSelected && (
-                <span className="h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                <span className="h-6 w-6 rounded-full bg-amber-800 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
                   <HiCheck className="h-4 w-4" />
                 </span>
               )}

@@ -26,7 +26,7 @@ const STATUS_CONFIG = {
   closing: {
     label: 'Closing Soon',
     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200',
-    dot: 'bg-amber-500 animate-pulse',
+    dot: 'bg-amber-800 animate-pulse',
   },
   upcoming: {
     label: 'Notification Released',
@@ -89,7 +89,7 @@ function JobCard({ job }) {
             <h2 className="text-base sm:text-lg font-extrabold text-dark-900 dark:text-white line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-snug mb-1">
               {job.title}
             </h2>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
               <HiOfficeBuilding className="h-3.5 w-3.5 text-amber-500 shrink-0" />
               <span className="truncate">{alert.organization || 'Government Organization'}</span>
             </div>
@@ -101,7 +101,7 @@ function JobCard({ job }) {
               <p className="text-xl font-black text-amber-600 dark:text-amber-400">
                 {alert.totalVacancies.toLocaleString()}
               </p>
-              <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
+              <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-0.5">
                 Posts
               </p>
             </div>
@@ -144,7 +144,7 @@ function JobCard({ job }) {
 
         {/* Excerpt */}
         {job.excerpt && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-5 leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mb-5 leading-relaxed">
             {job.excerpt}
           </p>
         )}
@@ -153,7 +153,7 @@ function JobCard({ job }) {
         <div className="flex flex-col sm:flex-row gap-2">
           <Link
             to={`/blog/${job.slug}`}
-            className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2.5 px-4 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20"
+            className="flex-1 bg-amber-800 hover:bg-amber-900 text-white font-extrabold py-2.5 px-4 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-amber-800/20"
           >
             View Full Details <HiArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -311,9 +311,9 @@ export default function JobAlertList() {
         {!loading && !error && jobs.length === 0 && (
           <div className="text-center py-20 bg-white dark:bg-dark-900 rounded-3xl border border-dashed border-slate-300 dark:border-dark-700">
             <div className="text-5xl mb-4">🔔</div>
-            <h3 className="text-xl font-bold text-dark-900 dark:text-white mb-2">
+            <h2 className="text-xl font-bold text-dark-900 dark:text-white mb-2">
               No job alerts found
-            </h3>
+            </h2>
             <p className="text-slate-500 text-sm">
               {search || statusFilter !== 'all'
                 ? 'Try adjusting your search or filter.'
@@ -324,7 +324,7 @@ export default function JobAlertList() {
 
         {!loading && !error && jobs.length > 0 && (
           <>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-5">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-5">
               Showing {jobs.length} result{jobs.length !== 1 ? 's' : ''}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

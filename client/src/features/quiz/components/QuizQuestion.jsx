@@ -38,7 +38,7 @@ export default function QuizQuestion({ question, index, selectedAnswer, onSelect
                 className={`flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center text-base font-extrabold transition-all shadow-sm ${
                   isSelected
                     ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white scale-110'
-                    : 'bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-500 dark:text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 group-hover:border-blue-200 dark:group-hover:bg-blue-900/30'
+                    : 'bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 text-slate-600 dark:text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 group-hover:border-blue-200 dark:group-hover:bg-blue-900/30'
                 }`}
               >
                 {String.fromCharCode(65 + i)}

@@ -93,7 +93,7 @@ export default function TestDetail() {
             <div className="text-xs text-dark-400">Questions</div>
           </div>
           <div className="card p-3 sm:p-4 text-center bg-dark-50 dark:bg-dark-800/50">
-            <HiClock className="h-5 w-5 sm:h-6 sm:w-6 text-accent-500 mx-auto mb-1" />
+            <HiClock className="h-5 w-5 sm:h-6 sm:w-6 text-amber-800 mx-auto mb-1" />
             <div className="text-base sm:text-lg font-bold text-dark-900 dark:text-white">
               {test.duration || 60}
             </div>
@@ -107,7 +107,7 @@ export default function TestDetail() {
             <div className="text-xs text-dark-400">Attempts</div>
           </div>
           <div className="card p-3 sm:p-4 text-center bg-dark-50 dark:bg-dark-800/50">
-            <HiShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500 mx-auto mb-1" />
+            <HiShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-amber-800 mx-auto mb-1" />
             <div className="text-base sm:text-lg font-bold text-dark-900 dark:text-white">
               {test.totalMarks || totalQ}
             </div>

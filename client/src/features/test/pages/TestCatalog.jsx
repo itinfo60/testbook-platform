@@ -135,7 +135,7 @@ export default function TestCatalog() {
             onClick={() => handleTypeChange(opt.id)}
             className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeType === opt.id
-                ? 'bg-amber-500 text-white shadow-md'
+                ? 'bg-amber-800 text-white shadow-md'
                 : 'bg-white dark:bg-dark-800 text-dark-700 dark:text-dark-300 border border-dark-200 dark:border-dark-700 hover:bg-dark-50 dark:hover:bg-dark-750'
             }`}
           >

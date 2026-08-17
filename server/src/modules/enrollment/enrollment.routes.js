@@ -28,5 +28,6 @@ router.post('/progress/:courseId', enrollmentController.updateProgress);
 router.patch('/:id/verify', enrollmentController.verifyPayment);
 router.get('/certificate/:courseId', generateCertificate);
 router.get('/analytics/performance', enrollmentController.getStudentPerformanceAnalytics);
+router.delete('/:id', authorize('admin', 'super_admin'), enrollmentController.revokeEnrollment);
 
 export default router;

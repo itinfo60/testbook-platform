@@ -22,11 +22,13 @@ import {
 } from 'react-icons/hi';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchMyEnrollments } from '@/features/enrollment/enrollmentSlice';
+import { fetchWishlist } from '@/features/wishlist/wishlistSlice';
 import DashboardSkeleton from '@/components/skeleton/DashboardSkeleton';
 import ProgressBar from '@/components/common/ProgressBar';
 import ErrorState from '@/components/ErrorState';
 import toast from 'react-hot-toast';
 import { useMemo, useState } from 'react';
+import { testAPI, enrollmentAPI, liveClassAPI, quizAPI } from '@/services/api';
 
 export default function Dashboard() {
   const dispatch = useDispatch();
@@ -138,7 +140,7 @@ export default function Dashboard() {
       label: 'Courses',
       value: `${enrollments.length}`,
       sub: 'Enrolled courses',
-      color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/30',
+      color: 'text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/30',
       tagColor: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
       link: '#courses-section',
     },
@@ -207,13 +209,13 @@ export default function Dashboard() {
       <div className="bg-gradient-to-br from-white via-slate-50/50 to-amber-50/30 dark:from-dark-900 dark:via-dark-900 dark:to-amber-950/20 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-dark-800 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-500 dark:text-amber-400 text-xs font-black uppercase tracking-wider">
               <HiSparkles className="h-3.5 w-3.5" /> Learner Console
             </div>
             <h1 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-dark-900 dark:text-white">
               Welcome back, {user?.name?.split(' ')[0] || 'Student'} 👋
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
+            <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-medium">
               Everything in your learning portal is organized below for quick access.
             </p>
           </div>
@@ -222,19 +224,19 @@ export default function Dashboard() {
           {primaryCourseData && (
             <div className="bg-white dark:bg-dark-800 rounded-2xl p-4 sm:p-5 border border-amber-200/70 dark:border-amber-900/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 max-w-lg w-full">
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-500 dark:text-amber-400 flex items-center gap-1 mb-1">
                   <HiPlay className="h-3 w-3" /> Resume Learning
                 </span>
-                <h4 className="font-bold text-xs sm:text-sm text-dark-900 dark:text-white truncate">
+                <h3 className="font-bold text-xs sm:text-sm text-dark-900 dark:text-white truncate">
                   {primaryCourseData.course.title}
-                </h4>
+                </h3>
                 <div className="mt-2 space-y-1">
                   <ProgressBar
                     value={primaryCourseData.progressPct}
                     size="sm"
                     color="bg-amber-500"
                   />
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+                  <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-semibold">
                     <span>
                       {primaryCourseData.completedCount}/{primaryCourseData.totalLessons} Lessons
                     </span>
@@ -245,7 +247,7 @@ export default function Dashboard() {
 
               <Link
                 to={primaryCourseData.learnUrl}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-4 py-2.5 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-1.5 flex-shrink-0"
+                className="bg-amber-800 hover:bg-amber-900 text-white font-extrabold px-4 py-2.5 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-1.5 flex-shrink-0"
               >
                 Continue <HiArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -271,7 +273,7 @@ export default function Dashboard() {
                 >
                   <mod.icon className="h-5 w-5" />
                 </div>
-                <span className="text-[11px] font-bold text-slate-400 group-hover:text-amber-500 transition-colors">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-amber-500 transition-colors">
                   ↓
                 </span>
               </div>
@@ -282,7 +284,7 @@ export default function Dashboard() {
                 {mod.label}
               </div>
             </div>
-            <div className="text-[10px] text-slate-400 mt-2 truncate font-medium flex items-center justify-between">
+            <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-2 truncate font-medium flex items-center justify-between">
               <span>{mod.sub}</span>
             </div>
           </a>
@@ -299,13 +301,13 @@ export default function Dashboard() {
               <HiBookOpen className="h-6 w-6 text-amber-500" /> My Enrolled Courses (
               {enrollments.length})
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Continue your video lessons, syllabus tracking & course modules
             </p>
           </div>
           <Link
             to="/my-courses"
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
           >
             View All Courses <HiChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -317,12 +319,12 @@ export default function Dashboard() {
             <p className="text-slate-600 dark:text-slate-400 font-bold text-sm">
               You have not enrolled in any courses yet.
             </p>
-            <p className="text-slate-400 text-xs mt-1">
+            <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
               Explore our expert-guided target batches and syllabus courses.
             </p>
             <Link
               to="/courses"
-              className="mt-4 inline-block bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs shadow-md"
+              className="mt-4 inline-block bg-amber-800 hover:bg-amber-900 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs shadow-md"
             >
               Browse Course Catalog
             </Link>
@@ -367,7 +369,9 @@ export default function Dashboard() {
                         >
                           {title}
                         </h3>
-                        <p className="text-xs text-slate-400 truncate">By {instructor}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                          By {instructor}
+                        </p>
                         <div className="flex items-center gap-2 mt-1 text-[11px] font-semibold text-slate-500">
                           <span>📚 {totalLessons} Lessons</span>
                           <span>·</span>
@@ -381,7 +385,7 @@ export default function Dashboard() {
                         <span className="text-slate-500">
                           {completedCount}/{totalLessons} Complete
                         </span>
-                        <span className="text-amber-600">{progressPct}%</span>
+                        <span className="text-amber-700 dark:text-amber-500">{progressPct}%</span>
                       </div>
                       <ProgressBar value={progressPct} size="sm" color="bg-amber-500" />
                     </div>
@@ -390,7 +394,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <Link
                       to={learnUrl}
-                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2.5 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                      className="flex-1 bg-amber-800 hover:bg-amber-900 text-white font-extrabold py-2.5 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5 shadow-sm"
                     >
                       <HiPlay className="h-3.5 w-3.5" /> Continue Course
                     </Link>
@@ -419,13 +423,13 @@ export default function Dashboard() {
               <HiClipboardList className="h-6 w-6 text-blue-500" /> Mock Tests & Performance
               Scorecards
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Review detailed solution analytics, rank cards, and attempt fresh mock tests
             </p>
           </div>
           <Link
             to="/my-test-attempts"
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
           >
             All Scorecards <HiChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -440,7 +444,7 @@ export default function Dashboard() {
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-400">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
                       {attempt.completedAt
                         ? new Date(attempt.completedAt).toLocaleDateString()
                         : 'Recent Test Attempt'}
@@ -459,7 +463,9 @@ export default function Dashboard() {
                     <span>·</span>
                     <span
                       className={
-                        attempt.isPassed ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'
+                        attempt.isPassed
+                          ? 'text-emerald-600 font-bold'
+                          : 'text-amber-700 dark:text-amber-500 font-bold'
                       }
                     >
                       {attempt.isPassed ? 'Passed' : 'Evaluated'}
@@ -478,10 +484,10 @@ export default function Dashboard() {
           ) : (
             <div className="col-span-full bg-white dark:bg-dark-900 p-6 rounded-3xl border border-slate-200 dark:border-dark-800 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h4 className="font-bold text-sm text-dark-900 dark:text-white">
+                <h3 className="font-bold text-sm text-dark-900 dark:text-white">
                   Attempt your first full-length Mock Test
-                </h4>
-                <p className="text-xs text-slate-400">
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   Practice full-length test series on official RPSC/Rajasthan exam patterns
                 </p>
               </div>
@@ -506,13 +512,13 @@ export default function Dashboard() {
               <HiLightningBolt className="h-6 w-6 text-orange-500" /> Daily Quizzes & Speed Practice
               Drills
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Timed 10-minute topic challenges with instant negative marking & solutions
             </p>
           </div>
           <Link
             to="/daily-quiz"
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
           >
             Today's Quiz Hub <HiChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -540,7 +546,7 @@ export default function Dashboard() {
                     {quiz.title}
                   </h3>
                   <p
-                    className={`text-xs ${index === 0 ? 'text-amber-100' : 'text-slate-400'} mb-3 line-clamp-2`}
+                    className={`text-xs ${index === 0 ? 'text-amber-100' : 'text-slate-600 dark:text-slate-400'} mb-3 line-clamp-2`}
                   >
                     {quiz.description || 'Practice quiz with instant solutions'}
                   </p>
@@ -564,14 +570,14 @@ export default function Dashboard() {
         ) : (
           <div className="bg-white dark:bg-dark-900 p-6 rounded-3xl border border-slate-200 dark:border-dark-800 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h4 className="font-bold text-sm text-dark-900 dark:text-white">Daily Quizzes</h4>
-              <p className="text-xs text-slate-400">
+              <h3 className="font-bold text-sm text-dark-900 dark:text-white">Daily Quizzes</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 No active quizzes at the moment. Check back later!
               </p>
             </div>
             <Link
               to="/daily-quiz"
-              className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs flex-shrink-0 shadow-md"
+              className="bg-amber-800 hover:bg-amber-900 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs flex-shrink-0 shadow-md"
             >
               View Quiz Hub
             </Link>
@@ -589,13 +595,13 @@ export default function Dashboard() {
               <HiVideoCamera className="h-6 w-6 text-rose-500" /> Live Interactive Classes &
               Mentorship
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Join interactive live classrooms, ask live doubts to teachers, and access recordings
             </p>
           </div>
           <Link
             to="/live-classes"
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
           >
             All Live Classes <HiChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -614,7 +620,7 @@ export default function Dashboard() {
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>{' '}
                       Live Broadcast
                     </span>
-                    <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1">
                       <HiCalendar className="h-3.5 w-3.5" />{' '}
                       {lc.scheduledAt
                         ? new Date(lc.scheduledAt).toLocaleTimeString([], {
@@ -627,7 +633,7 @@ export default function Dashboard() {
                   <h3 className="font-bold text-sm text-dark-900 dark:text-white line-clamp-1 mb-1">
                     {lc.title || 'Live Session'}
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     Mentor: {lc.teacher?.name || 'Subject Faculty'}
                   </p>
                 </div>
@@ -647,10 +653,12 @@ export default function Dashboard() {
                   🎥
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-dark-900 dark:text-white">
+                  <h3 className="text-sm font-extrabold text-dark-900 dark:text-white">
                     Live Classes
-                  </h4>
-                  <p className="text-xs text-slate-400">No scheduled live classes found.</p>
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    No scheduled live classes found.
+                  </p>
                 </div>
               </div>
             </div>
@@ -668,13 +676,13 @@ export default function Dashboard() {
               <HiHeart className="h-6 w-6 text-pink-500" /> Saved Wishlist Items (
               {wishlistItems?.length || 0})
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Target courses and test series saved for your upcoming exam cycle
             </p>
           </div>
           <Link
             to="/wishlist"
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
           >
             Manage Wishlist <HiChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -691,7 +699,7 @@ export default function Dashboard() {
                   <h3 className="font-bold text-sm text-dark-900 dark:text-white line-clamp-1 mb-1">
                     {item.course?.title || item.testSeries?.title || 'Saved Course/Test'}
                   </h3>
-                  <p className="text-xs text-amber-600 font-black mb-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-500 font-black mb-3">
                     ₹{item.course?.effectivePrice || item.testSeries?.price || 'Free'}
                   </p>
                 </div>
@@ -701,7 +709,7 @@ export default function Dashboard() {
                       ? `/checkout/${item.course.slug || item.course._id}`
                       : `/checkout/${item.testSeries?.slug || item.testSeries?._id}?type=test_series`
                   }
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl text-center text-xs transition-colors shadow-sm"
+                  className="w-full bg-amber-800 hover:bg-amber-900 text-white font-bold py-2.5 px-4 rounded-xl text-center text-xs transition-colors shadow-sm"
                 >
                   Enroll Now →
                 </Link>
@@ -714,12 +722,12 @@ export default function Dashboard() {
             <p className="text-slate-600 dark:text-slate-400 font-bold text-sm">
               Your wishlist is currently empty.
             </p>
-            <p className="text-slate-400 text-xs mt-1">
+            <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
               Bookmark any course or mock test series to enroll later.
             </p>
             <Link
               to="/courses"
-              className="mt-3 inline-block bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2 rounded-xl text-xs shadow-sm"
+              className="mt-3 inline-block bg-amber-800 hover:bg-amber-900 text-white font-bold px-5 py-2 rounded-xl text-xs shadow-sm"
             >
               Explore Courses & Mock Tests
             </Link>
@@ -737,13 +745,13 @@ export default function Dashboard() {
               <HiShoppingCart className="h-6 w-6 text-emerald-500" /> Orders & Payment Invoices (
               {orders.length})
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               All successful course enrollments, test packages, and receipts
             </p>
           </div>
           <Link
             to="/orders"
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
           >
             All Invoices <HiChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -764,7 +772,7 @@ export default function Dashboard() {
                         ord.testSeries?.title ||
                         'Course Enrollment'}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                       Enrolled:{' '}
                       {ord.enrolledAt ? new Date(ord.enrolledAt).toLocaleDateString() : 'Recent'} ·
                       Status: Active Course Access

@@ -78,7 +78,7 @@ describe('Auth Routes', () => {
     it('should return error for wrong password', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: testUser.email, password: 'Password123!' })
+        .send({ email: testUser.email, password: 'WrongPassword123!' })
         .expect(401);
 
       expect(res.body.success).toBe(false);
@@ -130,8 +130,8 @@ describe('Auth Routes', () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data.email).toBe(testUser.email);
-      expect(res.body.data.password).toBeUndefined();
+      expect(res.body.data.user.email).toBe(testUser.email);
+      expect(res.body.data.user.password).toBeUndefined();
     });
 
     it('should return 401 if missing token', async () => {

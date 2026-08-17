@@ -102,7 +102,7 @@ export default function TestResult() {
         <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
           Error Loading Result
         </h2>
-        <p className="text-slate-500 mb-6 text-sm">{error || 'Could not find attempt results.'}</p>
+        <p className="text-slate-600 mb-6 text-sm">{error || 'Could not find attempt results.'}</p>
         <div className="flex gap-3 justify-center">
           <button
             onClick={() => dispatch(fetchLatestTestResult(id))}
@@ -132,7 +132,7 @@ export default function TestResult() {
           to={`/tests/${id}`}
           className="bg-white dark:bg-dark-950 border border-slate-200/50 dark:border-dark-800/50 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-900 font-bold py-2.5 px-5 rounded-xl text-xs flex items-center gap-1.5 transition-all duration-300 shrink-0 shadow-premium"
         >
-          <HiRefresh className="h-4 w-4 text-amber-500" /> Reattempt Test
+          <HiRefresh className="h-4 w-4 text-amber-800" /> Reattempt Test
         </Link>
       </div>
 
@@ -152,7 +152,7 @@ export default function TestResult() {
               <h3 className="font-extrabold tracking-tight text-slate-900 dark:text-white text-base">
                 Question Solutions Key
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-600 mt-0.5">
                 Detailed explanations and step-by-step breakdown.
               </p>
             </div>
@@ -163,7 +163,7 @@ export default function TestResult() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   reviewFilter === 'all'
                     ? 'bg-white dark:bg-dark-950 text-slate-900 dark:text-white shadow-premium'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-600 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 All ({questions.length})
@@ -173,7 +173,7 @@ export default function TestResult() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                   reviewFilter === 'incorrect'
                     ? 'bg-rose-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-rose-600'
+                    : 'text-slate-600 hover:text-rose-600'
                 }`}
               >
                 <HiXCircle className="h-3.5 w-3.5" /> Mistakes ({incorrectCount})
@@ -183,7 +183,7 @@ export default function TestResult() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                   reviewFilter === 'skipped'
                     ? 'bg-slate-600 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                    : 'text-slate-600 hover:text-slate-700'
                 }`}
               >
                 <HiMinusCircle className="h-3.5 w-3.5" /> Skipped ({skippedCount})
@@ -193,7 +193,7 @@ export default function TestResult() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                   reviewFilter === 'correct'
                     ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-emerald-600'
+                    : 'text-slate-600 hover:text-emerald-600'
                 }`}
               >
                 <HiCheckCircle className="h-3.5 w-3.5" /> Correct ({correctCount})
@@ -208,7 +208,7 @@ export default function TestResult() {
               <h4 className="font-bold tracking-tight text-slate-900 dark:text-white text-base">
                 No questions in this filter
               </h4>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 Try switching to another filter tab above.
               </p>
             </div>

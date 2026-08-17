@@ -134,7 +134,7 @@ export default function ExamDetail() {
           '@type': 'Course',
           name: category?.name,
           description: category?.description || `Preparation hub for ${category?.name}`,
-          provider: { '@type': 'Organization', name: 'EduHub' },
+          provider: { '@type': 'Organization', name: 'CivicsEdu' },
         }}
       />
       {/* ════════ HERO SECTION (Without Key Dates Widget) ════════ */}
@@ -212,7 +212,7 @@ export default function ExamDetail() {
                   onClick={() => scrollToSection(tab.id)}
                   className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-amber-500 text-white shadow-md'
+                      ? 'bg-amber-800 text-white shadow-md'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60'
                   }`}
                 >
@@ -385,9 +385,9 @@ export default function ExamDetail() {
                 </p>
                 <div className="grid sm:grid-cols-2 gap-4 not-prose">
                   <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <h4 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
                       1. General Studies & Core Concepts
-                    </h4>
+                    </h3>
                     <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
                       <li>Indian Constitution, Polity & Governance</li>
                       <li>History, Art, Culture & Heritage</li>
@@ -396,9 +396,9 @@ export default function ExamDetail() {
                     </ul>
                   </div>
                   <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <h4 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
                       2. State Specific & Mental Ability
-                    </h4>
+                    </h3>
                     <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
                       <li>Rajasthan History, Art, Fairs & Festivals</li>
                       <li>State Administrative Framework & Schemes</li>
@@ -502,9 +502,9 @@ export default function ExamDetail() {
             ) : (
               <div className="grid sm:grid-cols-2 gap-4 not-prose">
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
                     Educational Qualifications & Age Limit
-                  </h4>
+                  </h3>
                   <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
                     <li>Bachelor’s Degree in any discipline from a recognized University.</li>
                     <li>
@@ -514,9 +514,9 @@ export default function ExamDetail() {
                   </ul>
                 </div>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-2">
                     Selection Process Stages
-                  </h4>
+                  </h3>
                   <ul className="text-xs text-slate-500 space-y-1.5 list-disc list-inside">
                     <li>Stage 1: Preliminary Screening Examination (Objective MCQs)</li>
                     <li>Stage 2: Main Written Examination (Descriptive Papers)</li>
@@ -583,9 +583,9 @@ export default function ExamDetail() {
                     📝
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {resource.title}
-                    </h4>
+                    </h3>
                     {resource.description && (
                       <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                         {resource.description}
@@ -652,9 +652,9 @@ export default function ExamDetail() {
                     📄
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                       {resource.title}
-                    </h4>
+                    </h3>
                     {resource.description && (
                       <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                         {resource.description}
@@ -721,9 +721,9 @@ export default function ExamDetail() {
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-md mb-2 inline-block">
                     {blog.type?.replace('_', ' ') || 'Notification'}
                   </span>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 group-hover:text-orange-600 transition-colors">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 group-hover:text-orange-600 transition-colors">
                     {blog.title}
-                  </h4>
+                  </h3>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{blog.summary}</p>
                 </Link>
               ))}
@@ -744,9 +744,9 @@ export default function ExamDetail() {
             <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-900/40">
               <div className="text-3xl">📄</div>
               <div>
-                <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">
                   {selectedResource.title}
-                </h4>
+                </h3>
                 <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase">
                   {selectedResource.resourceType?.replace('_', ' ') || 'PDF Document'}
                 </span>

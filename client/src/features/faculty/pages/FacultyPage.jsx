@@ -84,7 +84,7 @@ export default function FacultyPage() {
                   <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mb-1">
                     {fac.subject || fac.expertise || 'Subject Expert'}
                   </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400 mb-3">
                     {fac.qualification || 'Highly Qualified'} •{' '}
                     {fac.experience || 'Experienced Professional'}
                   </div>
@@ -94,7 +94,7 @@ export default function FacultyPage() {
                   </p>
 
                   <div className="pt-3 border-t border-slate-100 dark:border-dark-800 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                    <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
                       📚 {fac.coursesCount || Math.floor(Math.random() * 5) + 1} Active Batches
                     </span>
                     <Link

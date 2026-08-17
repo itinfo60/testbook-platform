@@ -108,14 +108,14 @@ export default function TeacherDashboard() {
                 <stat.icon className="h-6 w-6" />
               </div>
               <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-dark-700 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
-                <HiArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                <HiArrowRight className="h-4 w-4 text-slate-600 dark:text-slate-400" />
               </div>
             </div>
             <div className="mt-2">
               <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">
                 {stat.value}
               </div>
-              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1">
                 {stat.label}
               </div>
             </div>

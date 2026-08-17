@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -26,7 +26,10 @@ import {
 import { logoutUser } from '@/features/auth/authSlice';
 import { fetchUnreadCount } from '@/features/notification/notificationSlice';
 import DarkModeToggle from '@/components/DarkModeToggle';
-import NotificationDropdown from '@/features/notification/components/NotificationDropdown';
+
+const NotificationDropdown = lazy(
+  () => import('@/features/notification/components/NotificationDropdown')
+);
 export default function Navbar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -114,23 +117,13 @@ export default function Navbar() {
             {/* Logo */}
             <div className="flex items-center gap-8">
               <Link to="/" className="flex items-center gap-2.5">
-                {logoUrl ? (
-                  <img src={logoUrl} alt={instituteName || 'Logo'} className="h-9 object-contain" />
-                ) : (
-                  <>
-                    <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
-                      <HiLibrary className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-2xl font-bold font-display tracking-tight text-navy-950 dark:text-white uppercase">
-                      {instituteName || (
-                        <>
-                          <span className="text-navy-950 dark:text-white">Edu</span>
-                          <span className="text-primary-600 dark:text-primary-400">Hub</span>
-                        </>
-                      )}
-                    </span>
-                  </>
-                )}
+                <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
+                  <HiAcademicCap className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-2xl font-bold font-display tracking-tight text-navy-950 dark:text-white uppercase">
+                  <span className="text-navy-950 dark:text-white">Civics</span>
+                  <span className="text-amber-800 dark:text-amber-500">Edu</span>
+                </span>
               </Link>
 
               {/* Desktop Nav Links */}
@@ -175,6 +168,7 @@ export default function Navbar() {
                   {/* Notifications */}
                   <div ref={notifRef} className="relative">
                     <button
+                      aria-label="View Notifications"
                       onClick={() => setNotifOpen(!notifOpen)}
                       className="relative p-2 rounded-full text-dark-500 hover:text-dark-700 hover:bg-dark-100/60 dark:text-dark-400 dark:hover:text-white dark:hover:bg-dark-800/60 transition-all"
                     >
@@ -185,12 +179,17 @@ export default function Navbar() {
                         </span>
                       )}
                     </button>
-                    {notifOpen && <NotificationDropdown onClose={() => setNotifOpen(false)} />}
+                    {notifOpen && (
+                      <Suspense fallback={null}>
+                        <NotificationDropdown onClose={() => setNotifOpen(false)} />
+                      </Suspense>
+                    )}
                   </div>
 
                   {/* User Menu */}
                   <div ref={userMenuRef} className="relative">
                     <button
+                      aria-label="Open User Menu"
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
                       className="flex items-center gap-2 p-1.5 rounded-full hover:bg-dark-100/60 dark:hover:bg-dark-800/60 transition-colors"
                     >
@@ -248,7 +247,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/register"
-                    className="text-sm font-semibold bg-accent-500 text-white px-5 py-2.5 rounded hover:bg-accent-600 transition-all shadow-sm"
+                    className="text-sm font-semibold bg-amber-900 text-white px-5 py-2.5 rounded hover:bg-amber-950 transition-all shadow-sm"
                   >
                     Start Free
                   </Link>
@@ -257,6 +256,7 @@ export default function Navbar() {
 
               {/* Mobile menu button */}
               <button
+                aria-label="Toggle Navigation"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-2 rounded-full text-dark-500 hover:bg-dark-100 dark:hover:bg-dark-800"
               >

@@ -108,11 +108,13 @@ describe('Security and Bad User Scenario Tests', () => {
 
     const course = await Course.create({
       title: 'Paid Course',
+      description: 'This is a description that is long enough.',
+      category: '600000000000000000000000',
       slug: 'paid-course',
       price: 1000,
       pricingType: 'paid',
       isPublished: true,
-      instructor: userId,
+      teacher: userId,
     });
 
     const res = await request(app)

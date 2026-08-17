@@ -50,7 +50,7 @@ export default function HelpCenterPage() {
       id: 5,
       cat: 'Video Classes',
       q: 'Can I watch video lectures offline on mobile?',
-      a: 'Yes, video lectures can be streamed in adaptive HD or saved offline inside the EduHub Mobile App.',
+      a: 'Yes, video lectures can be streamed in adaptive HD or saved offline inside the CivicsEdu Mobile App.',
     },
   ];
 

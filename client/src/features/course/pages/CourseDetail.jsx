@@ -101,7 +101,7 @@ export default function CourseDetail() {
         </p>
         <Link
           to="/courses"
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm"
+          className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm"
         >
           Browse All Courses
         </Link>
@@ -145,7 +145,7 @@ export default function CourseDetail() {
                 '@type': 'Course',
                 name: course.title,
                 description: course.description,
-                provider: { '@type': 'Organization', name: 'EduHub' },
+                provider: { '@type': 'Organization', name: 'CivicsEdu' },
                 offers: {
                   '@type': 'Offer',
                   price: course.discountedPrice || course.price || 0,

@@ -193,7 +193,7 @@ export default function TeacherTests() {
           <h2 className="text-xl sm:text-2xl font-bold text-dark-900 dark:text-white font-display">
             Test Series & Mock Tests
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-normal">
+          <p className="text-xs sm:text-sm text-slate-600 font-normal">
             Create multi-test series packages and individual chapter drills with bilingual
             questions.
           </p>
@@ -261,7 +261,7 @@ export default function TeacherTests() {
             <h3 className="text-base font-semibold text-dark-900 dark:text-white mb-1">
               No Test Series Packages Yet
             </h3>
-            <p className="text-xs text-slate-500 mb-4 max-w-sm mx-auto">
+            <p className="text-xs text-slate-600 mb-4 max-w-sm mx-auto">
               Test Series packages allow you to bundle 20+ chapter drills, PYQs, and full mocks
               under one package.
             </p>
@@ -295,7 +295,7 @@ export default function TeacherTests() {
                     {series.title}
                   </h3>
 
-                  <p className="text-xs text-slate-500 font-normal line-clamp-2 mb-4 leading-relaxed">
+                  <p className="text-xs text-slate-600 font-normal line-clamp-2 mb-4 leading-relaxed">
                     {series.description ||
                       'Comprehensive test series with detailed solutions and ranking.'}
                   </p>
@@ -313,7 +313,7 @@ export default function TeacherTests() {
                   <Link
                     to={`/test-series/${series.slug || series._id}`}
                     target="_blank"
-                    className="text-xs font-semibold text-slate-500 hover:text-primary-600 flex items-center gap-1"
+                    className="text-xs font-semibold text-slate-600 hover:text-primary-600 flex items-center gap-1"
                   >
                     <HiExternalLink className="h-3.5 w-3.5" /> View Series Page
                   </Link>
@@ -346,7 +346,7 @@ export default function TeacherTests() {
           <h3 className="text-base font-semibold text-dark-900 dark:text-white mb-1">
             No Individual Tests Created
           </h3>
-          <p className="text-xs text-slate-500 mb-4 max-w-sm mx-auto">
+          <p className="text-xs text-slate-600 mb-4 max-w-sm mx-auto">
             Create chapter drills, mock papers, and practice tests with bilingual questions and
             marking rules.
           </p>
@@ -369,7 +369,7 @@ export default function TeacherTests() {
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-100">
                     {test.category?.name || 'Mock Drill'}
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400">
+                  <span className="text-[10px] font-semibold text-slate-600">
                     {test.difficulty || 'Medium'}
                   </span>
                 </div>
@@ -383,7 +383,7 @@ export default function TeacherTests() {
                     <div className="text-xs font-bold text-dark-900 dark:text-white">
                       {test.questionsCount || test.questions?.length || 0}
                     </div>
-                    <div className="text-[9px] text-slate-400 uppercase font-semibold">
+                    <div className="text-[9px] text-slate-600 uppercase font-semibold">
                       Questions
                     </div>
                   </div>
@@ -391,7 +391,7 @@ export default function TeacherTests() {
                     <div className="text-xs font-bold text-dark-900 dark:text-white">
                       {test.duration || 60}m
                     </div>
-                    <div className="text-[9px] text-slate-400 uppercase font-semibold">
+                    <div className="text-[9px] text-slate-600 uppercase font-semibold">
                       Duration
                     </div>
                   </div>
@@ -399,7 +399,7 @@ export default function TeacherTests() {
                     <div className="text-xs font-bold text-dark-900 dark:text-white">
                       {test.totalAttempts || 0}
                     </div>
-                    <div className="text-[9px] text-slate-400 uppercase font-semibold">
+                    <div className="text-[9px] text-slate-600 uppercase font-semibold">
                       Attempts
                     </div>
                   </div>
@@ -410,7 +410,7 @@ export default function TeacherTests() {
                 <Link
                   to={`/tests/${test._id}`}
                   target="_blank"
-                  className="text-xs font-semibold text-slate-500 hover:text-primary-600 flex items-center gap-1"
+                  className="text-xs font-semibold text-slate-600 hover:text-primary-600 flex items-center gap-1"
                 >
                   <HiExternalLink className="h-3.5 w-3.5" /> Preview Test
                 </Link>
@@ -453,7 +453,7 @@ export default function TeacherTests() {
                 <h3 className="text-lg font-bold text-dark-900 dark:text-white font-display">
                   {editingSeriesId ? 'Edit Test Series Package' : 'Create Test Series Package'}
                 </h3>
-                <p className="text-xs text-slate-500 font-normal">
+                <p className="text-xs text-slate-600 font-normal">
                   Bundle mocks, drills, and previous year papers into a comprehensive package.
                 </p>
               </div>
@@ -542,7 +542,7 @@ export default function TeacherTests() {
               {/* Specs Counters */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-dark-800/60 border border-slate-100 dark:border-dark-700">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
                     Total Tests
                   </label>
                   <input
@@ -553,7 +553,7 @@ export default function TeacherTests() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
                     Total Questions
                   </label>
                   <input
@@ -566,7 +566,7 @@ export default function TeacherTests() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
                     Total Marks
                   </label>
                   <input
@@ -577,7 +577,7 @@ export default function TeacherTests() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
                     Duration (mins)
                   </label>
                   <input
@@ -634,7 +634,7 @@ export default function TeacherTests() {
                   <button
                     type="button"
                     onClick={() => setSeriesModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
                   >
                     Cancel
                   </button>

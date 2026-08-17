@@ -350,3 +350,18 @@ export const getStudentPerformanceAnalytics = catchAsync(async (req, res) => {
 
   ApiResponse.ok(res, { analytics }, 'Performance analytics fetched');
 });
+
+export const revokeEnrollment = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const enrollment = await Enrollment.findById(id);
+  if (!enrollment) {
+    throw ApiError.notFound('Enrollment not found');
+  }
+
+  // Optional: check permissions - already handled by routes authorize('admin')
+
+  await enrollment.deleteOne();
+
+  ApiResponse.ok(res, null, 'Enrollment revoked successfully');
+});

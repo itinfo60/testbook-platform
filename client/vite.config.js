@@ -5,7 +5,19 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
-  build: { sourcemap: true },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-redux': ['@reduxjs/toolkit', 'react-redux'],
+          'vendor-icons': ['react-icons'],
+          'vendor-utils': ['axios', 'date-fns'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

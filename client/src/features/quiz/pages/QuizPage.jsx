@@ -261,7 +261,7 @@ export default function QuizPage() {
                   ? 'bg-amber-500 text-white ring-4 ring-amber-500/20 shadow-md scale-110'
                   : isAnswered
                     ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-dark-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-700'
+                    : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-700'
               }`}
             >
               {i + 1}

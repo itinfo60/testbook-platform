@@ -299,7 +299,7 @@ export default function DailyQuizPage() {
                       </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-6">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-6">
                       <span className="px-2 py-0.5 bg-slate-100 dark:bg-dark-800 rounded-md">
                         🎯 {qCount} Questions
                       </span>

@@ -59,7 +59,7 @@ export default function AIQuestionGenerator() {
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
             AI Question Generator
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Generate exam-ready MCQs using GPT-4o
           </p>
         </div>

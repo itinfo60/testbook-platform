@@ -158,7 +158,7 @@ export default function QuizResults({ result, quiz, userAnswers = {}, onRetry })
             <HiAcademicCap className="h-6 w-6 text-amber-500" /> Question Solutions & Detailed
             Explanations
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Learn the concepts behind every question to master this topic.
           </p>
         </div>

@@ -39,15 +39,15 @@ export default function TestItemCard({ test, isLocked, onShare, onUnlock }) {
               </span>
             )}
             {test.subjectTag && (
-              <span className="text-[10px] font-medium text-slate-500 dark:text-dark-400 bg-slate-50 dark:bg-dark-800 px-2 py-0.5 rounded-md truncate max-w-[130px] border border-slate-100 dark:border-dark-700">
+              <span className="text-[10px] font-medium text-slate-600 dark:text-dark-400 bg-slate-50 dark:bg-dark-800 px-2 py-0.5 rounded-md truncate max-w-[130px] border border-slate-100 dark:border-dark-700">
                 {test.subjectTag}
               </span>
             )}
           </div>
 
           {test.userCountStr && (
-            <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-dark-400 shrink-0">
-              <HiUsers className="h-3 w-3 text-slate-400" /> {test.userCountStr}
+            <span className="flex items-center gap-1 text-[10px] font-medium text-slate-600 dark:text-dark-400 shrink-0">
+              <HiUsers className="h-3 w-3 text-slate-600" /> {test.userCountStr}
             </span>
           )}
         </div>
@@ -58,7 +58,7 @@ export default function TestItemCard({ test, isLocked, onShare, onUnlock }) {
         </h3>
 
         {/* Compact Inline Specs Bar */}
-        <div className="flex items-center gap-2.5 text-xs font-normal text-slate-500 dark:text-dark-400 bg-slate-50 dark:bg-dark-950 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-dark-800 mb-3">
+        <div className="flex items-center gap-2.5 text-xs font-normal text-slate-600 dark:text-dark-400 bg-slate-50 dark:bg-dark-950 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-dark-800 mb-3">
           <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
             <HiQuestionMarkCircle className="h-3.5 w-3.5 text-primary-500" />
             {test.questionsCount || test.questions?.length || 15} Qs
@@ -107,14 +107,14 @@ export default function TestItemCard({ test, isLocked, onShare, onUnlock }) {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setShowSyllabusModal(true)}
-            className="flex items-center justify-center h-8 w-8 rounded-lg bg-slate-50 hover:bg-primary-50 dark:bg-dark-800 dark:hover:bg-primary-950/40 text-slate-400 hover:text-primary-600 dark:text-dark-400 transition-colors"
+            className="flex items-center justify-center h-8 w-8 rounded-lg bg-slate-50 hover:bg-primary-50 dark:bg-dark-800 dark:hover:bg-primary-950/40 text-slate-600 hover:text-primary-600 dark:text-dark-400 transition-colors"
             title="Syllabus & Info"
           >
             <HiInformationCircle className="h-4 w-4" />
           </button>
           <button
             onClick={() => onShare && onShare(test)}
-            className="flex items-center justify-center h-8 w-8 rounded-lg bg-slate-50 hover:bg-primary-50 dark:bg-dark-800 dark:hover:bg-primary-950/40 text-slate-400 hover:text-primary-600 dark:text-dark-400 transition-colors"
+            className="flex items-center justify-center h-8 w-8 rounded-lg bg-slate-50 hover:bg-primary-50 dark:bg-dark-800 dark:hover:bg-primary-950/40 text-slate-600 hover:text-primary-600 dark:text-dark-400 transition-colors"
             title="Share Test"
           >
             <HiShare className="h-3.5 w-3.5" />

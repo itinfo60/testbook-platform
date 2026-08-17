@@ -40,7 +40,7 @@ export default function MyCourses() {
           </p>
           <Link
             to="/courses"
-            className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-8 py-3 rounded-xl transition-colors inline-block shadow-md"
+            className="bg-amber-800 hover:bg-amber-900 text-white font-bold px-8 py-3 rounded-xl transition-colors inline-block shadow-md"
           >
             Explore Courses
           </Link>

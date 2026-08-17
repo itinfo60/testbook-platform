@@ -56,7 +56,7 @@ export default function TestNavigator({ questions, onSubmit }) {
         <h4 className="font-extrabold text-dark-900 dark:text-white text-sm sm:text-base font-display">
           Question Palette
         </h4>
-        <span className="text-xs font-bold text-slate-400">
+        <span className="text-xs font-bold text-slate-600">
           {answeredCount}/{total}
         </span>
       </div>
@@ -75,7 +75,7 @@ export default function TestNavigator({ questions, onSubmit }) {
             className={`px-2 py-1 rounded-lg transition-all flex-shrink-0 cursor-pointer ${
               filter === tab.id
                 ? 'bg-dark-900 text-white dark:bg-white dark:text-dark-900'
-                : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-800'
+                : 'text-slate-600 hover:bg-slate-100 dark:hover:bg-dark-800'
             }`}
           >
             {tab.label}

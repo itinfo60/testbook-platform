@@ -180,7 +180,7 @@ export default function Checkout() {
             </span>
           </div>
 
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
             By{' '}
             <span className="text-dark-900 dark:text-white font-black">
               {item.teacher?.name || 'EduPortal Expert Faculty'}
@@ -188,7 +188,7 @@ export default function Checkout() {
           </p>
 
           {/* High-Yield Meta Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
             {!isTest && (
               <>
                 <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">

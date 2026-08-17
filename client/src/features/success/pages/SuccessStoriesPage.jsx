@@ -65,7 +65,7 @@ export default function SuccessStoriesPage() {
                   </p>
 
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold">
-                    <HiCheckCircle className="h-4 w-4" /> Verified EduHub Student
+                    <HiCheckCircle className="h-4 w-4" /> Verified CivicsEdu Student
                   </div>
                 </div>
               </div>

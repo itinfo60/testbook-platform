@@ -52,7 +52,7 @@ export default function SearchResultsPage() {
             <span className="text-primary-600 dark:text-primary-400">"{query}"</span>
           </h1>
           {results && (
-            <p className="text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
               Found {results.totalResults || 0} matching items across exams, courses, tests,
               resources, and alerts.
             </p>
@@ -62,7 +62,7 @@ export default function SearchResultsPage() {
         {loading && (
           <div className="py-20 text-center">
             <LoadingSpinner size="lg" />
-            <p className="text-slate-500 mt-4">Searching across EduHub...</p>
+            <p className="text-slate-500 mt-4">Searching across CivicsEdu...</p>
           </div>
         )}
 
@@ -74,7 +74,7 @@ export default function SearchResultsPage() {
             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
               No results found
             </h3>
-            <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+            <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6">
               We couldn't find anything matching "{query}". Try searching for RAS, Patwari, RPSC,
               Political Science, or Syllabus.
             </p>
@@ -112,7 +112,7 @@ export default function SearchResultsPage() {
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">
                           {exam.name}
                         </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
                           {exam.description || exam.conductingBody}
                         </p>
                         <div className="flex items-center gap-3 mt-3 text-xs font-semibold text-primary-600 dark:text-primary-400">

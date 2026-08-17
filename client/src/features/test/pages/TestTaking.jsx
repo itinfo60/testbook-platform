@@ -255,7 +255,7 @@ export default function TestTaking() {
           <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
             Unable to load test
           </h2>
-          <p className="text-slate-500 text-sm mb-6">
+          <p className="text-slate-600 text-sm mb-6">
             We couldn't retrieve the questions for this test. Please try again.
           </p>
           <Button onClick={() => navigate(`/tests/${id}`)}>Go Back</Button>
@@ -279,10 +279,10 @@ export default function TestTaking() {
             </h2>
 
             {/* Auto-Save Indicator */}
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-dark-800 text-[11px] font-bold text-slate-500">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-dark-800 text-[11px] font-bold text-slate-600">
               <span
                 className={`h-2 w-2 rounded-full ${
-                  isAutoSaving ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'
+                  isAutoSaving ? 'bg-amber-800 animate-ping' : 'bg-emerald-500'
                 }`}
               />
               <span>{isAutoSaving ? 'Auto-saving...' : 'Saved'}</span>
@@ -309,7 +309,7 @@ export default function TestTaking() {
 
             {/* Submit Button */}
             <button
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-5 sm:px-6 rounded-xl transition-all shadow-md text-xs sm:text-sm active:scale-95 cursor-pointer"
+              className="bg-amber-800 hover:bg-amber-800 text-white font-bold py-2 px-5 sm:px-6 rounded-xl transition-all shadow-md text-xs sm:text-sm active:scale-95 cursor-pointer"
               onClick={() => setShowSubmitModal(true)}
             >
               Submit Test
@@ -319,7 +319,7 @@ export default function TestTaking() {
             <button
               onClick={() => setShowCloseModal(true)}
               title="Close Test"
-              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center h-9 w-9 bg-slate-50 dark:bg-dark-800 cursor-pointer"
+              className="p-2 rounded-xl text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center h-9 w-9 bg-slate-50 dark:bg-dark-800 cursor-pointer"
             >
               <HiX className="h-5 w-5" />
             </button>
@@ -358,7 +358,7 @@ export default function TestTaking() {
               <span className="font-bold tracking-tight text-sm text-slate-900 dark:text-white">
                 Question Palette
               </span>
-              <button onClick={() => setShowNav(false)} className="p-1 rounded-lg text-slate-400">
+              <button onClick={() => setShowNav(false)} className="p-1 rounded-lg text-slate-600">
                 <HiX className="h-5 w-5" />
               </button>
             </div>
@@ -386,7 +386,7 @@ export default function TestTaking() {
             <h3 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
               Are you ready to submit your test?
             </h3>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Please review your attempt summary below before final submission.
             </p>
           </div>
@@ -397,7 +397,7 @@ export default function TestTaking() {
               <div className="text-xl font-black text-dark-900 dark:text-white">
                 {questions.length}
               </div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">
                 Total
               </div>
             </div>
@@ -429,7 +429,7 @@ export default function TestTaking() {
 
           {unansweredCount > 0 && (
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3.5 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-medium mb-6 flex items-center gap-2">
-              <HiExclamationCircle className="h-5 w-5 flex-shrink-0 text-amber-600" />
+              <HiExclamationCircle className="h-5 w-5 flex-shrink-0 text-amber-800" />
               <span>
                 You have <strong>{unansweredCount}</strong> unanswered questions. Once submitted,
                 you cannot change your answers.
@@ -460,7 +460,7 @@ export default function TestTaking() {
           <p className="text-slate-900 dark:text-white font-bold tracking-tight mb-1">
             Are you sure you want to exit?
           </p>
-          <p className="text-xs text-slate-500 mb-6">
+          <p className="text-xs text-slate-600 mb-6">
             Your progress will be saved, but the timer will continue running until you return.
           </p>
           <div className="flex gap-3 justify-center">

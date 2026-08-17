@@ -17,14 +17,14 @@ export default function FinalCTA() {
         </h2>
 
         <p className="text-xl text-navy-200 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Join 25,000+ aspirants using EduHub to prepare smarter, practice harder and measure their
-          progress.
+          Join 25,000+ aspirants using CivicsEdu to prepare smarter, practice harder and measure
+          their progress.
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
           <Link
             to="/register"
-            className="inline-flex items-center justify-center gap-2 bg-accent-500 text-white font-semibold px-8 py-4 rounded-xl hover:bg-accent-600 transition-all shadow-xl shadow-accent-500/25"
+            className="inline-flex items-center justify-center gap-2 bg-amber-900 text-white font-semibold px-8 py-4 rounded-xl hover:bg-amber-950 transition-all shadow-xl shadow-amber-900/25"
           >
             Create Free Account <HiArrowRight className="h-5 w-5" />
           </Link>

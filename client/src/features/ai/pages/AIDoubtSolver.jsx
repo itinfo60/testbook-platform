@@ -159,7 +159,7 @@ export default function AIDoubtSolver() {
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
             AI Doubt Solver
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Ask any question — text or image. Powered by GPT-4o.
           </p>
         </div>
@@ -215,7 +215,7 @@ export default function AIDoubtSolver() {
             <button
               type="button"
               onClick={() => fileRef.current.click()}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-dark-600 text-sm text-slate-500 dark:text-slate-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-dark-600 text-sm text-slate-600 dark:text-slate-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
             >
               <HiPhotograph className="h-4 w-4" /> Upload question image (optional)
             </button>

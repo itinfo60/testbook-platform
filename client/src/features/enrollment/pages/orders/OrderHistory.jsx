@@ -317,7 +317,7 @@ function OrderCard({ order }) {
 function Row({ label, value, mono, valueClass }) {
   return (
     <div className="flex justify-between gap-2 text-[13px]">
-      <dt className="text-slate-500 dark:text-slate-400 font-bold tracking-wide flex-shrink-0">
+      <dt className="text-slate-600 dark:text-slate-400 font-bold tracking-wide flex-shrink-0">
         {label}
       </dt>
       <dd

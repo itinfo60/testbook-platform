@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { fetchCourses, setFilters, clearFilters } from '@/features/course/courseSlice';
+import { fetchExamCategories } from '@/features/category/categorySlice';
 import CourseGrid from '@/features/course/components/CourseGrid';
 import SearchBar from '@/components/common/SearchBar';
 import FilterSidebar from '@/components/common/FilterSidebar';
 import Pagination from '@/components/common/Pagination';
-import { High } from 'react-icons/hi';
 
 export default function CourseCatalog() {
   const dispatch = useDispatch();
@@ -151,7 +151,7 @@ export default function CourseCatalog() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-h-[75vh]">
       <SeoHead
         title="Courses — EduPortal"
         description="Explore premium courses for RPSC RAS, RJS, EO/RO, Rajasthan GK, and Political Science. Live classes, video lectures, and handwritten notes."

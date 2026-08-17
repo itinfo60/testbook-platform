@@ -18,7 +18,7 @@ export default function EmptyState({
       <span className="text-5xl mb-4 select-none">{icon}</span>
       <h3 className="text-xl font-extrabold text-dark-900 dark:text-white mb-2">{title}</h3>
       {description && (
-        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed mb-6">
+        <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm leading-relaxed mb-6">
           {description}
         </p>
       )}

@@ -351,7 +351,7 @@ export default function TestSeriesDetail() {
                   className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                     activeMainTab === 'Mock Tests'
                       ? 'bg-white/20 text-white'
-                      : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
+                      : 'bg-slate-100 dark:bg-dark-800 text-slate-600'
                   }`}
                 >
                   {totalMockCount}
@@ -372,7 +372,7 @@ export default function TestSeriesDetail() {
                   className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                     activeMainTab === 'PYPs'
                       ? 'bg-white/20 text-white'
-                      : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
+                      : 'bg-slate-100 dark:bg-dark-800 text-slate-600'
                   }`}
                 >
                   {totalPypCount}
@@ -398,7 +398,7 @@ export default function TestSeriesDetail() {
                       className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ${
                         activeSection === sec.sectionName
                           ? 'bg-white/20 text-white'
-                          : 'bg-slate-100 dark:bg-dark-800 text-slate-500'
+                          : 'bg-slate-100 dark:bg-dark-800 text-slate-600'
                       }`}
                     >
                       {sec.count}
@@ -413,7 +413,7 @@ export default function TestSeriesDetail() {
               currentSectionObj.topics &&
               currentSectionObj.topics.length > 1 && (
                 <div className="bg-white dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-5 shadow-sm transition-all duration-300">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 mb-2">
                     Filter by Topic:
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -439,7 +439,7 @@ export default function TestSeriesDetail() {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm sm:text-base font-bold text-dark-900 dark:text-white flex items-center gap-2">
                   <span>{currentSectionObj?.sectionName}</span>
-                  <span className="text-xs font-normal text-slate-500">
+                  <span className="text-xs font-normal text-slate-600">
                     ({sectionFilteredTests.length} Tests Available)
                   </span>
                 </h3>
@@ -453,7 +453,7 @@ export default function TestSeriesDetail() {
                       ? 'No tests available yet.'
                       : `No tests found for "${activeTopicFilter}"`}
                   </h4>
-                  <p className="text-xs text-slate-500 mb-3">
+                  <p className="text-xs text-slate-600 mb-3">
                     {currentSections.length === 0
                       ? 'Tests will be added soon by the instructor.'
                       : 'Try selecting another topic filter above.'}
@@ -506,7 +506,7 @@ export default function TestSeriesDetail() {
                     <h3 className="text-base sm:text-lg font-bold text-dark-900 dark:text-white">
                       More Test Series for You
                     </h3>
-                    <p className="text-xs text-slate-500 font-normal">
+                    <p className="text-xs text-slate-600 font-normal">
                       Popular practice packs aligned with your exam goals
                     </p>
                   </div>
@@ -525,7 +525,7 @@ export default function TestSeriesDetail() {
                       to={`/test-series/${mSeries.slug || mSeries._id}`}
                       className="p-4 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-primary-400 hover:shadow-sm transition-all duration-200 block group"
                     >
-                      <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                      <div className="flex items-center justify-between text-xs text-slate-600 mb-1.5">
                         <span className="font-semibold text-primary-600 dark:text-primary-400">
                           {mSeries.examCategory?.name || 'Test Series'}
                         </span>
@@ -534,7 +534,7 @@ export default function TestSeriesDetail() {
                       <h4 className="text-sm font-semibold text-dark-900 dark:text-white group-hover:text-primary-600 transition-colors line-clamp-1 mb-1">
                         {mSeries.title}
                       </h4>
-                      <p className="text-xs text-slate-500 line-clamp-2 font-normal">
+                      <p className="text-xs text-slate-600 line-clamp-2 font-normal">
                         {mSeries.description}
                       </p>
                     </Link>
@@ -557,7 +557,7 @@ export default function TestSeriesDetail() {
                     <h4 className="font-semibold text-xs text-dark-900 dark:text-white mb-0.5">
                       All India & State Rank
                     </h4>
-                    <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
                       Compete with students across Rajasthan & India with live percentile
                       calculations.
                     </p>
@@ -572,7 +572,7 @@ export default function TestSeriesDetail() {
                     <h4 className="font-semibold text-xs text-dark-900 dark:text-white mb-0.5">
                       Personal Recommendation
                     </h4>
-                    <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
                       Instant feedback and recommendations based on your strong & weak subject
                       areas.
                     </p>
@@ -587,7 +587,7 @@ export default function TestSeriesDetail() {
                     <h4 className="font-semibold text-xs text-dark-900 dark:text-white mb-0.5">
                       Expert Quality
                     </h4>
-                    <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
                       Designed by subject faculties. Strictly based on the latest official exam
                       pattern.
                     </p>
@@ -602,7 +602,7 @@ export default function TestSeriesDetail() {
                     <h4 className="font-semibold text-xs text-dark-900 dark:text-white mb-0.5">
                       Earn Referral Rewards
                     </h4>
-                    <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
                       Invite study peers and unlock special discounts and reward bonuses.
                     </p>
                   </div>
@@ -647,7 +647,7 @@ export default function TestSeriesDetail() {
                     </div>
                   ) : (
                     <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 mb-1">
                         Unlock Complete Test Series
                       </div>
                       <div className="flex items-baseline gap-2 mb-1.5">
@@ -655,7 +655,7 @@ export default function TestSeriesDetail() {
                           ₹{finalPrice}
                         </span>
                         {series.discountPrice > finalPrice && (
-                          <span className="text-sm text-slate-400 line-through">
+                          <span className="text-sm text-slate-600 line-through">
                             ₹{series.discountPrice}
                           </span>
                         )}
@@ -702,7 +702,7 @@ export default function TestSeriesDetail() {
 
                 {/* Package Highlights */}
                 <div className="pt-4 border-t border-slate-100 dark:border-dark-800">
-                  <h4 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                  <h4 className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
                     This Package Includes:
                   </h4>
                   <div className="space-y-2.5 text-xs font-medium text-slate-600 dark:text-dark-300">
@@ -752,7 +752,7 @@ export default function TestSeriesDetail() {
                   ₹{finalPrice}
                 </span>
                 {series.discountPrice > finalPrice && (
-                  <span className="text-[10px] text-slate-400 line-through mt-0.5">
+                  <span className="text-[10px] text-slate-600 line-through mt-0.5">
                     ₹{series.discountPrice}
                   </span>
                 )}

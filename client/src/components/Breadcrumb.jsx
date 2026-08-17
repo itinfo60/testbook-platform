@@ -36,7 +36,7 @@ export default function Breadcrumb({ items = [], theme = 'light' }) {
 
       <nav
         aria-label="Breadcrumb"
-        className={`flex items-center flex-wrap gap-1 text-[13px] mb-6 ${theme === 'dark' ? 'text-blue-200/70' : 'text-slate-500 dark:text-slate-400'}`}
+        className={`flex items-center flex-wrap gap-1 text-[13px] mb-6 ${theme === 'dark' ? 'text-blue-200/70' : 'text-slate-600 dark:text-slate-400'}`}
       >
         {allItems.map((item, idx) => {
           const isLast = idx === allItems.length - 1;

@@ -56,7 +56,7 @@ const JobAlertList = lazy(() => import('@/features/blog/pages/JobAlertList'));
 const PricingPage = lazy(() => import('@/features/subscription/pages/PricingPage'));
 const NotFoundPage = lazy(() => import('@/features/home/pages/NotFoundPage'));
 
-// EduHub Public Pages
+// CivicsEdu Public Pages
 const ExamsCatalog = lazy(() => import('@/features/exams/pages/ExamsCatalog'));
 const ExamDetail = lazy(() => import('@/features/exams/pages/ExamDetail'));
 const SearchResultsPage = lazy(() => import('@/features/search/pages/SearchResultsPage'));

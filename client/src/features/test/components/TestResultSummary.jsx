@@ -58,7 +58,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
     if (pct >= 60)
       return {
         label: 'Good',
-        color: 'text-amber-500',
+        color: 'text-amber-800',
         emoji: '👍',
         message: 'Keep practicing to improve.',
       };
@@ -90,7 +90,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
         <h2 className={`text-2xl sm:text-3xl font-extrabold ${grade.color} mb-2 font-display`}>
           {grade.label}
         </h2>
-        <p className="text-slate-500 text-sm font-medium mb-6">{grade.message}</p>
+        <p className="text-slate-600 text-sm font-medium mb-6">{grade.message}</p>
 
         <div className="relative inline-flex items-center justify-center my-4 sm:my-6 bg-slate-50 dark:bg-dark-800 p-6 rounded-full shadow-inner border border-slate-100 dark:border-dark-700">
           <svg className="h-32 w-32 sm:h-40 sm:w-40" viewBox="0 0 100 100">
@@ -121,7 +121,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
             <div className="text-3xl sm:text-4xl font-extrabold text-dark-900 dark:text-white">
               {Math.round(pct)}%
             </div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
+            <div className="text-xs font-bold text-slate-600 uppercase tracking-wider mt-1">
               Score
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
 
         <div className="mt-4 inline-flex items-center gap-2 bg-slate-100 dark:bg-dark-800 px-4 py-2 rounded-xl text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300">
           Total Score: <span className={grade.color}>{score || 0}</span>{' '}
-          <span className="text-slate-400 font-medium">out of {totalMarks || 0}</span>
+          <span className="text-slate-600 font-medium">out of {totalMarks || 0}</span>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
           <div className="text-xl sm:text-2xl font-extrabold text-dark-900 dark:text-white">
             {correct || 0}
           </div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
             Correct
           </div>
         </div>
@@ -149,32 +149,32 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
           <div className="text-xl sm:text-2xl font-extrabold text-dark-900 dark:text-white">
             {incorrect || 0}
           </div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
             Incorrect
           </div>
         </div>
         <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-4 text-center shadow-sm">
-          <HiMinusCircle className="h-6 w-6 text-slate-400 mx-auto mb-2" />
+          <HiMinusCircle className="h-6 w-6 text-slate-600 mx-auto mb-2" />
           <div className="text-xl sm:text-2xl font-extrabold text-dark-900 dark:text-white">
             {unanswered || 0}
           </div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
             Skipped
           </div>
         </div>
         <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-4 text-center shadow-sm">
           <div className="text-xl sm:text-2xl mb-2 h-6 flex items-center justify-center">🎯</div>
           <div className="text-xl sm:text-2xl font-extrabold text-blue-600">{accuracy}%</div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
             Accuracy
           </div>
         </div>
         <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-4 text-center shadow-sm col-span-2 sm:col-span-1">
           <div className="text-xl sm:text-2xl mb-2 h-6 flex items-center justify-center">⏱️</div>
-          <div className="text-xl sm:text-2xl font-extrabold text-amber-600">
+          <div className="text-xl sm:text-2xl font-extrabold text-amber-800">
             {timeTaken || '-'}
           </div>
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
             Time
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
       {/* Accuracy Donut Chart */}
       {correct !== undefined && incorrect !== undefined && (
         <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 shadow-sm mb-6">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-5 text-center">
+          <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-5 text-center">
             Performance Breakdown
           </h3>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
@@ -281,7 +281,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
                   <span className="text-sm font-extrabold text-dark-900 dark:text-white">
                     {item.value}
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-600">
                     (
                     {(
                       (item.value / ((correct || 0) + (incorrect || 0) + (unanswered || 0))) *
@@ -302,7 +302,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
           <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 flex flex-col justify-center gap-6 shadow-sm">
             {hasRank && (
               <div className="flex items-center justify-between">
-                <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+                <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">
                   Your Rank
                 </div>
                 <div className="text-2xl font-extrabold text-dark-900 dark:text-white bg-slate-100 dark:bg-dark-800 px-3 py-1 rounded-lg">
@@ -312,7 +312,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
             )}
             {hasPercentile && (
               <div className="flex items-center justify-between border-t border-slate-100 dark:border-dark-800 pt-6">
-                <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+                <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">
                   Percentile
                 </div>
                 <div className="text-2xl font-extrabold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg">
@@ -325,14 +325,14 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
 
         {/* Mock Topic Analysis */}
         <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 shadow-sm flex-1">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-dark-800 pb-2">
+          <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-dark-800 pb-2">
             Topic Analysis
           </h3>
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between text-xs font-bold mb-1.5">
                 <span className="text-green-600">Strong Area: Indian Polity</span>
-                <span className="text-slate-500">85%</span>
+                <span className="text-slate-600">85%</span>
               </div>
               <div className="h-2 w-full bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 w-[85%] rounded-full"></div>
@@ -341,7 +341,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
             <div>
               <div className="flex items-center justify-between text-xs font-bold mb-1.5">
                 <span className="text-orange-500">Average: Current Affairs</span>
-                <span className="text-slate-500">60%</span>
+                <span className="text-slate-600">60%</span>
               </div>
               <div className="h-2 w-full bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
                 <div className="h-full bg-orange-400 w-[60%] rounded-full"></div>
@@ -350,7 +350,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
             <div>
               <div className="flex items-center justify-between text-xs font-bold mb-1.5">
                 <span className="text-red-500">Weak Area: Rajasthan Geography</span>
-                <span className="text-slate-500">30%</span>
+                <span className="text-slate-600">30%</span>
               </div>
               <div className="h-2 w-full bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
                 <div className="h-full bg-red-500 w-[30%] rounded-full"></div>
@@ -373,7 +373,7 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
         {resolvedTestId && (
           <Link
             to={`/tests/${resolvedTestId}`}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center gap-2 text-sm"
+            className="bg-amber-800 hover:bg-amber-800 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center gap-2 text-sm"
           >
             <HiRefresh className="h-4 w-4" /> Reattempt Test
           </Link>

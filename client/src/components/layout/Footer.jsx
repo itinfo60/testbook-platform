@@ -47,7 +47,7 @@ export default function Footer() {
     Support: [
       { label: 'Help Center & FAQs', path: '/help' },
       { label: 'Faculty Members', path: '/faculty' },
-      { label: 'About EduHub', path: '/about' },
+      { label: 'About CivicsEdu', path: '/about' },
       { label: 'Privacy Policy', path: '/legal/privacy' },
       { label: 'Terms & Conditions', path: '/legal/terms' },
     ],
@@ -73,17 +73,17 @@ export default function Footer() {
                 <HiAcademicCap className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-bold font-display tracking-tight text-white uppercase">
-                Edu<span className="text-accent-500">Hub</span>
+                Civics<span className="text-amber-300">Edu</span>
               </span>
             </Link>
-            <p className="text-sm text-dark-500 mb-5 max-w-xs leading-relaxed">
+            <p className="text-sm text-slate-400 mb-5 max-w-xs leading-relaxed">
               Rajasthan's dedicated learning & test-series platform for serious competitive exam
               aspirants.
             </p>
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <HiMail className="h-4 w-4 text-primary-400" />
-                <span>support@eduhub.com</span>
+                <span>support@civicsedu.com</span>
               </div>
               <div className="flex items-center gap-2">
                 <HiPhone className="h-4 w-4 text-primary-400" />
@@ -116,9 +116,9 @@ export default function Footer() {
 
         {/* Bottom Footer */}
         <div className="py-6 border-t border-dark-800/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-dark-500">
-            © {new Date().getFullYear()} EduHub. All rights reserved. Specialized Coaching for RPSC
-            & Political Science.
+          <p className="text-xs text-slate-400">
+            © {new Date().getFullYear()} CivicsEdu. All rights reserved. Specialized Coaching for
+            RPSC & Political Science.
           </p>
           <div className="flex items-center gap-3">
             {socialLinks.map((social) => (

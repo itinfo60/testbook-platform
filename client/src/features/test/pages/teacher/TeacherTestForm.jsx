@@ -206,7 +206,7 @@ export default function TeacherTestForm() {
             <h2 className="text-xl sm:text-2xl font-bold text-dark-900 dark:text-white font-display">
               {isEdit ? 'Edit Assessment Drill / Test' : 'Create New Assessment Drill / Test'}
             </h2>
-            <p className="text-xs text-slate-500 font-normal">
+            <p className="text-xs text-slate-600 font-normal">
               Configure timing, marking rules, test series linkage, and bilingual questions.
             </p>
           </div>
@@ -337,7 +337,7 @@ export default function TeacherTestForm() {
               <h3 className="font-bold text-dark-900 dark:text-white text-base">
                 Questions ({formData.questions.length})
               </h3>
-              <p className="text-xs text-slate-500 font-normal">
+              <p className="text-xs text-slate-600 font-normal">
                 Set positive marks, negative marks penalty, and detailed solution notes.
               </p>
             </div>
@@ -363,7 +363,7 @@ export default function TeacherTestForm() {
 
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1 text-xs">
-                      <span className="text-slate-400 font-medium">+Marks:</span>
+                      <span className="text-slate-600 font-medium">+Marks:</span>
                       <input
                         type="number"
                         step="0.5"
@@ -374,7 +374,7 @@ export default function TeacherTestForm() {
                     </div>
 
                     <div className="flex items-center gap-1 text-xs">
-                      <span className="text-slate-400 font-medium">-Negative:</span>
+                      <span className="text-slate-600 font-medium">-Negative:</span>
                       <input
                         type="number"
                         step="0.01"
@@ -388,7 +388,7 @@ export default function TeacherTestForm() {
                       <button
                         type="button"
                         onClick={() => removeQuestion(qi)}
-                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                        className="p-1 text-slate-600 hover:text-rose-600 transition-colors"
                         title="Delete Question"
                       >
                         <HiTrash className="h-4 w-4" />
@@ -409,7 +409,7 @@ export default function TeacherTestForm() {
 
                 {/* Options */}
                 <div className="space-y-2">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                  <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">
                     Options & Correct Answer Choice:
                   </span>
                   {q.options.map((opt, oi) => (
@@ -422,7 +422,7 @@ export default function TeacherTestForm() {
                         className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                         title="Mark as correct answer"
                       />
-                      <span className="text-xs font-bold text-slate-400 w-4">
+                      <span className="text-xs font-bold text-slate-600 w-4">
                         {String.fromCharCode(65 + oi)}.
                       </span>
                       <input
@@ -442,7 +442,7 @@ export default function TeacherTestForm() {
 
                 {/* Solution Explanation */}
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Explanation / Solution Details (Optional)
                   </label>
                   <textarea
@@ -460,7 +460,7 @@ export default function TeacherTestForm() {
           <button
             type="button"
             onClick={addQuestion}
-            className="w-full py-2.5 border-2 border-dashed border-slate-200 dark:border-dark-700 rounded-xl text-xs font-semibold text-slate-500 hover:border-primary-400 hover:text-primary-600 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 border-2 border-dashed border-slate-200 dark:border-dark-700 rounded-xl text-xs font-semibold text-slate-600 hover:border-primary-400 hover:text-primary-600 transition-colors flex items-center justify-center gap-1.5"
           >
             <HiPlus className="h-4 w-4" /> Add Next Question
           </button>
@@ -470,7 +470,7 @@ export default function TeacherTestForm() {
         <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-dark-800">
           <Link
             to="/teacher/tests"
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
           >
             Cancel
           </Link>

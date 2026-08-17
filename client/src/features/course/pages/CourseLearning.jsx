@@ -230,7 +230,7 @@ export default function CourseLearning() {
         </p>
         <Link
           to="/courses"
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm"
+          className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all text-sm"
         >
           Explore Courses
         </Link>
@@ -345,7 +345,7 @@ export default function CourseLearning() {
                     onClick={() => {
                       goToNext();
                     }}
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
+                    className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
                   >
                     Next Lesson
                   </button>
@@ -443,7 +443,7 @@ export default function CourseLearning() {
                     {currentLesson.quizId && (
                       <Link
                         to={`/quiz/${currentLesson.quizId}`}
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all inline-flex items-center justify-center gap-2 text-sm"
+                        className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all inline-flex items-center justify-center gap-2 text-sm"
                       >
                         Start Lesson Quiz <HiArrowRight className="h-4 w-4" />
                       </Link>

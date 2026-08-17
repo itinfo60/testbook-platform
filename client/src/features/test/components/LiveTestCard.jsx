@@ -29,19 +29,19 @@ export default function LiveTestCard({ liveTest, onShare }) {
               Free
             </span>
           </div>
-          <span className="text-[11px] font-extrabold text-slate-400 flex items-center gap-1">
-            <HiCalendar className="h-3.5 w-3.5 text-amber-500" />{' '}
+          <span className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1">
+            <HiCalendar className="h-3.5 w-3.5 text-amber-800" />{' '}
             {liveTest.dateRange || '12 Aug, 9:00 to 14 Aug, 21:00'}
           </span>
         </div>
 
         {/* Live Test Title */}
-        <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mb-3 line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+        <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mb-3 line-clamp-2 group-hover:text-amber-800 dark:group-hover:text-amber-400 transition-colors">
           {liveTest.title}
         </h3>
 
         {/* Parameters */}
-        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-400 mb-4 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
           <span className="flex items-center gap-1">
             <HiQuestionMarkCircle className="h-4 w-4 text-blue-500" />{' '}
             {liveTest.questionsCount || 30} Questions
@@ -52,7 +52,7 @@ export default function LiveTestCard({ liveTest, onShare }) {
           </span>
           <span>|</span>
           <span className="flex items-center gap-1">
-            <HiAcademicCap className="h-4 w-4 text-amber-500" /> {liveTest.totalMarks || 60} Marks
+            <HiAcademicCap className="h-4 w-4 text-amber-800" /> {liveTest.totalMarks || 60} Marks
           </span>
         </div>
       </div>
@@ -60,23 +60,23 @@ export default function LiveTestCard({ liveTest, onShare }) {
       <div>
         {/* Footer Languages & Action */}
         <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 mb-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">
             <HiGlobe className="h-4 w-4 text-indigo-500" />
             <span>{liveTest.languages || 'English , Hindi + 8 More'}</span>
           </div>
 
-          <div className="flex items-center gap-3 text-xs font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-400">
             {liveTest.hasSyllabus !== false && (
               <button
                 onClick={() => setShowSyllabusModal(true)}
-                className="hover:text-amber-600 flex items-center gap-1 cursor-pointer transition-colors"
+                className="hover:text-amber-800 flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <HiInformationCircle className="h-4 w-4" /> Syllabus
               </button>
             )}
             <button
               onClick={() => onShare && onShare(liveTest)}
-              className="hover:text-amber-600 flex items-center gap-1 cursor-pointer transition-colors"
+              className="hover:text-amber-800 flex items-center gap-1 cursor-pointer transition-colors"
             >
               <HiShare className="h-4 w-4" /> Share
             </button>
@@ -101,7 +101,7 @@ export default function LiveTestCard({ liveTest, onShare }) {
         ) : (
           <button
             onClick={() => setRegistered(true)}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+            className="w-full bg-amber-800 hover:bg-amber-800 text-white font-black py-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
           >
             Register
           </button>
@@ -114,7 +114,7 @@ export default function LiveTestCard({ liveTest, onShare }) {
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 relative">
             <button
               onClick={() => setShowSyllabusModal(false)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-2 text-slate-600 hover:text-slate-600 rounded-full transition-colors cursor-pointer"
             >
               <HiX className="h-6 w-6" />
             </button>
@@ -144,7 +144,7 @@ export default function LiveTestCard({ liveTest, onShare }) {
             </div>
             <button
               onClick={() => setShowSyllabusModal(false)}
-              className="w-full bg-amber-500 text-white font-extrabold py-3 rounded-2xl text-sm cursor-pointer"
+              className="w-full bg-amber-800 text-white font-extrabold py-3 rounded-2xl text-sm cursor-pointer"
             >
               Close Syllabus
             </button>
