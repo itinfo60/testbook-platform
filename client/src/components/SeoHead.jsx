@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet-async';
-const SITE_NAME = 'CivicsHub';
+const SITE_NAME = 'CivicsEdu';
 const SITE_URL = 'https://edurportal.in';
 const DEFAULT_IMAGE = '/og-default.png';
 const DEFAULT_DESCRIPTION =

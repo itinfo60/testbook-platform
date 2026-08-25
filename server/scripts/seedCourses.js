@@ -1303,8 +1303,8 @@ const seedCourses = async () => {
     console.log(`💬 Discussions: ${totalDiscussions}`);
     console.log(`📓 Notes:       ${totalNotes}`);
     console.log('\nLogin to explore:');
-    console.log('   Teacher: teacher@civicshub.com / Teacher@123456');
-    console.log('   Student: student@civicshub.com / Student@123456');
+    console.log('   Teacher: teacher@civicsedu.com / Teacher@123456');
+    console.log('   Student: student@civicsedu.com / Student@123456');
 
     process.exit(0);
   } catch (err) {

@@ -68,6 +68,7 @@ export const createCourseSchema = z.object({
   requirements: z.array(z.string().trim()).default([]),
   whatYouLearn: z.array(z.string().trim()).default([]),
   sections: z.array(sectionSchema).default([]),
+  instructors: z.any().optional(),
 });
 
 export const updateCourseSchema = z.object({
@@ -78,6 +79,7 @@ export const updateCourseSchema = z.object({
   categoryId: objectId.optional(),
   examCategory: objectId.optional(),
   teacherId: objectId.optional(),
+  instructors: z.any().optional(),
   price: z.number().min(0).max(100000).optional(),
   discountPrice: z.number().min(0).optional(),
   isFree: z.boolean().optional(),
@@ -109,6 +111,7 @@ export const courseQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(12),
   search: z.string().trim().max(100).optional(),
   category: z.string().optional(),
+  teacher: z.string().optional(),
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   priceMin: z.coerce.number().min(0).optional(),
   priceMax: z.coerce.number().min(0).optional(),

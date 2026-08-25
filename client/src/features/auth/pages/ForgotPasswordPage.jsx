@@ -3,7 +3,7 @@ import { Button } from '@/components/ui';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { HiMail, HiArrowLeft } from 'react-icons/hi';
-import supabase from '@/services/supabase';
+import { authAPI } from '@/services/api';
 import toast from 'react-hot-toast';
 
 export default function ForgotPasswordPage() {
@@ -21,19 +21,14 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      // Supabase sends the password reset email with a link to /reset-password
-      const { error: sbError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (sbError) {
-        throw sbError;
-      }
-
+      // Use backend SMTP — works for all users regardless of auth provider
+      await authAPI.forgotPassword(cleanEmail);
       setSent(true);
       toast.success('Password reset link sent to your email!');
     } catch (err) {
-      toast.error(err.message || 'Failed to send reset link');
+      // Show success even on error to prevent email enumeration
+      setSent(true);
+      toast.success('If that email exists, a reset link has been sent.');
     } finally {
       setLoading(false);
     }
@@ -56,6 +51,15 @@ export default function ForgotPasswordPage() {
           </h1>
           <p className="text-dark-500">
             We've sent a reset link to <strong>{email}</strong>
+          </p>
+          <p className="text-dark-400 text-sm mt-3">
+            Didn't receive it? Check spam or{' '}
+            <button
+              className="text-primary-600 hover:underline font-medium"
+              onClick={() => setSent(false)}
+            >
+              try again
+            </button>
           </p>
         </div>
       ) : (

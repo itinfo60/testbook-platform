@@ -21,7 +21,7 @@ export class InstituteController extends BaseController {
       return this.ok(
         res,
         {
-          name: 'CivicsHub Platform',
+          name: 'CivicsEdu Platform',
           logo: '',
           primaryColor: '#f59e0b',
           secondaryColor: '#ea580c',

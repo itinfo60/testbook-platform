@@ -197,7 +197,7 @@ describe('LoginPage', () => {
       });
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/Enter your email/i);
-        expect(emailInput.value).toBe('teacher@civicshub.com');
+        expect(emailInput.value).toBe('teacher@civicsedu.com');
       });
     });
   });

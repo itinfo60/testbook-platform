@@ -33,7 +33,7 @@ class FixtureStore {
       _id: id,
       name: overrides.name || 'Default Institute',
       subdomain: overrides.subdomain || 'default',
-      websiteTitle: overrides.websiteTitle || 'CivicsHub Academy',
+      websiteTitle: overrides.websiteTitle || 'CivicsEdu Academy',
       isActive: overrides.isActive !== undefined ? overrides.isActive : true,
       subscription: overrides.subscription || {
         status: 'active',

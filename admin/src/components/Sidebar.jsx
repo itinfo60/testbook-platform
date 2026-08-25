@@ -20,6 +20,7 @@ import {
   Tag,
   Megaphone,
   Palette,
+  Activity,
   X,
   ChevronLeft,
 } from 'lucide-react';
@@ -82,8 +83,17 @@ const navSections = [
     items: [{ label: 'Announcements', path: '/announcements', icon: Megaphone }],
   },
   {
-    title: '10. Branding & Settings',
-    items: [{ label: 'Branding', path: '/branding', icon: Palette }],
+    title: '10. Policies & Support CMS',
+    items: [
+      { label: 'Branding', path: '/branding', icon: Palette },
+      { label: 'Legal & Policies', path: '/legal-settings', icon: FileText },
+      { label: 'Help & FAQs', path: '/help-settings', icon: Star },
+      { label: 'Success Stories', path: '/success-stories-settings', icon: Trophy },
+    ],
+  },
+  {
+    title: '11. System & Operations',
+    items: [{ label: 'System Logs', path: '/logs', icon: Activity }],
   },
 ];
 
@@ -109,7 +119,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold font-display text-white">
-                Civics<span className="text-primary-400">Hub</span>
+                Civics<span className="text-primary-400">Edu</span>
               </span>
             </div>
           )}
@@ -169,7 +179,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
         {/* Footer */}
         {!collapsed && (
           <div className="p-3 border-t border-white/10 flex-shrink-0">
-            <p className="text-xs text-gray-400 text-center">© 2026 CivicsHub Admin</p>
+            <p className="text-xs text-gray-400 text-center">© 2026 CivicsEdu Admin</p>
           </div>
         )}
       </aside>

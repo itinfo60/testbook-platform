@@ -56,10 +56,22 @@ export class CourseRepository extends TenantRepository<any> {
       }
     }
 
+    if (query.teacher) {
+      const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        query.teacher
+      );
+      if (isId) {
+        filter.teacherId = query.teacher;
+      } else {
+        filter.teacher = { name: { contains: query.teacher, mode: 'insensitive' } };
+      }
+    }
+
     if (query.search) {
       filter.OR = [
         { title: { contains: query.search, mode: 'insensitive' } },
         { description: { contains: query.search, mode: 'insensitive' } },
+        { teacher: { name: { contains: query.search, mode: 'insensitive' } } },
       ];
     }
 
@@ -82,7 +94,7 @@ export class CourseRepository extends TenantRepository<any> {
       prisma.course.findMany({
         where: scopedFilter,
         include: {
-          teacher: { select: { name: true, email: true, avatar: true } },
+          teacher: { select: { id: true, name: true, email: true, avatar: true } },
           category: { select: { name: true } },
         },
         orderBy,

@@ -1,30 +1,31 @@
 import { Input, Button } from '@/components/ui';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiLockClosed, HiCheckCircle, HiExclamationCircle } from 'react-icons/hi';
+import { HiLockClosed, HiExclamationCircle } from 'react-icons/hi';
+import { authAPI } from '@/services/api';
 import supabase from '@/services/supabase';
 import toast from 'react-hot-toast';
 
 export default function ResetPasswordPage() {
-  const { token } = useParams(); // legacy token-in-URL support
+  const { token } = useParams(); // backend token in URL
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState('');
+  const [mode, setMode] = useState('backend'); // 'backend' | 'supabase'
 
-  // On mount: consume the #access_token from the URL hash (Supabase recovery link)
   useEffect(() => {
-    const establishSession = async () => {
+    const init = async () => {
       const hash = window.location.hash;
 
-      if (hash && hash.includes('access_token=')) {
+      // Mode 1: Supabase recovery link with #access_token in URL hash
+      if (hash && hash.includes('access_token=') && hash.includes('type=recovery')) {
         const params = new URLSearchParams(hash.replace(/^#/, ''));
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
-        const type = params.get('type');
 
-        if (type === 'recovery' && accessToken) {
+        if (accessToken) {
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || '',
@@ -32,30 +33,25 @@ export default function ResetPasswordPage() {
           if (error) {
             setSessionError('This reset link is invalid or has expired. Please request a new one.');
           } else {
-            // Clean up hash from URL
             window.history.replaceState(null, '', window.location.pathname);
+            setMode('supabase');
             setSessionReady(true);
           }
           return;
         }
       }
 
-      // Fallback: maybe session already exists (page refresh)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
+      // Mode 2: Backend token in URL param (e.g. /reset-password/abc123)
+      if (token && token !== 'undefined') {
+        setMode('backend');
         setSessionReady(true);
-      } else if (!token) {
-        // No hash, no session, no legacy token → invalid
-        setSessionError('No valid reset session found. Please request a new password reset link.');
-      } else {
-        // Legacy token in URL param — backend-only flow
-        setSessionReady(true);
+        return;
       }
+
+      setSessionError('No valid reset link found. Please request a new password reset.');
     };
 
-    establishSession();
+    init();
   }, [token]);
 
   const handleSubmit = async (e) => {
@@ -71,27 +67,29 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      // Update password via Supabase (session is already set via setSession above)
-      const { error: sbError } = await supabase.auth.updateUser({
-        password: formData.password,
-      });
-
-      if (sbError) {
-        throw sbError;
+      if (mode === 'supabase') {
+        // Supabase session is already active — update password directly
+        const { error } = await supabase.auth.updateUser({ password: formData.password });
+        if (error) throw error;
+        await supabase.auth.signOut();
+      } else {
+        // Backend token flow — call backend reset-password endpoint
+        await authAPI.resetPassword(token, { password: formData.password });
       }
 
       toast.success('Password updated successfully!');
-      // Sign out so user logs in fresh with new password
-      await supabase.auth.signOut();
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
-      toast.error(err.message || 'Failed to reset password. Please try again.');
+      toast.error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to reset password. The link may have expired.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Invalid / expired link
   if (sessionError) {
     return (
       <div className="card p-6 sm:p-8 animate-fade-in max-w-md mx-auto text-center">
@@ -105,7 +103,6 @@ export default function ResetPasswordPage() {
     );
   }
 
-  // Still establishing session from hash
   if (!sessionReady) {
     return (
       <div className="card p-6 sm:p-8 animate-fade-in max-w-md mx-auto text-center">
@@ -118,7 +115,6 @@ export default function ResetPasswordPage() {
   return (
     <div className="card p-6 sm:p-8 animate-fade-in max-w-md mx-auto">
       <div className="text-center mb-6">
-        <HiCheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Reset Password</h1>
         <p className="text-dark-500 mt-1">Enter your new password below</p>
       </div>

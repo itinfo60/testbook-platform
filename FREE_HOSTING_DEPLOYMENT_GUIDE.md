@@ -1,6 +1,6 @@
 # 🚀 100% Free Complete Platform Hosting & Deployment Guide
 
-This guide gives you the exact blueprint and steps to deploy the entire **CivicsHub / Testbook Platform** (Student Web Portal, Admin Portal, Backend Node.js API, PostgreSQL Database, File Storage, and Redis Cache) **100% FREE forever**.
+This guide gives you the exact blueprint and steps to deploy the entire **CivicsEdu / Testbook Platform** (Student Web Portal, Admin Portal, Backend Node.js API, PostgreSQL Database, File Storage, and Redis Cache) **100% FREE forever**.
 
 ---
 
@@ -32,7 +32,7 @@ Your database and storage are already configured with Supabase:
 2. Click **New +** → **Web Service**.
 3. Connect your GitHub repository: `testbook-platform`.
 4. Configure the settings:
-   - **Name:** `civicshub-api`
+   - **Name:** `civicsedu-api`
    - **Root Directory:** `server`
    - **Runtime:** `Node`
    - **Build Command:** `npm install && npx prisma generate`
@@ -52,7 +52,7 @@ Your database and storage are already configured with Supabase:
    ADMIN_URL=https://your-admin-app.vercel.app
    ```
 6. Click **Create Web Service**.
-7. Once deployed, copy your Render URL: e.g. `https://civicshub-api.onrender.com`.
+7. Once deployed, copy your Render URL: e.g. `https://civicsedu-api.onrender.com`.
 
 ---
 
@@ -62,17 +62,17 @@ Your database and storage are already configured with Supabase:
 2. Click **Add New...** → **Project**.
 3. Import your `testbook-platform` repository.
 4. Configure:
-   - **Project Name:** `civicshub-portal`
+   - **Project Name:** `civicsedu-portal`
    - **Framework Preset:** `Vite`
    - **Root Directory:** Click Edit and select `client`
    - **Build Command:** `npm run build`
    - **Output Directory:** `dist`
 5. Under **Environment Variables**, add:
    ```env
-   VITE_API_URL=https://civicshub-api.onrender.com/api/v1
+   VITE_API_URL=https://civicsedu-api.onrender.com/api/v1
    ```
 6. Click **Deploy**.
-   - Your student portal is now live with zero cold starts at `https://civicshub-portal.vercel.app` (or your custom domain).
+   - Your student portal is now live with zero cold starts at `https://civicsedu-portal.vercel.app` (or your custom domain).
 
 ---
 
@@ -81,17 +81,17 @@ Your database and storage are already configured with Supabase:
 1. In Vercel, click **Add New...** → **Project**.
 2. Select the same `testbook-platform` repository again.
 3. Configure:
-   - **Project Name:** `civicshub-admin`
+   - **Project Name:** `civicsedu-admin`
    - **Framework Preset:** `Vite`
    - **Root Directory:** Click Edit and select `admin`
    - **Build Command:** `npm run build`
    - **Output Directory:** `dist`
 4. Under **Environment Variables**, add:
    ```env
-   VITE_API_URL=https://civicshub-api.onrender.com/api/v1
+   VITE_API_URL=https://civicsedu-api.onrender.com/api/v1
    ```
 5. Click **Deploy**.
-   - Your admin portal is now live at `https://civicshub-admin.vercel.app`.
+   - Your admin portal is now live at `https://civicsedu-admin.vercel.app`.
 
 ---
 
@@ -101,7 +101,7 @@ Render Free tier goes to sleep after 15 minutes of inactivity. To keep your back
 
 1. Go to [Cron-job.org](https://cron-job.org) or [UptimeRobot.com](https://uptimerobot.com) (100% Free).
 2. Create a free monitor/cron job:
-   - **URL:** `https://civicshub-api.onrender.com/health`
+   - **URL:** `https://civicsedu-api.onrender.com/health`
    - **Interval:** Every 5 minutes (or 10 minutes)
    - **Method:** `GET`
 3. This periodically hits the lightweight `/health` endpoint so Render never spins down, giving your students instant responses at all times!

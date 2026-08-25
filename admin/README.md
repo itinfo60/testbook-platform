@@ -1,6 +1,6 @@
 # 🛡️ Enterprise Admin Panel
 
-Modern, enterprise-grade admin dashboard for the CivicsHub learning platform.
+Modern, enterprise-grade admin dashboard for the CivicsEdu learning platform.
 
 ## Features
 

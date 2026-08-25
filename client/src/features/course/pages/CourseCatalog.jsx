@@ -17,18 +17,17 @@ export default function CourseCatalog() {
   const [page, setPage] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Sync URL params to Redux on mount
+  // Sync URL params to Redux on mount and param change
   useEffect(() => {
     const search = searchParams.get('search');
     const category = searchParams.get('category');
-    if (search || category) {
-      dispatch(
-        setFilters({
-          ...(search && { search }),
-          ...(category && { category }),
-        })
-      );
-    }
+
+    dispatch(
+      setFilters({
+        search: search || '',
+        category: category || '',
+      })
+    );
 
     // Fetch categories if not already loaded
     if (!examCategories || examCategories.length === 0) {
@@ -84,14 +83,11 @@ export default function CourseCatalog() {
     if (key === 'category') {
       let currentCategories = filters.category ? filters.category.split(',').filter(Boolean) : [];
 
-      const parentCat = examCategories?.find((c) => (c.id || c._id || c.slug) === value);
-
       // Find node anywhere in tree
       const findNodeAndChildren = (nodes) => {
         for (const n of nodes) {
           const nKey = n.id || n._id || n.slug;
           if (nKey === value) {
-            // Collect all descendants
             const collectDescendants = (item) => {
               let ids = [item.id || item._id || item.slug];
               (item.subcategories || []).forEach((child) => {
@@ -112,17 +108,17 @@ export default function CourseCatalog() {
       const match = findNodeAndChildren(examCategories || []);
 
       if (match && match.node.subcategories && match.node.subcategories.length > 0) {
-        // Toggling a node with children
         const isSelected = currentCategories.includes(value);
         if (isSelected) {
           currentCategories = currentCategories.filter((c) => !match.allDescendantIds.includes(c));
         } else {
           match.allDescendantIds.forEach((id) => {
-            if (!currentCategories.includes(id)) currentCategories.push(id);
+            if (!currentCategories.includes(id)) {
+              currentCategories.push(id);
+            }
           });
         }
       } else {
-        // Toggling a leaf child node
         if (currentCategories.includes(value)) {
           currentCategories = currentCategories.filter((c) => c !== value);
         } else {
@@ -135,47 +131,63 @@ export default function CourseCatalog() {
     dispatch(setFilters({ [key]: newValue }));
     setPage(1);
 
-    const newParams = new URLSearchParams(searchParams);
-    if (newValue) newParams.set(key, newValue);
-    else newParams.delete(key);
-    setSearchParams(newParams, { state: { preventScroll: true } });
+    const nextParams = new URLSearchParams(searchParams);
+    if (newValue) {
+      nextParams.set(key, newValue);
+    } else {
+      nextParams.delete(key);
+    }
+    setSearchParams(nextParams, { state: { preventScroll: true } });
   };
 
-  const handleSearch = (query) => {
-    dispatch(setFilters({ search: query }));
+  const handleSearch = (term) => {
+    dispatch(setFilters({ search: term }));
     setPage(1);
-
-    const newParams = new URLSearchParams(searchParams);
-    if (query) newParams.set('search', query);
-    else newParams.delete('search');
-    setSearchParams(newParams, { state: { preventScroll: true } });
+    const nextParams = new URLSearchParams(searchParams);
+    if (term) {
+      nextParams.set('search', term);
+    } else {
+      nextParams.delete('search');
+    }
+    setSearchParams(nextParams, { state: { preventScroll: true } });
   };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const activeFilterCount =
+    (filters.search ? 1 : 0) +
+    (filters.category ? filters.category.split(',').filter(Boolean).length : 0) +
+    (filters.level ? 1 : 0);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-h-[75vh]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <SeoHead
-        title="Courses — EduPortal"
-        description="Explore premium courses for RPSC RAS, RJS, EO/RO, Rajasthan GK, and Political Science. Live classes, video lectures, and handwritten notes."
+        title="Explore All Courses | CivicsEdu"
+        description="Browse comprehensive courses and test series taught by India's top educators on CivicsEdu."
       />
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          Explore Courses
+
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-dark-900 dark:text-white font-display">
+          All Courses & Syllabus Batches
         </h1>
-        <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
-          Find the perfect course for your learning goals
+        <p className="text-sm text-dark-500 dark:text-dark-400 mt-1">
+          Explore structured courses, video lectures, and notes prepared by specialized faculty.
         </p>
       </div>
 
-      {/* Search + Mobile Filter Button — same row */}
+      {/* Search and Mobile Filter Trigger */}
       <div className="flex items-center gap-3 mb-6">
-        <SearchBar
-          value={filters.search || ''}
-          onSearch={handleSearch}
-          placeholder="Search courses..."
-          className="flex-1 min-w-0"
-        />
-        {/* Mobile filter toggle */}
+        <div className="flex-1">
+          <SearchBar
+            onSearch={handleSearch}
+            placeholder="Search by course title, topic, or faculty name..."
+            defaultValue={filters.search || ''}
+          />
+        </div>
         <button
           onClick={() => setSidebarOpen(true)}
           className="lg:hidden flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border border-dark-200 dark:border-dark-700 text-sm text-dark-600 dark:text-dark-300 bg-white dark:bg-dark-800"
@@ -188,7 +200,7 @@ export default function CourseCatalog() {
               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
             />
           </svg>
-          Filters
+          Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
         </button>
       </div>
 
@@ -258,26 +270,25 @@ export default function CourseCatalog() {
         {/* Course Grid + Pagination */}
         <div className="flex-1 min-w-0">
           {error ? (
-            <div className="text-center py-16 bg-white dark:bg-dark-900 rounded-3xl border border-red-200 dark:border-red-900/30">
-              <div className="text-4xl mb-3">⚠️</div>
-              <p className="font-bold text-dark-900 dark:text-white mb-1">Failed to load courses</p>
-              <p className="text-sm text-slate-500 mb-4">{error}</p>
+            <div className="text-center py-12">
+              <p className="text-red-500 font-medium">{error}</p>
               <button
-                onClick={() => dispatch(fetchCourses({ page, limit: 12, sort: 'newest' }))}
-                className="btn-primary text-sm px-5 py-2"
+                onClick={() => dispatch(fetchCourses({ page: 1, limit: 12 }))}
+                className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
               >
-                Retry
+                Try Again
               </button>
             </div>
           ) : (
             <>
               <CourseGrid courses={courses} loading={loading} />
-              {pagination && (
-                <div className="mt-6 sm:mt-8">
+
+              {!loading && pagination && pagination.totalPages > 1 && (
+                <div className="mt-8 flex justify-center">
                   <Pagination
-                    currentPage={pagination.page || page}
-                    totalPages={pagination.totalPages || 1}
-                    onPageChange={(p) => setPage(p)}
+                    currentPage={pagination.page}
+                    totalPages={pagination.totalPages}
+                    onPageChange={handlePageChange}
                   />
                 </div>
               )}

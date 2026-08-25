@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   HiBadgeCheck,
@@ -42,6 +43,30 @@ export default function CourseCard({ course }) {
     'Comprehensive course material and expert guidance to help you master this subject.';
   const rawAuthorName = author?.name || creator?.name || teacher?.name;
   const authorName = rawAuthorName || 'Instructor';
+
+  const instructorsList = useMemo(() => {
+    const list = [];
+    if (teacher && teacher.name) {
+      list.push(teacher);
+    }
+    if (Array.isArray(course.instructors)) {
+      course.instructors.forEach((ins) => {
+        if (
+          ins &&
+          ins.name &&
+          !list.some(
+            (existing) => (existing.id && existing.id === ins.id) || existing.name === ins.name
+          )
+        ) {
+          list.push(ins);
+        }
+      });
+    }
+    if (list.length === 0 && rawAuthorName) {
+      list.push({ name: rawAuthorName });
+    }
+    return list;
+  }, [teacher, course.instructors, rawAuthorName]);
 
   const formatDuration = (secs) => {
     if (!secs) return null;
@@ -113,11 +138,40 @@ export default function CourseCard({ course }) {
           {displayDesc}
         </p>
 
-        {/* Meta Stats: Teacher, Duration, Lessons */}
+        {/* Meta Stats: Teachers, Duration, Lessons */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] font-medium text-dark-500 dark:text-dark-400 mb-4">
-          <div className="flex items-center gap-1.5 max-w-[120px] sm:max-w-[150px]">
-            <HiUser className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{authorName}</span>
+          <div className="flex items-center gap-1.5 flex-wrap max-w-full">
+            {instructorsList.map((ins, idx) => {
+              const insName = ins.name || 'Instructor';
+              const insAvatar = ins.avatar?.url || ins.avatar;
+              return (
+                <button
+                  key={ins.id || ins._id || idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = `/courses?search=${encodeURIComponent(insName)}`;
+                  }}
+                  className="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition-colors group/teacher cursor-pointer text-xs"
+                  title={`Filter courses by ${insName}`}
+                >
+                  {insAvatar ? (
+                    <img
+                      src={insAvatar}
+                      alt={insName}
+                      className="w-4 h-4 rounded-full object-cover shrink-0 border border-primary-400/40"
+                    />
+                  ) : (
+                    <HiUser className="h-3.5 w-3.5 shrink-0 text-primary-500" />
+                  )}
+                  <span className="truncate group-hover/teacher:underline">
+                    {insName}
+                    {idx < instructorsList.length - 1 ? ',' : ''}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           {formatDuration(totalDuration) && (
             <div className="flex items-center gap-1.5">

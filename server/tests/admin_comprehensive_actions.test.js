@@ -502,7 +502,7 @@ describe('Comprehensive Admin API & Action Verification Suite', () => {
         scheduledAt: futureDate,
         durationMinutes: 60,
         courseId: createdCourseId || undefined,
-        meetingUrl: 'https://meet.jit.si/CivicsHubPolitySession',
+        meetingUrl: 'https://meet.jit.si/CivicsEduPolitySession',
       };
 
       const res = await request(app).post('/api/v1/live-classes').set(adminHeaders).send(payload);

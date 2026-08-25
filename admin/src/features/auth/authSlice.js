@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api, { authAPI } from '@/services/api';
+import supabase from '@/services/supabase';
 import toast from 'react-hot-toast';
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'superadmin'];
@@ -94,10 +95,20 @@ export const logout = createAsyncThunk('auth/logout', async () => {
     await authAPI.logout();
   } catch (e) {
     /* ignore */
+  }
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {
+    /* ignore */
   } finally {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminRefreshToken');
     localStorage.removeItem('adminTenantId');
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('sb-') || key.includes('supabase')) {
+        localStorage.removeItem(key);
+      }
+    });
   }
 });
 

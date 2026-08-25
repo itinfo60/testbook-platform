@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
+import VideoPlayer from '@/features/course/components/learning/VideoPlayer';
 import { courseAPI } from '@/services/api';
 import {
   HiArrowRight,
@@ -24,10 +24,14 @@ export default function SampleClasses() {
           // Add a stable id for UI rendering
           const mappedSamples = response.data.data.samples.map((s, index) => ({
             ...s,
-            id: s._id || index,
+            id: s.id || s._id || s.videoUrl || `sample-${index}`,
             topic: s.courseTitle,
             faculty: s.teacher?.name || 'Expert Faculty',
             role: 'Senior Educator',
+            thumbnail:
+              s.thumbnail?.url ||
+              (typeof s.thumbnail === 'string' && s.thumbnail) ||
+              'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=60',
             duration: s.duration
               ? `${Math.floor(s.duration / 60)}:${(s.duration % 60).toString().padStart(2, '0')} Min`
               : 'Free Class',
@@ -89,10 +93,10 @@ export default function SampleClasses() {
           </div>
 
           <Link
-            to="/free-resources"
+            to="/courses"
             className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-accent-400 hover:text-accent-300 transition-colors border-b-2 border-accent-400/40 hover:border-accent-300 pb-1 whitespace-nowrap self-start md:self-auto"
           >
-            View All Free Classes <HiArrowRight className="h-4 w-4" />
+            Explore All Courses & Lectures <HiArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
@@ -117,22 +121,7 @@ export default function SampleClasses() {
                   <div className="aspect-video relative overflow-hidden bg-black flex items-center justify-center">
                     {isPlaying ? (
                       <div className="relative w-full h-full">
-                        <video
-                          ref={(el) => (videoRefs.current[cls.id] = el)}
-                          src={cls.videoUrl}
-                          controls
-                          autoPlay
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                        {/* Fullscreen Quick Trigger Overlay */}
-                        <button
-                          onClick={(e) => handleFullScreen(cls.id, e)}
-                          title="View Fullscreen"
-                          className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl backdrop-blur-md transition-colors z-20 border border-white/20"
-                        >
-                          <HiOutlineArrowsExpand className="h-4 w-4" />
-                        </button>
+                        <VideoPlayer url={cls.videoUrl} autoPlay={true} />
                       </div>
                     ) : (
                       <div
@@ -182,10 +171,14 @@ export default function SampleClasses() {
                   {/* Card Content Body */}
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="text-base sm:text-lg font-bold text-white font-display line-clamp-2 mb-2 group-hover:text-accent-400 transition-colors">
+                      <Link
+                        to={`/courses/${cls.courseSlug || cls.courseId}`}
+                        className="text-base sm:text-lg font-bold text-white font-display line-clamp-2 mb-2 hover:text-accent-400 transition-colors block"
+                        title={`View full course: ${cls.courseTitle}`}
+                      >
                         {cls.title}
-                      </h3>
-                      <p className="text-xs text-slate-400 mb-4">{cls.role}</p>
+                      </Link>
+                      <p className="text-xs text-slate-400 mb-4">{cls.courseTitle || cls.role}</p>
                     </div>
 
                     <div className="pt-4 border-t border-navy-800 flex items-center justify-between">
@@ -199,14 +192,14 @@ export default function SampleClasses() {
                       {!isPlaying ? (
                         <button
                           onClick={() => handlePlay(cls.id)}
-                          className="text-xs font-extrabold text-accent-400 hover:text-accent-300 flex items-center gap-1 transition-colors"
+                          className="text-xs font-extrabold text-accent-400 hover:text-accent-300 flex items-center gap-1 transition-colors cursor-pointer"
                         >
-                          Watch Now <HiPlay className="h-3.5 w-3.5" />
+                          Watch Demo <HiPlay className="h-3.5 w-3.5" />
                         </button>
                       ) : (
                         <button
                           onClick={(e) => handleFullScreen(cls.id, e)}
-                          className="text-xs font-extrabold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+                          className="text-xs font-extrabold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           Fullscreen <HiOutlineArrowsExpand className="h-3.5 w-3.5" />
                         </button>
@@ -222,10 +215,11 @@ export default function SampleClasses() {
         {/* Bottom Centered View All Link */}
         <div className="mt-12 text-center">
           <Link
-            to="/free-resources"
-            className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-navy-900 hover:bg-navy-800 text-white border border-navy-700 hover:border-navy-600 rounded-full font-bold text-sm sm:text-base shadow-sm hover:shadow-md transition-all"
+            to="/courses"
+            className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-navy-900 hover:bg-navy-800 text-white border border-navy-700 hover:border-navy-600 rounded-full font-bold text-sm sm:text-base shadow-sm hover:shadow-md transition-all cursor-pointer"
           >
-            Explore All Free Video Lectures <HiArrowRight className="h-4 w-4 text-accent-400" />
+            Explore All Courses & Video Lectures{' '}
+            <HiArrowRight className="h-4 w-4 text-accent-400" />
           </Link>
         </div>
       </div>

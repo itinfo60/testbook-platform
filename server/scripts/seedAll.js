@@ -1452,7 +1452,7 @@ const run = async () => {
 
   const admin = await User.create({
     name: 'Super Admin',
-    email: 'admin@civicshub.com',
+    email: 'admin@civicsedu.com',
     password: 'Admin@123456',
     role: 'super_admin',
     isEmailVerified: true,
@@ -1462,7 +1462,7 @@ const run = async () => {
 
   const teacher = await User.create({
     name: 'Rajesh Kumar',
-    email: 'teacher@civicshub.com',
+    email: 'teacher@civicsedu.com',
     password: 'Teacher@123456',
     role: 'teacher',
     isEmailVerified: true,
@@ -1479,7 +1479,7 @@ const run = async () => {
 
   const teacher2 = await User.create({
     name: 'Priya Sharma',
-    email: 'teacher2@civicshub.com',
+    email: 'teacher2@civicsedu.com',
     password: 'Teacher@123456',
     role: 'teacher',
     isEmailVerified: true,
@@ -1843,9 +1843,9 @@ const run = async () => {
   console.log(`  Blog posts   : ${BLOG_POSTS.length}`);
   console.log('───────────────────────────────────────────────');
   console.log('  Login credentials');
-  console.log('  Admin   : admin@civicshub.com    / Admin@123456');
-  console.log('  Teacher : teacher@civicshub.com  / Teacher@123456');
-  console.log('  Teacher2: teacher2@civicshub.com / Teacher@123456');
+  console.log('  Admin   : admin@civicsedu.com    / Admin@123456');
+  console.log('  Teacher : teacher@civicsedu.com  / Teacher@123456');
+  console.log('  Teacher2: teacher2@civicsedu.com / Teacher@123456');
   console.log('  Student : arjun@student.com     / Student@123456');
   console.log('  (all 12 students use Student@123456)');
   console.log('═══════════════════════════════════════════════\n');

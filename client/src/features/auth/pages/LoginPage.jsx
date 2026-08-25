@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
   const {
     register,
@@ -113,7 +114,7 @@ export default function LoginPage() {
       }
     };
 
-    // 1. Check direct URL hash immediately
+    // Process OAuth token if and only if returned from OAuth redirect with hash
     if (window.location.hash && window.location.hash.includes('access_token=')) {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const token = hashParams.get('access_token');
@@ -122,18 +123,15 @@ export default function LoginPage() {
       }
     }
 
-    // 2. Check Supabase existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.access_token) {
-        processToken(session.access_token);
-      }
-    });
-
-    // 3. Listen to Supabase auth state changes (e.g. SIGNED_IN after hash parsed)
+    // Listen to Supabase auth state changes only for explicit SIGNED_IN event with active hash
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.access_token && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+      if (
+        session?.access_token &&
+        event === 'SIGNED_IN' &&
+        window.location.hash.includes('access_token=')
+      ) {
         processToken(session.access_token);
       }
     });
@@ -171,46 +169,26 @@ export default function LoginPage() {
       return;
     }
 
-    // 1. Check with Supabase Auth
-    try {
-      const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
-        email: data.email.trim(),
-        password: data.password,
-      });
-
-      if (sbError) {
-        const msg = (sbError.message || '').toLowerCase();
-        if (msg.includes('email not confirmed') || msg.includes('not confirmed')) {
-          setServerError(
-            'Please verify your email address before logging in. Check your inbox for the verification link.'
-          );
-          return;
-        }
-      }
-
-      if (sbData?.session?.access_token) {
-        const result = await dispatch(
-          loginWithSupabase({ accessToken: sbData.session.access_token })
-        );
-        if (loginWithSupabase.fulfilled.match(result)) {
-          navigate(from, { replace: true });
-          return;
-        } else {
-          setServerError(result.payload || 'Login failed');
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn('Supabase sign-in exception:', err);
-    }
-
-    // 2. Fallback to platform login (which also enforces isEmailVerified)
+    // Email/password users live in the backend DB — go straight to platform login.
+    // Google OAuth users are handled separately via the Google button + onAuthStateChange.
     const result = await dispatch(login(data));
     if (login.rejected.match(result)) {
-      setServerError(result.payload || 'Invalid email or password');
+      const errMsg = result.payload || 'Invalid email or password';
+      // Surface unverified-email errors with a resend option
+      if (
+        errMsg.toLowerCase().includes('verify your email') ||
+        errMsg.toLowerCase().includes('email not confirmed')
+      ) {
+        setServerError(errMsg);
+        setUnverifiedEmail(data.email.trim());
+      } else {
+        setServerError(errMsg);
+      }
     } else if (result.payload?.requiresMfa) {
       setMfaUserId(result.payload.userId);
       setRequiresMfa(true);
+    } else {
+      navigate(from, { replace: true });
     }
   };
 

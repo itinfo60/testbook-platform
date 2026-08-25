@@ -11,7 +11,7 @@ const serverDir = path.resolve(__dirname, '../../');
 console.log(
   '\n========================================================================================'
 );
-console.log('                 CivicsHub Automated E2E Test Harness (Tiers 1 - 4)');
+console.log('                 CivicsEdu Automated E2E Test Harness (Tiers 1 - 4)');
 console.log(
   '========================================================================================\n'
 );

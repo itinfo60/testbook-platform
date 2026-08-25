@@ -165,7 +165,20 @@ export const getCategoryBySlug = catchAsync(async (req, res) => {
         ],
       };
 
-  const category = await prisma.category.findFirst({ where: whereClause });
+  let category = await prisma.category.findFirst({ where: whereClause });
+
+  if (!category) {
+    category = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { slug: { startsWith: cleanParam, mode: 'insensitive' as const } },
+          { slug: { contains: cleanParam, mode: 'insensitive' as const } },
+          { name: { contains: cleanParam, mode: 'insensitive' as const } },
+        ],
+      },
+    });
+  }
+
   if (!category) throw ApiError.notFound('Category not found');
 
   // Find sub-categories (e.g. specific exams under a main category)

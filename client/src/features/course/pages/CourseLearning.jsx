@@ -507,6 +507,7 @@ export default function CourseLearning() {
             <div className="flex-1 overflow-y-auto">
               <LessonSidebar
                 sections={sections}
+                currentLesson={currentLesson}
                 currentLessonId={currentLesson?._id || currentLesson?.id}
                 completedLessonIds={completedLessonIds}
                 onSelectLesson={handleLessonSelect}
@@ -724,6 +725,7 @@ export default function CourseLearning() {
         <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0 p-4 lg:p-6 lg:pl-0">
           <LessonSidebar
             sections={sections}
+            currentLesson={currentLesson}
             currentLessonId={currentLesson?._id || currentLesson?.id}
             completedLessonIds={completedLessonIds}
             onSelectLesson={handleLessonSelect}

@@ -1,5 +1,8 @@
 import './instrument.js'; // Sentry must load first
+import logger from './services/logger';
 import ReactDOM from 'react-dom/client';
+
+logger.init();
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster, ToastBar, toast } from 'react-hot-toast';

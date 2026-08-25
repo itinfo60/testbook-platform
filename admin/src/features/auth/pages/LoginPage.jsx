@@ -36,16 +36,14 @@ export default function Login() {
       }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.access_token) {
-        processToken(session.access_token);
-      }
-    });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.access_token && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+      if (
+        session?.access_token &&
+        event === 'SIGNED_IN' &&
+        window.location.hash.includes('access_token=')
+      ) {
         processToken(session.access_token);
       }
     });

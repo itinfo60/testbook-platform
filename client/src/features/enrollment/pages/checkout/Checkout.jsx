@@ -269,7 +269,7 @@ export default function Checkout() {
           amount: orderAmount,
           currency: currency || 'INR',
           order_id: orderId,
-          name: 'CivicsHub',
+          name: 'CivicsEdu',
           description: item?.title || 'Course Purchase',
           image: item?.thumbnail?.url || '',
           prefill: {
@@ -391,7 +391,7 @@ export default function Checkout() {
           <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
             By{' '}
             <span className="text-dark-900 dark:text-white font-black">
-              {item?.teacher?.name || 'CivicsHub Faculty'}
+              {item?.teacher?.name || 'CivicsEdu Faculty'}
             </span>
           </p>
           <PriceTag

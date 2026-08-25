@@ -231,6 +231,8 @@ export class CourseService {
           ? { url: input.thumbnail }
           : { url: '' };
 
+    const instructors = (input as any).instructors || [];
+
     const course = await prisma.course.create({
       data: {
         title: input.title,
@@ -248,6 +250,7 @@ export class CourseService {
         totalLessons,
         totalDuration,
         teacherId: assignedTeacherId,
+        instructors,
         categoryId,
         tenantId: (input as any).tenantId || null,
       },
@@ -293,6 +296,12 @@ export class CourseService {
     }
     if (input.language !== undefined) updateData.language = input.language;
     if (input.level !== undefined) updateData.level = input.level;
+    if ((input as any).teacherId) {
+      updateData.teacherId = (input as any).teacherId;
+    }
+    if ((input as any).instructors !== undefined) {
+      updateData.instructors = (input as any).instructors;
+    }
     if (input.sections !== undefined) {
       updateData.sections = input.sections;
       let totalLessons = 0;
@@ -442,7 +451,13 @@ export class CourseService {
       }
       sections.forEach((section: any) => {
         (section.lessons || []).forEach((lesson: any) => {
-          if (lesson.isFree && lesson.type === 'video') {
+          if (
+            lesson.isFree &&
+            lesson.type === 'video' &&
+            lesson.videoUrl &&
+            typeof lesson.videoUrl === 'string' &&
+            lesson.videoUrl.trim().length > 0
+          ) {
             samples.push({
               id: lesson.id || lesson._id,
               courseId: course.id,
@@ -452,7 +467,7 @@ export class CourseService {
               thumbnail: course.thumbnail,
               title: lesson.title,
               duration: lesson.duration,
-              videoUrl: lesson.videoUrl,
+              videoUrl: lesson.videoUrl.trim(),
             });
           }
         });

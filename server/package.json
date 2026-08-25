@@ -1,5 +1,5 @@
 {
-  "name": "civicshub-server",
+  "name": "civicsedu-server",
   "version": "2.0.0",
   "description": "Enterprise-grade learning platform API",
   "main": "src/server.js",

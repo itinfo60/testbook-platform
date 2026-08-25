@@ -62,7 +62,7 @@ export default function SearchResultsPage() {
         {loading && (
           <div className="py-20 text-center">
             <LoadingSpinner size="lg" />
-            <p className="text-slate-500 mt-4">Searching across CivicsHub...</p>
+            <p className="text-slate-500 mt-4">Searching across CivicsEdu...</p>
           </div>
         )}
 

@@ -78,7 +78,7 @@ const startServer = async () => {
     // Start server
     server.listen(config.port, () => {
       logger.info('═══════════════════════════════════════════');
-      logger.info(`🚀 CivicsHub Server v2.0.0`);
+      logger.info(`🚀 CivicsEdu Server v2.0.0`);
       logger.info(`📡 Environment: ${config.env}`);
       logger.info(`🌐 Server: http://localhost:${config.port}`);
       logger.info(`📋 API: http://localhost:${config.port}/api/v1`);

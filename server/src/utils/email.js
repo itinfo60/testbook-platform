@@ -123,10 +123,10 @@ class EmailService {
 ══════════════════════════════════════════════════════════════════`);
     return this.send({
       to: user.email,
-      subject: 'Verify Your Email - CivicsHub',
+      subject: 'Verify Your Email - CivicsEdu',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-          <h2 style="color:#4F46E5;">Welcome to CivicsHub!</h2>
+          <h2 style="color:#4F46E5;">Welcome to CivicsEdu!</h2>
           <p>Hi ${user.name},</p>
           <p>Please verify your email by clicking the button below:</p>
           <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#4F46E5;color:#fff;text-decoration:none;border-radius:8px;margin:16px 0;">Verify Email</a>
@@ -145,7 +145,7 @@ class EmailService {
 ══════════════════════════════════════════════════════════════════`);
     return this.send({
       to: user.email,
-      subject: 'Reset Password - CivicsHub',
+      subject: 'Reset Password - CivicsEdu',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
           <h2 style="color:#4F46E5;">Password Reset</h2>
@@ -161,11 +161,11 @@ class EmailService {
   async sendWelcomeEmail(user) {
     return this.send({
       to: user.email,
-      subject: 'Welcome to CivicsHub!',
+      subject: 'Welcome to CivicsEdu!',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
           <h2 style="color:#4F46E5;">Welcome, ${user.name}!</h2>
-          <p>Your account is ready. Start exploring courses and tests on CivicsHub.</p>
+          <p>Your account is ready. Start exploring courses and tests on CivicsEdu.</p>
           <a href="${config.clientUrl}/dashboard" style="display:inline-block;padding:12px 24px;background:#4F46E5;color:#fff;text-decoration:none;border-radius:8px;margin:16px 0;">Go to Dashboard</a>
         </div>
       `,
@@ -175,7 +175,7 @@ class EmailService {
   async sendCertificateEmail(user, course, certificateUrl) {
     return this.send({
       to: user.email,
-      subject: `Your Certificate: ${course.title} - CivicsHub`,
+      subject: `Your Certificate: ${course.title} - CivicsEdu`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
           <h2 style="color:#4F46E5;">Congratulations, ${user.name}!</h2>
@@ -189,7 +189,7 @@ class EmailService {
   async sendEnrollmentConfirmation(user, course) {
     return this.send({
       to: user.email,
-      subject: `Enrolled: ${course.title} - CivicsHub`,
+      subject: `Enrolled: ${course.title} - CivicsEdu`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
           <h2 style="color:#4F46E5;">Enrollment Confirmed! 🎉</h2>

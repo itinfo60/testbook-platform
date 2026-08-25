@@ -51,7 +51,7 @@ const config = {
         pass: process.env.SMTP_PASS,
       },
     },
-    from: process.env.EMAIL_FROM || 'noreply@civicshub.com',
+    from: process.env.EMAIL_FROM || 'noreply@civicsedu.com',
   },
 
   google: {

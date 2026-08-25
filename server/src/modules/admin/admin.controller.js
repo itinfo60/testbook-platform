@@ -1996,7 +1996,25 @@ export const getTeacherById = catchAsync(async (req, res) => {
 });
 
 export const createTeacher = catchAsync(async (req, res) => {
-  const { name, email, password, bio, phone, specialization, experience } = req.body;
+  const {
+    name,
+    email,
+    password,
+    bio,
+    phone,
+    designation,
+    headline,
+    qualification,
+    specialization,
+    subjects,
+    experience,
+    showOnFaculty = true,
+    isFeatured = false,
+    headerImage,
+    avatar,
+    links,
+  } = req.body;
+
   if (!name || !email || !password) {
     throw ApiError.badRequest('Name, email, and password are required');
   }
@@ -2007,13 +2025,29 @@ export const createTeacher = catchAsync(async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const teacherProfile = {
     bio: bio || '',
+    designation: designation || headline || '',
+    headline: headline || designation || '',
+    qualification: qualification || '',
+    experience: experience || '',
     specialization: Array.isArray(specialization)
       ? specialization
       : specialization
         ? [specialization]
         : [],
-    experience: experience || '',
+    subjects: Array.isArray(subjects)
+      ? subjects
+      : subjects
+        ? [subjects]
+        : Array.isArray(specialization)
+          ? specialization
+          : specialization
+            ? [specialization]
+            : [],
+    showOnFaculty: showOnFaculty !== false,
+    isFeatured: !!isFeatured,
     isVerified: true,
+    headerImage: headerImage || null,
+    links: links || {},
   };
 
   const user = await prisma.user.create({
@@ -2024,6 +2058,7 @@ export const createTeacher = catchAsync(async (req, res) => {
       role: 'teacher',
       bio: bio || '',
       phone: phone || '',
+      avatar: avatar ? (typeof avatar === 'string' ? { url: avatar } : avatar) : null,
       teacherProfile,
       isEmailVerified: true,
       tenantId: req.tenantId || null,
@@ -2033,6 +2068,9 @@ export const createTeacher = catchAsync(async (req, res) => {
       name: true,
       email: true,
       role: true,
+      avatar: true,
+      bio: true,
+      phone: true,
       isActive: true,
       teacherProfile: true,
       createdAt: true,
@@ -2043,7 +2081,24 @@ export const createTeacher = catchAsync(async (req, res) => {
 });
 
 export const updateTeacher = catchAsync(async (req, res) => {
-  const { name, bio, phone, specialization, experience, isActive } = req.body;
+  const {
+    name,
+    bio,
+    phone,
+    designation,
+    headline,
+    qualification,
+    specialization,
+    subjects,
+    experience,
+    showOnFaculty,
+    isFeatured,
+    headerImage,
+    avatar,
+    links,
+    isActive,
+  } = req.body;
+
   const teacher = await prisma.user.findUnique({ where: { id: req.params.id } });
   if (!teacher || teacher.role !== 'teacher') throw ApiError.notFound('Teacher not found');
 
@@ -2052,19 +2107,33 @@ export const updateTeacher = catchAsync(async (req, res) => {
       ? JSON.parse(teacher.teacherProfile)
       : teacher.teacherProfile
     : {};
+
   const updatedProfile = {
     ...currentProfile,
     ...(bio !== undefined && { bio }),
+    ...(designation !== undefined && { designation }),
+    ...(headline !== undefined && { headline }),
+    ...(qualification !== undefined && { qualification }),
     ...(specialization !== undefined && {
       specialization: Array.isArray(specialization) ? specialization : [specialization],
     }),
+    ...(subjects !== undefined && {
+      subjects: Array.isArray(subjects) ? subjects : [subjects],
+    }),
     ...(experience !== undefined && { experience }),
+    ...(showOnFaculty !== undefined && { showOnFaculty: Boolean(showOnFaculty) }),
+    ...(isFeatured !== undefined && { isFeatured: Boolean(isFeatured) }),
+    ...(headerImage !== undefined && { headerImage }),
+    ...(links !== undefined && { links }),
   };
 
   const data = {
     ...(name && { name }),
     ...(bio !== undefined && { bio }),
     ...(phone !== undefined && { phone }),
+    ...(avatar !== undefined && {
+      avatar: avatar ? (typeof avatar === 'string' ? { url: avatar } : avatar) : null,
+    }),
     ...(isActive !== undefined && { isActive }),
     teacherProfile: updatedProfile,
   };
@@ -2077,6 +2146,9 @@ export const updateTeacher = catchAsync(async (req, res) => {
       name: true,
       email: true,
       role: true,
+      avatar: true,
+      bio: true,
+      phone: true,
       isActive: true,
       teacherProfile: true,
       updatedAt: true,
@@ -2085,6 +2157,32 @@ export const updateTeacher = catchAsync(async (req, res) => {
 
   await redis.del(`user_${teacher.id}`);
   ApiResponse.ok(res, { teacher: updated }, 'Teacher updated successfully');
+});
+
+export const toggleFacultyVisibility = catchAsync(async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!user || user.role !== 'teacher') throw ApiError.notFound('Teacher not found');
+
+  const teacherProfile = user.teacherProfile
+    ? typeof user.teacherProfile === 'string'
+      ? JSON.parse(user.teacherProfile)
+      : user.teacherProfile
+    : {};
+
+  teacherProfile.showOnFaculty = teacherProfile.showOnFaculty === false ? true : false;
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { teacherProfile },
+  });
+
+  await redis.del(`user_${user.id}`);
+
+  ApiResponse.ok(
+    res,
+    { showOnFaculty: teacherProfile.showOnFaculty },
+    `Teacher ${teacherProfile.showOnFaculty ? 'enabled' : 'hidden'} on Faculty page`
+  );
 });
 
 export const deleteTeacher = catchAsync(async (req, res) => {
@@ -2127,18 +2225,85 @@ export const verifyTeacher = catchAsync(async (req, res) => {
 
 // ===== ANNOUNCEMENTS =====
 
+export const getAnnouncements = catchAsync(async (req, res) => {
+  const tenantId = await getAdminTenantId(req);
+  const limit = parseInt(req.query.limit) || 20;
+
+  const where = {
+    type: 'announcement',
+    ...(tenantId ? { tenantId } : {}),
+  };
+
+  const notifications = await prisma.notification.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+
+  // Group broadcast notifications to avoid duplicate rows for each recipient
+  const seen = new Set();
+  const announcements = [];
+
+  for (const item of notifications) {
+    const timeKey = item.createdAt ? new Date(item.createdAt).toISOString().slice(0, 16) : '';
+    const key = `${item.title}__${item.message}__${timeKey}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      const dataObj = typeof item.data === 'object' && item.data ? item.data : {};
+      announcements.push({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        type: dataObj.type || item.type || 'info',
+        url: dataObj.url || dataObj.link || '',
+        link: dataObj.link || dataObj.url || '',
+        priority: dataObj.priority || 'normal',
+        targetRoles: dataObj.targetRoles || ['all'],
+        targetRole:
+          Array.isArray(dataObj.targetRoles) && dataObj.targetRoles.length === 1
+            ? dataObj.targetRoles[0]
+            : dataObj.targetRole || 'all',
+        sentAt: item.createdAt,
+        createdAt: item.createdAt,
+      });
+    }
+  }
+
+  ApiResponse.ok(res, {
+    announcements: announcements.slice(0, limit),
+    total: announcements.length,
+  });
+});
+
 export const sendAnnouncement = catchAsync(async (req, res) => {
-  const { title, message, targetRoles, target, link, scheduledAt, priority } = req.body;
+  const { title, message, targetRoles, target, link, url, scheduledAt, priority } = req.body;
+  const redirectUrl = link || url || '';
 
   if (!title || !message) {
     throw ApiError.badRequest('Title and message are required');
   }
 
   let roles = targetRoles;
-  if (!roles) {
-    if (target === 'students' || target === 'student') roles = ['student'];
-    else if (target === 'teachers' || target === 'teacher') roles = ['teacher'];
-    else roles = ['student', 'teacher'];
+  if (!roles || (Array.isArray(roles) && roles.includes('all')) || target === 'all') {
+    roles = ['student', 'teacher', 'admin', 'super_admin'];
+  } else if (
+    target === 'students' ||
+    target === 'student' ||
+    (Array.isArray(roles) && roles.includes('student'))
+  ) {
+    roles = ['student'];
+  } else if (
+    target === 'teachers' ||
+    target === 'teacher' ||
+    (Array.isArray(roles) && roles.includes('teacher'))
+  ) {
+    roles = ['teacher'];
+  } else if (
+    target === 'admins' ||
+    target === 'admin' ||
+    (Array.isArray(roles) && roles.includes('admin'))
+  ) {
+    roles = ['admin', 'super_admin'];
   }
 
   if (scheduledAt) {
@@ -2152,7 +2317,8 @@ export const sendAnnouncement = catchAsync(async (req, res) => {
           message,
           targetRoles: roles,
           tenantId: req.tenantId,
-          link: link || '',
+          link: redirectUrl,
+          url: redirectUrl,
           senderId: req.userId,
         },
         { delay }
@@ -2178,7 +2344,9 @@ export const sendAnnouncement = catchAsync(async (req, res) => {
     message,
     isRead: false,
     data: {
-      link: link || '',
+      link: redirectUrl,
+      url: redirectUrl,
+      actionUrl: redirectUrl,
       priority: priority || 'normal',
       isBroadcast: true,
       targetRoles: roles,
@@ -2199,7 +2367,7 @@ export const sendAnnouncement = catchAsync(async (req, res) => {
   for (const user of targetUsers) {
     await transactionalEmailQueue.add('send', {
       type: 'announcement',
-      data: { user, title, message },
+      data: { user, title, message, link: redirectUrl, url: redirectUrl },
     });
   }
 

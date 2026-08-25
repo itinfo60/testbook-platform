@@ -16,7 +16,7 @@ export async function loginAsStudent(page) {
 }
 
 export async function loginAsTeacher(page) {
-  return loginAs(page, 'teacher@civicshub.com', 'Teacher@123456');
+  return loginAs(page, 'teacher@civicsedu.com', 'Teacher@123456');
 }
 
 export async function logout(page) {

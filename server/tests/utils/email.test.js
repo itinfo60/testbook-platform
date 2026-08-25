@@ -82,7 +82,7 @@ describe('Email Service', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'user@test.com',
-          subject: 'Verify Your Email - CivicsHub',
+          subject: 'Verify Your Email - CivicsEdu',
           html: expect.stringContaining('http://localhost:3000/verify-email?token=verify-token'),
         })
       );
@@ -99,7 +99,7 @@ describe('Email Service', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'user@test.com',
-          subject: 'Reset Password - CivicsHub',
+          subject: 'Reset Password - CivicsEdu',
           html: expect.stringContaining('http://localhost:3000/reset-password?token=reset-token'),
         })
       );
@@ -116,7 +116,7 @@ describe('Email Service', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'user@test.com',
-          subject: 'Enrolled: Test Course - CivicsHub',
+          subject: 'Enrolled: Test Course - CivicsEdu',
           html: expect.stringContaining('http://localhost:3000/learning/course123'),
         })
       );

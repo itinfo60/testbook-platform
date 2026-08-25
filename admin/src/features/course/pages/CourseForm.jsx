@@ -51,6 +51,7 @@ export default function CourseForm() {
     discountPrice: '',
     isFree: false,
     teacherId: '',
+    selectedTeacherIds: [],
     categoryId: '',
     examCategoryId: '',
     level: 'all_levels',
@@ -115,6 +116,16 @@ export default function CourseForm() {
             return;
           }
           setExistingCourse(c);
+          const rawInstructors = Array.isArray(c.instructors)
+            ? c.instructors
+                .map((ins) => (typeof ins === 'string' ? ins : ins.id || ins._id))
+                .filter(Boolean)
+            : [];
+          const primaryTeacherId = c.teacher?.id || c.teacher?._id || c.teacherId || '';
+          const initialSelectedTeacherIds = Array.from(
+            new Set([primaryTeacherId, ...rawInstructors].filter(Boolean))
+          );
+
           setForm({
             title: c.title || '',
             description: c.description || '',
@@ -122,7 +133,8 @@ export default function CourseForm() {
             price: c.price || 0,
             discountPrice: c.discountPrice || 0,
             isFree: c.isFree || c.price === 0,
-            teacherId: c.teacher?.id || c.teacher?._id || c.teacherId || '',
+            teacherId: primaryTeacherId,
+            selectedTeacherIds: initialSelectedTeacherIds,
             categoryId: '',
             examCategoryId: '',
             _existingCategoryId:
@@ -294,6 +306,18 @@ export default function CourseForm() {
       return;
     }
 
+    const assignedInstructors = teachers
+      .filter((t) => (form.selectedTeacherIds || []).includes(t.id || t._id))
+      .map((t) => ({
+        id: t.id || t._id,
+        name: t.name,
+        email: t.email,
+        avatar: t.avatar,
+        designation: t.designation || t.teacherProfile?.designation || 'Faculty Member',
+      }));
+
+    const primaryTeacherId = form.teacherId || form.selectedTeacherIds?.[0] || undefined;
+
     const payload = {
       title: form.title.trim(),
       description: form.description.trim(),
@@ -302,7 +326,8 @@ export default function CourseForm() {
       discountPrice: form.isFree ? 0 : Number(form.discountPrice) || 0,
       category: form.examCategoryId || form.categoryId,
       categoryId: form.examCategoryId || form.categoryId,
-      ...(form.teacherId ? { teacherId: form.teacherId } : {}),
+      ...(primaryTeacherId ? { teacherId: primaryTeacherId } : {}),
+      instructors: assignedInstructors,
       ...(form.examCategoryId ? { examCategory: form.examCategoryId } : {}),
       level: form.level,
       language: form.language,
@@ -465,26 +490,91 @@ export default function CourseForm() {
                 <HiAcademicCap className="text-primary-600" /> Basic Information
               </h3>
 
-              {/* Teacher Selector */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
-                  <HiUser className="text-primary-600" /> Assigned Teacher / Faculty (Optional)
-                </label>
-                <select
-                  value={form.teacherId}
-                  onChange={(e) => setField('teacherId', e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:border-primary-500 text-gray-900 dark:text-white font-medium"
-                >
-                  <option value="">-- Admin / Testbook Faculty --</option>
-                  {teachers.map((t) => (
-                    <option key={t.id || t._id} value={t.id || t._id}>
-                      {t.name} ({t.email})
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[11px] text-gray-400 font-normal">
-                  Select which teacher or faculty is conducting this course batch.
-                </span>
+              {/* Multi-Teacher & Faculty Selector */}
+              <div className="bg-slate-50 dark:bg-gray-700/40 p-4 rounded-2xl border border-gray-200 dark:border-gray-600 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-wider">
+                    <HiUser className="text-primary-600 h-4 w-4" /> Assigned Faculty & Educators
+                    (Multiple Allowed)
+                  </label>
+                  <span className="text-[11px] text-primary-600 dark:text-primary-400 font-semibold">
+                    {form.selectedTeacherIds?.length || 0} Selected
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
+                  {teachers.map((t) => {
+                    const tId = t.id || t._id;
+                    const isChecked = (form.selectedTeacherIds || []).includes(tId);
+                    const isPrimary = form.teacherId === tId;
+
+                    return (
+                      <div
+                        key={tId}
+                        onClick={() => {
+                          const currentIds = form.selectedTeacherIds || [];
+                          let nextIds = isChecked
+                            ? currentIds.filter((id) => id !== tId)
+                            : [...currentIds, tId];
+                          let nextPrimary = form.teacherId;
+                          if (!isChecked && !nextPrimary) nextPrimary = tId;
+                          if (isChecked && nextPrimary === tId) nextPrimary = nextIds[0] || '';
+
+                          setForm((prev) => ({
+                            ...prev,
+                            selectedTeacherIds: nextIds,
+                            teacherId: nextPrimary,
+                          }));
+                        }}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 cursor-pointer transition-all ${
+                          isChecked
+                            ? 'bg-primary-50/80 dark:bg-primary-950/60 border-primary-300 dark:border-primary-700 shadow-xs'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            className="rounded text-primary-600 focus:ring-primary-500 h-4 w-4 pointer-events-none"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                              {t.name}
+                            </p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                              {t.teacherProfile?.designation || t.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isChecked && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setForm((prev) => ({ ...prev, teacherId: tId }));
+                            }}
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${
+                              isPrimary
+                                ? 'bg-primary-600 text-white shadow-xs'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-100'
+                            }`}
+                            title="Click to set as Lead / Primary Instructor"
+                          >
+                            {isPrimary ? 'Lead' : 'Set Lead'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-[11px] text-gray-400 font-normal">
+                  Check all faculty members who conduct/teach this course. The marked "Lead" will be
+                  the primary instructor.
+                </p>
               </div>
 
               <div>

@@ -1,13 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import logger from '@/services/logger';
 
 // Stores scroll Y per location key so back-navigation restores position
 const scrollPositions = {};
 
 export default function ScrollManager() {
   const location = useLocation();
-  const { pathname, key, state } = location;
+  const { pathname, key, state, search } = location;
   const prevKey = useRef(key);
+
+  useEffect(() => {
+    logger.pageView(pathname + (search || ''));
+  }, [pathname, search]);
 
   useEffect(() => {
     // Tell the browser we manage scroll manually

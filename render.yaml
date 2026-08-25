@@ -1,7 +1,7 @@
 services:
   # 1. Backend API (Node.js + Prisma)
   - type: web
-    name: civicshub-backend-api
+    name: civicsedu-backend-api
     env: node
     rootDir: server
     buildCommand: npm install && npx prisma generate
@@ -32,25 +32,25 @@ services:
 
   # 2. Main Student Web Client (Vite Static Site)
   - type: web
-    name: civicshub-client
+    name: civicsedu-client
     env: static
     rootDir: client
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
         fromService:
           type: web
-          name: civicshub-backend-api
+          name: civicsedu-backend-api
           envVarKey: RENDER_EXTERNAL_URL
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
 
-  # 3. Admin & Faculty Portal (Vite Static Site)
+  # 3. Admin Portal (React / Vite)
   - type: web
-    name: civicshub-admin
+    name: civicsedu-admin
     env: static
     rootDir: admin
     buildCommand: npm install && npm run build
@@ -59,7 +59,7 @@ services:
       - key: VITE_API_URL
         fromService:
           type: web
-          name: civicshub-backend-api
+          name: civicsedu-backend-api
           envVarKey: RENDER_EXTERNAL_URL
     routes:
       - type: rewrite

@@ -169,9 +169,19 @@ export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   } catch {
     /* ignore */
   }
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    /* ignore */
+  }
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('sb-') || key.includes('supabase')) {
+      localStorage.removeItem(key);
+    }
+  });
 });
 
 const authSlice = createSlice({
@@ -212,6 +222,16 @@ const authSlice = createSlice({
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      try {
+        supabase.auth.signOut().catch(() => {});
+      } catch {
+        /* ignore */
+      }
     },
     clearError: (state) => {
       state.error = null;

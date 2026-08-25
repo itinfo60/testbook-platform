@@ -184,7 +184,7 @@ export class AuthService {
       throw ApiError.unauthorized('Invalid email or password');
     }
 
-    if (user.authProvider !== 'local') {
+    if (user.authProvider !== 'local' && !user.password) {
       throw ApiError.badRequest(`Please login using ${user.authProvider}`);
     }
 
@@ -424,9 +424,10 @@ export class AuthService {
 
     if (!user) return; // Silent error to prevent email harvesting
 
-    if (user.role !== 'super_admin') {
-      if (!tenantId || (user.tenantId && user.tenantId.toString() !== tenantId)) {
-        return; // Silent fail
+    // Only block if the user belongs to a different tenant
+    if (user.role !== 'super_admin' && user.tenantId && tenantId) {
+      if (user.tenantId.toString() !== tenantId) {
+        return; // Different tenant — silent fail
       }
     }
 
@@ -439,8 +440,11 @@ export class AuthService {
       })
     );
 
-    // NOTE: Supabase handles sending the reset email (via supabase.auth.resetPasswordForEmail on the client).
-    // The backend nodemailer reset email is intentionally skipped to avoid sending two conflicting emails.
+    // Send reset password email via backend SMTP (Gmail)
+    await transactionalEmailQueue.add('send', {
+      type: 'reset_password',
+      data: { user, token: resetToken },
+    });
 
     // Also generate a Supabase recovery link and log it (dev fallback)
     try {
@@ -598,9 +602,11 @@ export class AuthService {
       throw ApiError.notFound('User not found');
     }
 
-    const isMatch = await comparePassword(input.currentPassword, user.password || null);
-    if (!isMatch) {
-      throw ApiError.badRequest('Current password is incorrect');
+    if (user.password) {
+      const isMatch = await comparePassword(input.currentPassword, user.password);
+      if (!isMatch) {
+        throw ApiError.badRequest('Current password is incorrect');
+      }
     }
 
     const hashedPassword = await hashPassword(input.newPassword);
@@ -634,7 +640,7 @@ export class AuthService {
     if (!user) throw ApiError.notFound('User not found');
 
     const secret = speakeasy.generateSecret({
-      name: `CivicsHub (${user.email})`,
+      name: `CivicsEdu (${user.email})`,
       length: 20,
     });
 

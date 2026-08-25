@@ -21,6 +21,22 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-gray-300 dark:bg-gray-600 rounded-full;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+  h1 {
+    @apply text-xl md:text-2xl;
+  }
+  h2 {
+    @apply text-lg md:text-xl;
+  }
+  h3 {
+    @apply text-base md:text-lg font-medium;
+  }
+  b, strong {
+    font-weight: 600;
+  }
 }
 
 @layer components {

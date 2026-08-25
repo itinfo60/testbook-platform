@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   HiQuestionMarkCircle,
   HiSearch,
@@ -8,58 +8,102 @@ import {
   HiPhone,
   HiChat,
   HiTicket,
+  HiClock,
+  HiLocationMarker,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { supportAPI } from '@/services/api';
+import api from '@/services/api';
 
 export default function HelpCenterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [openFaq, setOpenFaq] = useState(null);
+  const [helpData, setHelpData] = useState({
+    supportEmail: 'support@civicsedu.com',
+    supportPhone: '+91 98765 43210',
+    supportWhatsapp: '+91 98765 43210',
+    supportHours: 'Mon – Sat: 9:00 AM – 7:00 PM IST',
+    officeAddress: 'CivicsEdu Learning Centre, Jaipur, Rajasthan',
+    faqs: [],
+  });
+  const [loading, setLoading] = useState(true);
+
   const [ticketForm, setTicketForm] = useState({
     category: 'Account & Login',
     subject: '',
     description: '',
   });
 
-  const faqs = [
+  useEffect(() => {
+    const fetchHelpSettings = async () => {
+      try {
+        const res = await api.get('/settings/help');
+        const data = res.data?.data || res.data || {};
+        setHelpData((prev) => ({
+          ...prev,
+          supportEmail: data.supportEmail || prev.supportEmail,
+          supportPhone: data.supportPhone || prev.supportPhone,
+          supportWhatsapp: data.supportWhatsapp || prev.supportWhatsapp,
+          supportHours: data.supportHours || prev.supportHours,
+          officeAddress: data.officeAddress || prev.officeAddress,
+          faqs: Array.isArray(data.faqs) && data.faqs.length > 0 ? data.faqs : prev.faqs,
+        }));
+      } catch (err) {
+        console.warn('Using default help & FAQ settings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHelpSettings();
+  }, []);
+
+  const defaultFaqs = [
     {
-      id: 1,
-      cat: 'Course Access',
-      q: 'How do I access my purchased courses & handwritten notes?',
-      a: 'After successful payment via Razorpay, your course is automatically unlocked under "My Courses" in your Student Dashboard. Handwritten PDFs can be viewed or downloaded directly.',
+      id: 'faq-1',
+      category: 'Course Access',
+      question: 'How do I access my purchased courses & handwritten notes?',
+      answer:
+        'After successful payment via Razorpay, your course is automatically unlocked under "My Courses" in your Student Dashboard. Handwritten PDFs can be viewed or downloaded directly.',
     },
     {
-      id: 2,
-      cat: 'Watermarked PDFs',
-      q: 'Why are PDFs watermarked with my name & mobile number?',
-      a: 'To prevent piracy and illegal redistribution of premium faculty handwritten notes, all paid PDFs feature a dynamic watermark indicating "Licensed to: [Your Name]".',
+      id: 'faq-2',
+      category: 'Watermarked PDFs',
+      question: 'Why are PDFs watermarked with my name & mobile number?',
+      answer:
+        'To prevent piracy and illegal redistribution of premium faculty handwritten notes, all paid PDFs feature a dynamic watermark indicating your registered student identity.',
     },
     {
-      id: 3,
-      cat: 'Test Series',
-      q: 'Can I re-attempt mock tests?',
-      a: 'Each test series allows up to the designated attempt limit (usually 2-3 attempts). Detailed solutions, state percentile, and performance analytics remain available indefinitely.',
+      id: 'faq-3',
+      category: 'Test Series',
+      question: 'Can I re-attempt mock tests?',
+      answer:
+        'Each test series allows up to the designated attempt limit. Detailed solutions, state percentile, and performance analytics remain available indefinitely in your test analysis tab.',
     },
     {
-      id: 4,
-      cat: 'Payments',
-      q: 'What should I do if money is deducted but course is not unlocked?',
-      a: 'Please wait 5-10 minutes for webhook processing. If access is still pending, submit a support ticket below or contact WhatsApp support with your payment ID.',
+      id: 'faq-4',
+      category: 'Payments',
+      question: 'What should I do if money is deducted but course is not unlocked?',
+      answer:
+        'Please allow 5-10 minutes for payment webhook confirmation. If access is still pending, submit a support ticket with your transaction ID or message our WhatsApp helpline.',
     },
     {
-      id: 5,
-      cat: 'Video Classes',
-      q: 'Can I watch video lectures offline on mobile?',
-      a: 'Yes, video lectures can be streamed in adaptive HD or saved offline inside the CivicsHub Mobile App.',
+      id: 'faq-5',
+      category: 'Video Classes',
+      question: 'Can I watch video lectures on mobile and adjust playback speed?',
+      answer:
+        'Yes, video lectures support adaptive streaming, playback speed controls (0.75x to 2x), and offline video playback on supported mobile browsers.',
     },
   ];
 
-  const filteredFaqs = faqs.filter(
-    (f) =>
-      f.q.toLowerCase().includes(search.toLowerCase()) ||
-      f.a.toLowerCase().includes(search.toLowerCase())
-  );
+  const activeFaqs = helpData.faqs.length > 0 ? helpData.faqs : defaultFaqs;
+
+  const filteredFaqs = activeFaqs.filter((f) => {
+    const q = (f.question || f.q || '').toLowerCase();
+    const a = (f.answer || f.a || '').toLowerCase();
+    return q.includes(search.toLowerCase()) || a.includes(search.toLowerCase());
+  });
 
   const handleTicketSubmit = async (e) => {
     e.preventDefault();
@@ -81,18 +125,26 @@ export default function HelpCenterPage() {
     }
   };
 
+  const cleanPhone = (helpData.supportWhatsapp || helpData.supportPhone || '').replace(
+    /[^0-9]/g,
+    ''
+  );
+
   return (
-    <div className="bg-dark-50 dark:bg-dark-950 min-h-screen py-10 px-4 sm:px-6 lg:px-8 text-dark-900 dark:text-dark-100">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="bg-slate-50 dark:bg-dark-950 min-h-screen py-12 px-4 sm:px-6 lg:px-8 text-slate-900 dark:text-slate-100">
+      <div className="max-w-6xl mx-auto space-y-12">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider text-xs bg-amber-50 dark:bg-amber-950 px-3 py-1 rounded-full mb-3">
-            <HiQuestionMarkCircle className="h-4 w-4" /> Student Support
+          <div className="inline-flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold uppercase tracking-wider text-xs bg-primary-50 dark:bg-primary-950/60 px-3.5 py-1.5 rounded-full border border-primary-200 dark:border-primary-800 mb-4">
+            <HiQuestionMarkCircle className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+            <span>Student Support Centre</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-display">Help Center & FAQs</h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base mt-2">
-            Find answers to common questions regarding course purchases, test series, watermarked
-            PDFs, and technical support.
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display text-slate-900 dark:text-white tracking-tight">
+            Help Center & FAQs
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm mt-3 leading-relaxed">
+            Find answers to common questions regarding course enrollments, test series attempts,
+            watermarked PDFs, and dedicated technical help.
           </p>
 
           <div className="relative max-w-xl mx-auto mt-6">
@@ -102,100 +154,136 @@ export default function HelpCenterPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search help topics (e.g. download notes, refund, test attempt)..."
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-300 dark:border-dark-700 bg-white dark:bg-dark-900 focus:outline-none text-sm font-medium shadow-sm"
+              className="input-field !pl-11 py-3 text-xs sm:text-sm shadow-xs"
             />
           </div>
         </div>
 
-        {/* Support Contact Grid */}
+        {/* Support Contact Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-md">
-            <div className="h-12 w-12 bg-amber-50 dark:bg-amber-950 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-xs">
+            <div className="h-11 w-11 bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">
               <HiPhone />
             </div>
-            <h3 className="font-bold text-base mb-1">Phone Support</h3>
-            <p className="text-xs text-slate-500 mb-3">Mon - Sat (10 AM to 7 PM)</p>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
+              Phone Helpline
+            </h3>
+            <p className="text-xs text-slate-400 mb-2">
+              {helpData.supportHours || 'Mon – Sat (9 AM – 7 PM)'}
+            </p>
             <a
-              href="tel:+919876543210"
-              className="text-xs font-extrabold text-amber-600 hover:underline"
+              href={`tel:${helpData.supportPhone}`}
+              className="text-xs font-bold text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline"
             >
-              +91 98765 43210
+              {helpData.supportPhone}
             </a>
           </div>
 
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-md">
-            <div className="h-12 w-12 bg-green-50 dark:bg-green-950 text-green-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-xs">
+            <div className="h-11 w-11 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">
               <HiChat />
             </div>
-            <h3 className="font-bold text-base mb-1">WhatsApp Helpdesk</h3>
-            <p className="text-xs text-slate-500 mb-3">Instant Chat Support</p>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
+              WhatsApp Support
+            </h3>
+            <p className="text-xs text-slate-400 mb-2">Fast Resolution Chat</p>
             <a
-              href="https://wa.me/919876543210"
+              href={`https://wa.me/${cleanPhone}`}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-extrabold text-green-600 hover:underline"
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
             >
               Chat on WhatsApp →
             </a>
           </div>
 
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-md">
-            <div className="h-12 w-12 bg-blue-50 dark:bg-blue-950 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-xs">
+            <div className="h-11 w-11 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">
               <HiMail />
             </div>
-            <h3 className="font-bold text-base mb-1">Email Support</h3>
-            <p className="text-xs text-slate-500 mb-3">24 Hours Response Time</p>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">Email Support</h3>
+            <p className="text-xs text-slate-400 mb-2">24h Response Window</p>
             <a
-              href="mailto:support@eduportal.com"
-              className="text-xs font-extrabold text-blue-600 hover:underline"
+              href={`mailto:${helpData.supportEmail}`}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline"
             >
-              support@eduportal.com
+              {helpData.supportEmail}
             </a>
           </div>
         </div>
 
         {/* FAQs List */}
-        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 dark:border-dark-800">
-          <h2 className="text-2xl font-extrabold mb-6">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            {filteredFaqs.map((faq) => (
-              <div
-                key={faq.id}
-                className="border border-slate-200 dark:border-dark-800 rounded-2xl overflow-hidden"
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
-                  className="w-full px-6 py-4 text-left font-bold text-sm sm:text-base flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors"
+        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200 dark:border-dark-800">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">
+              Frequently Asked Questions
+            </h2>
+            <span className="text-xs text-slate-400">{filteredFaqs.length} questions</span>
+          </div>
+
+          <div className="space-y-3">
+            {filteredFaqs.map((faq, idx) => {
+              const qId = faq.id || idx;
+              const qTitle = faq.question || faq.q;
+              const aBody = faq.answer || faq.a;
+              const qCat = faq.category || faq.cat;
+
+              return (
+                <div
+                  key={qId}
+                  className="border border-slate-200/90 dark:border-dark-800 rounded-2xl overflow-hidden"
                 >
-                  <span>{faq.q}</span>
-                  {openFaq === faq.id ? <HiChevronUp /> : <HiChevronDown />}
-                </button>
-                {openFaq === faq.id && (
-                  <div className="px-6 py-4 bg-slate-50 dark:bg-dark-800/50 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-200 dark:border-dark-800">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
+                  <button
+                    onClick={() => setOpenFaq(openFaq === qId ? null : qId)}
+                    className="w-full px-5 py-4 text-left font-semibold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-dark-800/60 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {qCat && (
+                        <span className="text-[10px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/60 px-2 py-0.5 rounded-md border border-primary-100 dark:border-primary-900/40">
+                          {qCat}
+                        </span>
+                      )}
+                      <span>{qTitle}</span>
+                    </div>
+                    {openFaq === qId ? (
+                      <HiChevronUp className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                    ) : (
+                      <HiChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                    )}
+                  </button>
+                  {openFaq === qId && (
+                    <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-dark-800/40 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-dark-800">
+                      {aBody}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Ticket Creation Form */}
-        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 dark:border-dark-800 max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 mb-6">
-            <HiTicket className="h-6 w-6 text-amber-500" />
-            <h2 className="text-2xl font-extrabold">Submit a Support Ticket</h2>
+        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200 dark:border-dark-800 max-w-3xl mx-auto">
+          <div className="flex items-center gap-2 mb-4">
+            <HiTicket className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">
+              Submit a Support Ticket
+            </h2>
           </div>
+          <p className="text-xs text-slate-500 mb-6">
+            Can't find what you need? Send a query to our student support team for prompt
+            assistance.
+          </p>
 
           <form onSubmit={handleTicketSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Category
               </label>
               <select
                 value={ticketForm.category}
                 onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
-                className="w-full p-3 rounded-xl border border-slate-300 dark:border-dark-700 bg-white dark:bg-dark-800 text-xs sm:text-sm font-medium focus:outline-none"
+                className="input-field text-xs"
               >
                 <option>Account & Login</option>
                 <option>Course Purchase & Access</option>
@@ -207,37 +295,39 @@ export default function HelpCenterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Subject
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Subject *
               </label>
               <input
                 type="text"
                 value={ticketForm.subject}
                 onChange={(e) => setTicketForm({ ...ticketForm, subject: e.target.value })}
                 placeholder="Brief summary of your query..."
-                className="w-full p-3 rounded-xl border border-slate-300 dark:border-dark-700 bg-white dark:bg-dark-800 text-xs sm:text-sm font-medium focus:outline-none"
+                className="input-field text-xs"
+                required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Description
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Description *
               </label>
               <textarea
                 rows={4}
                 value={ticketForm.description}
                 onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })}
-                placeholder="Describe your issue in detail..."
-                className="w-full p-3 rounded-xl border border-slate-300 dark:border-dark-700 bg-white dark:bg-dark-800 text-xs sm:text-sm font-medium focus:outline-none"
+                placeholder="Describe your issue in detail, including transaction ID or batch name..."
+                className="input-field text-xs leading-relaxed"
+                required
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed"
+              className="btn-primary w-full text-xs py-3 justify-center"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Ticket'}
+              {isSubmitting ? 'Submitting...' : 'Submit Support Ticket'}
             </button>
           </form>
         </div>

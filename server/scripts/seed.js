@@ -23,7 +23,7 @@ const seedData = async () => {
     console.log('👤 Creating admin user...');
     await User.create({
       name: 'Super Admin',
-      email: 'admin@civicshub.com',
+      email: 'admin@civicsedu.com',
       password: 'Admin@123456',
       role: 'super_admin',
       isEmailVerified: true,
@@ -34,7 +34,7 @@ const seedData = async () => {
     console.log('👨‍🏫 Creating teacher...');
     await User.create({
       name: 'Demo Teacher',
-      email: 'teacher@civicshub.com',
+      email: 'teacher@civicsedu.com',
       password: 'Teacher@123456',
       role: 'teacher',
       isEmailVerified: true,
@@ -51,7 +51,7 @@ const seedData = async () => {
     console.log('🎓 Creating student...');
     await User.create({
       name: 'Demo Student',
-      email: 'student@civicshub.com',
+      email: 'student@civicsedu.com',
       password: 'Student@123456',
       role: 'student',
       isEmailVerified: true,
@@ -212,9 +212,9 @@ const seedData = async () => {
     console.log('✅ Database seeded successfully!');
     console.log('');
     console.log('📧 Login credentials:');
-    console.log('   Admin:   admin@civicshub.com / Admin@123456');
-    console.log('   Teacher: teacher@civicshub.com / Teacher@123456');
-    console.log('   Student: student@civicshub.com / Student@123456');
+    console.log('   Admin:   admin@civicsedu.com / Admin@123456');
+    console.log('   Teacher: teacher@civicsedu.com / Teacher@123456');
+    console.log('   Student: student@civicsedu.com / Student@123456');
     console.log('');
 
     process.exit(0);

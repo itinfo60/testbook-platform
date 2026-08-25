@@ -16,7 +16,7 @@ export const DEFAULT_TENANT = {
   _id: '00000000-0000-0000-0000-000000000001',
   name: 'Default Institute',
   subdomain: 'default',
-  websiteTitle: 'CivicsHub Platform',
+  websiteTitle: 'CivicsEdu Platform',
   isActive: true,
   subscription: {
     status: 'active',

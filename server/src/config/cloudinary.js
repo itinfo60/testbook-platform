@@ -11,7 +11,7 @@ cloudinary.config({
 
 export const uploadToCloudinary = async (filePath, options = {}) => {
   const defaults = {
-    folder: 'civicshub',
+    folder: 'civicsedu',
     resource_type: 'auto',
     quality: 'auto:good',
     fetch_format: 'auto',

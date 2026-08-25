@@ -231,7 +231,7 @@ test.describe('E2E-004: Unauthorized Access Protection', () => {
 test.describe('E2E-005: Admin Content Mapping', () => {
   test('ADMIN-COURSE-003: Admin can assign ExamCategory', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholderText(/Enter your email/i).fill('admin@civicshub.com');
+    await page.getByPlaceholderText(/Enter your email/i).fill('admin@civicsedu.com');
     await page.getByPlaceholderText(/Enter your password/i).fill('Admin@123456');
     await page.getByRole('button', { name: /Sign In/i }).click();
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });

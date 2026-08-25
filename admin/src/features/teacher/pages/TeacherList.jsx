@@ -13,6 +13,12 @@ import {
   BookOpen,
   IndianRupee,
   Search,
+  Globe,
+  Youtube,
+  Send as TelegramIcon,
+  Twitter,
+  Linkedin,
+  Sparkles,
 } from 'lucide-react';
 import { fetchTeachers } from '@/features/teacher/teacherSlice';
 import { teachersAPI } from '@/services/api';
@@ -41,9 +47,20 @@ export default function TeacherList() {
     email: '',
     password: '',
     phone: '',
-    bio: '',
-    specialization: '',
+    avatar: '',
+    headerImage: '',
+    designation: '',
+    qualification: '',
     experience: '',
+    specialization: '',
+    bio: '',
+    showOnFaculty: true,
+    isFeatured: false,
+    youtube: '',
+    telegram: '',
+    twitter: '',
+    linkedin: '',
+    website: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -75,6 +92,18 @@ export default function TeacherList() {
     }
   };
 
+  const handleToggleFacultyVisibility = async (teacher) => {
+    const teacherId = teacher.id || teacher._id;
+    try {
+      const res = await teachersAPI.toggleFacultyVisibility(teacherId);
+      const isVisible = res.data?.data?.showOnFaculty;
+      toast.success(`Faculty page visibility ${isVisible ? 'enabled' : 'hidden'}`);
+      load();
+    } catch {
+      toast.error('Failed to update faculty visibility');
+    }
+  };
+
   const handleOpenAdd = () => {
     setEditingTeacher(null);
     setFormData({
@@ -82,9 +111,20 @@ export default function TeacherList() {
       email: '',
       password: '',
       phone: '',
-      bio: '',
-      specialization: '',
+      avatar: '',
+      headerImage: '',
+      designation: '',
+      qualification: '',
       experience: '',
+      specialization: '',
+      bio: '',
+      showOnFaculty: true,
+      isFeatured: false,
+      youtube: '',
+      telegram: '',
+      twitter: '',
+      linkedin: '',
+      website: '',
     });
     setIsModalOpen(true);
   };
@@ -94,17 +134,30 @@ export default function TeacherList() {
       typeof teacher.teacherProfile === 'string'
         ? JSON.parse(teacher.teacherProfile)
         : teacher.teacherProfile || {};
+    const links = profile.links || profile.socialLinks || {};
+
     setEditingTeacher(teacher);
     setFormData({
       name: teacher.name || '',
       email: teacher.email || '',
       password: '',
       phone: teacher.phone || '',
-      bio: profile.bio || teacher.bio || '',
+      avatar: teacher.avatar?.url || teacher.avatar || '',
+      headerImage: profile.headerImage || '',
+      designation: profile.designation || profile.headline || '',
+      qualification: profile.qualification || '',
+      experience: profile.experience || '',
       specialization: Array.isArray(profile.specialization)
         ? profile.specialization.join(', ')
         : profile.specialization || '',
-      experience: profile.experience || '',
+      bio: profile.bio || teacher.bio || '',
+      showOnFaculty: profile.showOnFaculty !== false,
+      isFeatured: !!profile.isFeatured,
+      youtube: links.youtube || '',
+      telegram: links.telegram || '',
+      twitter: links.twitter || '',
+      linkedin: links.linkedin || '',
+      website: links.website || '',
     });
     setIsModalOpen(true);
   };
@@ -113,31 +166,42 @@ export default function TeacherList() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const links = {
+        ...(formData.youtube && { youtube: formData.youtube.trim() }),
+        ...(formData.telegram && { telegram: formData.telegram.trim() }),
+        ...(formData.twitter && { twitter: formData.twitter.trim() }),
+        ...(formData.linkedin && { linkedin: formData.linkedin.trim() }),
+        ...(formData.website && { website: formData.website.trim() }),
+      };
+
+      const payload = {
+        name: formData.name,
+        phone: formData.phone,
+        bio: formData.bio,
+        designation: formData.designation,
+        headline: formData.designation,
+        qualification: formData.qualification,
+        experience: formData.experience,
+        specialization: formData.specialization
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        showOnFaculty: formData.showOnFaculty,
+        isFeatured: formData.isFeatured,
+        headerImage: formData.headerImage ? formData.headerImage.trim() : null,
+        avatar: formData.avatar ? formData.avatar.trim() : null,
+        links,
+      };
+
       if (editingTeacher) {
         const teacherId = editingTeacher.id || editingTeacher._id;
-        await teachersAPI.update(teacherId, {
-          name: formData.name,
-          phone: formData.phone,
-          bio: formData.bio,
-          specialization: formData.specialization
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          experience: formData.experience,
-        });
+        await teachersAPI.update(teacherId, payload);
         toast.success('Teacher updated successfully');
       } else {
         await teachersAPI.create({
-          name: formData.name,
+          ...payload,
           email: formData.email,
           password: formData.password,
-          phone: formData.phone,
-          bio: formData.bio,
-          specialization: formData.specialization
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          experience: formData.experience,
         });
         toast.success('Teacher created successfully');
       }
@@ -173,38 +237,100 @@ export default function TeacherList() {
   const columns = [
     {
       key: 'name',
-      label: 'Teacher',
-      render: (_, row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 text-sm font-bold">
-            {row.name?.charAt(0)?.toUpperCase() || '?'}
+      label: 'Teacher Profile',
+      render: (_, row) => {
+        const profile =
+          typeof row.teacherProfile === 'string'
+            ? JSON.parse(row.teacherProfile)
+            : row.teacherProfile || {};
+        const avatarUrl = row.avatar?.url || row.avatar;
+
+        return (
+          <div className="flex items-center gap-3">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={row.name}
+                className="w-10 h-10 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shadow-xs flex-shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-bold flex-shrink-0">
+                {row.name?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">{row.name}</p>
+                {profile.isFeatured && (
+                  <span className="badge badge-warning text-[10px] py-0 px-1">Featured</span>
+                )}
+              </div>
+              <p className="text-xs text-primary-600 dark:text-primary-400 font-medium">
+                {profile.designation || profile.headline || row.email}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">{row.name}</p>
-            <p className="text-xs text-gray-500">{row.email}</p>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'specialization',
-      label: 'Specialization',
+      label: 'Specialization & Exp',
       render: (_, row) => {
         const profile =
           typeof row.teacherProfile === 'string'
             ? JSON.parse(row.teacherProfile)
             : row.teacherProfile || {};
         const specs = profile.specialization || [];
-        return specs.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {specs.map((s, idx) => (
-              <span key={idx} className="badge badge-info text-xs">
-                {s}
-              </span>
-            ))}
+        return (
+          <div>
+            {specs.length > 0 ? (
+              <div className="flex flex-wrap gap-1 mb-1">
+                {specs.slice(0, 2).map((s, idx) => (
+                  <span key={idx} className="badge badge-info text-[11px] py-0.5">
+                    {s}
+                  </span>
+                ))}
+                {specs.length > 2 && (
+                  <span className="text-[10px] text-gray-400">+{specs.length - 2}</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">—</span>
+            )}
+            {profile.experience && (
+              <p className="text-[11px] text-gray-500">{profile.experience}</p>
+            )}
           </div>
-        ) : (
-          '—'
+        );
+      },
+    },
+    {
+      key: 'showOnFaculty',
+      label: 'Faculty Page',
+      render: (_, row) => {
+        const profile =
+          typeof row.teacherProfile === 'string'
+            ? JSON.parse(row.teacherProfile)
+            : row.teacherProfile || {};
+        const isVisible = profile.showOnFaculty !== false;
+
+        return (
+          <button
+            type="button"
+            onClick={() => handleToggleFacultyVisibility(row)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+              isVisible
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+            }`}
+            title="Click to toggle visibility on public /faculty page"
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${isVisible ? 'bg-emerald-500' : 'bg-gray-400'}`}
+            ></span>
+            {isVisible ? 'Visible' : 'Hidden'}
+          </button>
         );
       },
     },
@@ -219,7 +345,7 @@ export default function TeacherList() {
     },
     {
       key: 'totalStudents',
-      label: 'Students Taught',
+      label: 'Students',
       render: (_, row) => (
         <span className="font-semibold text-gray-800 dark:text-gray-200">
           {row.studentCount || 0}
@@ -227,25 +353,12 @@ export default function TeacherList() {
       ),
     },
     {
-      key: 'totalRevenue',
-      label: 'Revenue Earned',
-      render: (_, row) => {
-        const rev = row.totalRevenue || 0;
-        return <span className="font-semibold text-emerald-600">₹{rev.toLocaleString()}</span>;
-      },
-    },
-    {
       key: 'isActive',
-      label: 'Status',
+      label: 'Account',
       render: (val) => {
         const status = val !== false ? 'active' : 'inactive';
         return <span className={getStatusColor(status)}>{status}</span>;
       },
-    },
-    {
-      key: 'createdAt',
-      label: 'Joined',
-      render: (val) => formatDate(val),
     },
   ];
 
@@ -254,9 +367,9 @@ export default function TeacherList() {
       {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Teachers Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Teachers & Faculty</h2>
           <p className="mt-1 text-gray-500 dark:text-gray-400">
-            Manage teachers, assignments, student reaches, and earnings
+            Manage teachers, public /faculty showcase visibility, profiles, and credentials
           </p>
         </div>
         <button onClick={handleOpenAdd} className="btn-primary gap-2">
@@ -318,19 +431,20 @@ export default function TeacherList() {
         actions={(row) => {
           const rowId = row.id || row._id;
           const isActive = row.isActive !== false;
+
           return (
-            <div className="flex items-center justify-end gap-1">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => navigate(`/teachers/${rowId}`)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 transition-colors"
-                title="View Faculty Profile, Courses & Revenue"
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-600 transition-colors"
+                title="View Teacher Analytics"
               >
                 <Eye className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleOpenEdit(row)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 transition-colors"
-                title="Edit Faculty Details"
+                title="Edit Faculty Details & Links"
               >
                 <Edit className="w-4 h-4" />
               </button>
@@ -361,94 +475,271 @@ export default function TeacherList() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingTeacher ? 'Edit Teacher Profile' : 'Add New Teacher'}
+        size="xl"
+        title={editingTeacher ? 'Edit Teacher Profile & Faculty Info' : 'Add New Teacher'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input-field"
-              placeholder="e.g. Dr. Rajesh Kumar"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+          {/* Section: Basic Info */}
+          <div className="pb-2 border-b border-gray-100 dark:border-gray-700">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Basic Information
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="input-field"
+                  placeholder="e.g. Dr. Rajesh Kumar"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email Address *
-            </label>
-            <input
-              type="email"
-              required
-              disabled={!!editingTeacher}
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="input-field disabled:opacity-60"
-              placeholder="teacher@example.com"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  disabled={!!editingTeacher}
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="input-field disabled:opacity-60"
+                  placeholder="teacher@example.com"
+                />
+              </div>
 
-          {!editingTeacher && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password *
-              </label>
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="input-field"
-                placeholder="Secure temporary password"
-              />
+              {!editingTeacher && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Temporary Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="input-field"
+                    placeholder="Secure password"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="input-field"
+                  placeholder="e.g. +91 9876543210"
+                />
+              </div>
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Phone Number
-            </label>
-            <input
-              type="text"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="input-field"
-              placeholder="e.g. +91 9876543210"
-            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Specializations (comma-separated)
-            </label>
-            <input
-              type="text"
-              value={formData.specialization}
-              onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-              className="input-field"
-              placeholder="e.g. UPSC Polity, GS Paper II, History"
-            />
+          {/* Section: Academic & Faculty Details */}
+          <div className="pb-2 border-b border-gray-100 dark:border-gray-700">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Faculty & Header Details
+            </h4>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Designation / Headline
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.designation}
+                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g. Senior Faculty - Political Science"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Qualification
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.qualification}
+                    onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g. Ph.D., UGC NET JRF, MA"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Experience
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.experience}
+                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g. 12+ Years Teaching Experience"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Specializations & Subjects (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.specialization}
+                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g. Political Science, Indian Polity, RPSC RAS"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Profile Photo / Avatar URL
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.avatar}
+                    onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                    className="input-field"
+                    placeholder="https://.../photo.jpg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Detailed Bio & About
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  className="input-field"
+                  placeholder="Comprehensive bio detailing teaching philosophy, achievements, books authored..."
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Bio & Experience
-            </label>
-            <textarea
-              rows={3}
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              className="input-field"
-              placeholder="Short bio and subject credentials..."
-            />
+          {/* Section: Social & External Links */}
+          <div className="pb-2 border-b border-gray-100 dark:border-gray-700">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Social & Resource Links
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <Youtube className="w-3.5 h-3.5 text-red-500" /> YouTube Channel
+                </label>
+                <input
+                  type="text"
+                  value={formData.youtube}
+                  onChange={(e) => setFormData({ ...formData, youtube: e.target.value })}
+                  className="input-field text-xs"
+                  placeholder="https://youtube.com/@channel"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <TelegramIcon className="w-3.5 h-3.5 text-sky-500" /> Telegram Channel / Group
+                </label>
+                <input
+                  type="text"
+                  value={formData.telegram}
+                  onChange={(e) => setFormData({ ...formData, telegram: e.target.value })}
+                  className="input-field text-xs"
+                  placeholder="https://t.me/channel"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <Twitter className="w-3.5 h-3.5 text-blue-400" /> Twitter / X Profile
+                </label>
+                <input
+                  type="text"
+                  value={formData.twitter}
+                  onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
+                  className="input-field text-xs"
+                  placeholder="https://x.com/handle"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <Linkedin className="w-3.5 h-3.5 text-blue-600" /> LinkedIn Profile
+                </label>
+                <input
+                  type="text"
+                  value={formData.linkedin}
+                  onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                  className="input-field text-xs"
+                  placeholder="https://linkedin.com/in/profile"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5 text-emerald-500" /> Personal Website / Notes Link
+                </label>
+                <input
+                  type="text"
+                  value={formData.website}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  className="input-field text-xs"
+                  placeholder="https://mywebsite.com"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+          {/* Section: Visibility Controls */}
+          <div className="bg-gray-50 dark:bg-gray-800/50 p-3.5 rounded-xl space-y-2.5">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.showOnFaculty}
+                onChange={(e) => setFormData({ ...formData, showOnFaculty: e.target.checked })}
+                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+              />
+              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                Show on Public Faculty Page (<span className="text-primary-600">/faculty</span>)
+              </span>
+            </label>
+
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isFeatured}
+                onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+              />
+              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Featured Mentor Badge (Highlight
+                on showcase)
+              </span>
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">
               Cancel
             </button>

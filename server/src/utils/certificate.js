@@ -15,7 +15,7 @@ export async function generateCertificatePDF({ user, course, enrollment }) {
       margin: 50,
       info: {
         Title: `Certificate of Completion - ${course.title}`,
-        Author: 'CivicsHub Platform',
+        Author: 'CivicsEdu Platform',
       },
     });
 
@@ -177,7 +177,7 @@ export async function generateCertificatePDF({ user, course, enrollment }) {
       .fontSize(9)
       .fillColor('#9CA3AF')
       .text(
-        `Verify at: ${process.env.CLIENT_URL || 'https://app.civicshub.com'}/verify-certificate?id=${certId}`,
+        `Verify at: ${process.env.CLIENT_URL || 'https://app.civicsedu.com'}/verify-certificate?id=${certId}`,
         50,
         H - 45,
         {

@@ -69,6 +69,8 @@ import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import settingsRoutes from './modules/admin/settings.routes.js';
 import supportRoutes from './modules/support/support.routes.js';
+import facultyRoutes from './modules/faculty/faculty.routes.js';
+import logRoutes from './modules/log/log.routes.js';
 import { auditLog } from './middleware/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -217,6 +219,8 @@ app.use(`${API_PREFIX}/blogs`, optionalTenant, blogRoutes); // public blog listi
 app.use(`${API_PREFIX}/badges`, optionalTenant, badgeRoutes); // public badge catalog
 app.use(`${API_PREFIX}/leaderboard`, optionalTenant, leaderboardRoutes);
 app.use(`${API_PREFIX}/settings`, optionalTenant, settingsRoutes);
+app.use(`${API_PREFIX}/faculty`, optionalTenant, facultyRoutes);
+app.use(`${API_PREFIX}/logs`, optionalTenant, logRoutes);
 
 // Private routes — require a resolved tenant
 app.use(`${API_PREFIX}/enrollments`, requireTenant, enrollmentRoutes);
@@ -251,7 +255,7 @@ app.use(`${API_PREFIX}`, auditLog);
 app.get(`${API_PREFIX}`, (req, res) => {
   res.json({
     success: true,
-    message: 'CivicsHub API v1',
+    message: 'CivicsEdu API v1',
     version: '2.0.0',
     docs: `${API_PREFIX}/docs`,
     endpoints: {
@@ -379,7 +383,7 @@ if (config.env === 'production') {
   app.get('/', (req, res) => {
     res.status(200).json({
       success: true,
-      message: '🚀 CivicsHub API Server v2.0.0',
+      message: '🚀 CivicsEdu API Server v2.0.0',
       status: 'running',
       environment: config.env,
       endpoints: { api: '/api/v1', health: '/health' },

@@ -71,8 +71,23 @@ export class ReviewService {
   }
 
   async createReview(userId: string, body: ICreateReviewInput): Promise<any> {
-    const { course: courseId, rating, comment } = body;
+    const { course: courseInput, rating, comment } = body;
 
+    // Resolve course by UUID or slug
+    let course = await prisma.course.findFirst({
+      where: {
+        OR: [{ id: courseInput }, { slug: courseInput }],
+      },
+      select: { id: true, tenantId: true },
+    });
+
+    if (!course) {
+      throw ApiError.badRequest('Course not found');
+    }
+
+    const courseId = course.id;
+
+    // Check enrollment
     const enrollment = await prisma.enrollment.findFirst({
       where: {
         userId,
@@ -85,47 +100,36 @@ export class ReviewService {
       throw ApiError.forbidden('You must be enrolled to review this course');
     }
 
-    const existing = await this.reviewRepository.findOne({ userId, courseId });
+    // Check if review already exists for this user and course
+    const existing = await prisma.review.findFirst({
+      where: { userId, courseId },
+    });
+
+    let review;
     if (existing) {
-      // Update existing review gracefully instead of hard 409 error
-      const updated = await prisma.review.update({
+      // Gracefully update existing review instead of throwing duplicate constraint error
+      review = await prisma.review.update({
         where: { id: existing.id },
         data: {
           rating,
           comment,
           isApproved: true,
         },
-        include: { user: { select: { name: true, avatar: true } } },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
       });
-
-      // Recalculate Course rating
-      const avg = await prisma.review.aggregate({
-        where: { courseId, isApproved: true },
-        _avg: { rating: true },
+    } else {
+      review = await prisma.review.create({
+        data: {
+          userId,
+          courseId,
+          rating,
+          comment,
+          isApproved: true,
+          tenantId: course.tenantId || null,
+        },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
       });
-      if (avg._avg.rating !== null) {
-        await prisma.course.update({
-          where: { id: courseId },
-          data: { rating: Math.round(avg._avg.rating * 10) / 10 },
-        });
-      }
-
-      const tenantId = getTenantId();
-      await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');
-
-      return updated;
     }
-
-    const review = await prisma.review.create({
-      data: {
-        userId,
-        courseId,
-        rating,
-        comment,
-        isApproved: true,
-      },
-      include: { user: { select: { name: true, avatar: true } } },
-    });
 
     // Recalculate Course rating
     const avg = await prisma.review.aggregate({
@@ -146,9 +150,22 @@ export class ReviewService {
   }
 
   async updateReview(id: string, userId: string, body: IUpdateReviewInput): Promise<any> {
-    const review = await prisma.review.findFirst({ where: { id, userId } });
+    let review = await prisma.review.findFirst({
+      where: {
+        OR: [{ id, userId }, { id }],
+      },
+    });
+
     if (!review) {
       throw ApiError.notFound('Review not found');
+    }
+
+    // Permission check
+    if (review.userId !== userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (user?.role !== 'admin' && user?.role !== 'super_admin') {
+        throw ApiError.forbidden('You can only edit your own review');
+      }
     }
 
     const updateData: any = {};
@@ -157,7 +174,7 @@ export class ReviewService {
     updateData.isApproved = true;
 
     const updatedReview = await prisma.review.update({
-      where: { id },
+      where: { id: review.id },
       data: updateData,
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });

@@ -1,5 +1,5 @@
 import SeoHead from '@/components/SeoHead';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,6 +54,30 @@ export default function CourseDetail() {
   const [checkingEnrollment, setCheckingEnrollment] = useState(true);
   const enrollmentCheckedRef = useRef(false);
 
+  const instructorsList = useMemo(() => {
+    const list = [];
+    if (course?.teacher && course.teacher.name) {
+      list.push(course.teacher);
+    }
+    if (Array.isArray(course?.instructors)) {
+      course.instructors.forEach((ins) => {
+        if (
+          ins &&
+          ins.name &&
+          !list.some(
+            (existing) => (existing.id && existing.id === ins.id) || existing.name === ins.name
+          )
+        ) {
+          list.push(ins);
+        }
+      });
+    }
+    if (list.length === 0 && course?.teacher?.name) {
+      list.push({ name: course.teacher.name });
+    }
+    return list;
+  }, [course?.teacher, course?.instructors]);
+
   // Review form state
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
@@ -63,12 +87,8 @@ export default function CourseDetail() {
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
-    if (!reviewRating) {
+    if (reviewRating === 0) {
       toast.error('Please select a rating');
-      return;
-    }
-    if (!reviewText.trim()) {
-      toast.error('Please write your review');
       return;
     }
     if (reviewText.trim().length < 5) {
@@ -77,17 +97,19 @@ export default function CourseDetail() {
     }
     setSubmittingReview(true);
     try {
+      const courseIdString = (course.id || course._id).toString();
       await dispatch(
         createReview({
-          course: course.id || course.id || course._id,
+          course: courseIdString,
           rating: reviewRating,
           comment: reviewText.trim(),
         })
       ).unwrap();
-      toast.success('Review submitted! It will appear after moderation.');
+      toast.success('Review submitted successfully!');
       setReviewRating(0);
       setReviewText('');
       setReviewSubmitted(true);
+      dispatch(fetchCourseReviews({ courseId: courseIdString }));
     } catch (err) {
       toast.error(typeof err === 'string' ? err : err?.message || 'Failed to submit review');
     } finally {
@@ -97,8 +119,10 @@ export default function CourseDetail() {
 
   const handleEditReview = async (reviewId, data) => {
     try {
+      const courseIdString = (course?.id || course?._id || id).toString();
       await dispatch(updateReview({ id: reviewId, ...data })).unwrap();
-      toast.success('Review updated!');
+      toast.success('Review updated successfully!');
+      dispatch(fetchCourseReviews({ courseId: courseIdString }));
     } catch (err) {
       toast.error(typeof err === 'string' ? err : err?.message || 'Failed to update review');
       throw err; // let ReviewCard stay in edit mode on failure
@@ -267,15 +291,18 @@ export default function CourseDetail() {
     return <HiDocumentText className="h-4 w-4" />;
   };
 
+  const rawTeacherName = course.teacher?.name;
+  const teacherName = rawTeacherName || 'Instructor';
+
   const tabs = [
     { key: 'overview', label: 'Overview' },
     { key: 'curriculum', label: 'Curriculum', count: lessons.length },
     { key: 'reviews', label: 'Reviews', count: reviews.length },
-    { key: 'instructor', label: 'Instructor' },
+    {
+      key: 'instructor',
+      label: instructorsList.length > 1 ? `Faculty (${instructorsList.length})` : 'Faculty',
+    },
   ];
-
-  const rawTeacherName = course.teacher?.name;
-  const teacherName = rawTeacherName || 'Instructor';
 
   return (
     <div>
@@ -294,7 +321,7 @@ export default function CourseDetail() {
                 '@type': 'Course',
                 name: course.title,
                 description: course.description,
-                provider: { '@type': 'Organization', name: 'CivicsHub' },
+                provider: { '@type': 'Organization', name: 'CivicsEdu' },
                 offers: {
                   '@type': 'Offer',
                   price: course.discountedPrice || course.price || 0,
@@ -357,14 +384,39 @@ export default function CourseDetail() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-3.5">
-                <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 text-xl shadow-lg border-2 border-white/10">
-                  {teacherName.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-white font-bold text-[15px]">{teacherName}</p>
-                  <p className="text-blue-300 text-[13px] font-semibold">Expert Faculty</p>
-                </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                {instructorsList.map((ins, idx) => {
+                  const insName = ins.name || 'Faculty Member';
+                  const insAvatar = ins.avatar?.url || ins.avatar;
+                  return (
+                    <Link
+                      key={ins.id || ins._id || idx}
+                      to={`/courses?search=${encodeURIComponent(insName)}`}
+                      className="flex items-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-md px-3.5 py-2 rounded-2xl transition-all group"
+                      title={`View courses by ${insName}`}
+                    >
+                      {insAvatar ? (
+                        <img
+                          src={insAvatar}
+                          alt={insName}
+                          className="h-10 w-10 rounded-full object-cover border-2 border-white/20 shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 text-base shadow-sm border-2 border-white/20">
+                          {insName.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-white font-bold text-[14px] leading-tight group-hover:text-blue-200">
+                          {insName}
+                        </p>
+                        <p className="text-blue-300 text-[11px] font-medium">
+                          {ins.designation || 'Faculty Member'}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
@@ -820,24 +872,43 @@ export default function CourseDetail() {
           )}
 
           {activeTab === 'instructor' && (
-            <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80 transition-all duration-300">
-              <div className="flex items-center gap-5 mb-6 pb-6 border-b border-dark-100 dark:border-dark-800">
-                <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-lg border-4 border-blue-50">
-                  {teacherName.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white mb-1">
-                    {teacherName}
-                  </h3>
-                  <p className="text-primary-600 dark:text-primary-400 font-medium text-[15px]">
-                    Expert Instructor
-                  </p>
-                </div>
-              </div>
-              <p className="text-[15px] text-dark-600 dark:text-dark-400 leading-relaxed max-w-3xl">
-                {course.teacher?.bio ||
-                  'An experienced educator passionate about helping students achieve their goals through structured learning and comprehensive test series.'}
-              </p>
+            <div className="space-y-6">
+              {instructorsList.map((ins, idx) => {
+                const insName = ins.name || 'Faculty Member';
+                const insAvatar = ins.avatar?.url || ins.avatar;
+                return (
+                  <div
+                    key={ins.id || ins._id || idx}
+                    className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80 transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-5 mb-5 pb-5 border-b border-dark-100 dark:border-dark-800">
+                      {insAvatar ? (
+                        <img
+                          src={insAvatar}
+                          alt={insName}
+                          className="h-20 w-20 rounded-full object-cover shadow-lg border-4 border-blue-50 dark:border-dark-700"
+                        />
+                      ) : (
+                        <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-lg border-4 border-blue-50">
+                          {insName.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-[22px] font-extrabold text-[#172554] dark:text-white mb-1">
+                          {insName}
+                        </h3>
+                        <p className="text-primary-600 dark:text-primary-400 font-medium text-[15px]">
+                          {ins.designation || 'Expert Faculty & Course Mentor'}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[15px] text-dark-600 dark:text-dark-400 leading-relaxed max-w-3xl">
+                      {ins.bio ||
+                        'An experienced educator passionate about helping students achieve top ranks through structured learning, conceptual clarity, and dedicated mentorship.'}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

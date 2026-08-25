@@ -24,8 +24,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'CivicsHub LMS',
-        short_name: 'CivicsHub',
+        name: 'CivicsEdu LMS',
+        short_name: 'CivicsEdu',
         description: 'Online Learning & Test Platform',
         theme_color: '#6366f1',
         background_color: '#0f172a',

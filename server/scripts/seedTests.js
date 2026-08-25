@@ -628,7 +628,7 @@ const seedTests = async () => {
     console.log(`📝 ${testsData.length} tests created and published.`);
     console.log('');
     console.log('Login as student to take tests:');
-    console.log('   student@civicshub.com / Student@123456');
+    console.log('   student@civicsedu.com / Student@123456');
     console.log('');
 
     process.exit(0);

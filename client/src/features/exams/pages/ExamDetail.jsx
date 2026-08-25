@@ -159,7 +159,7 @@ export default function ExamDetail() {
           '@type': 'Course',
           name: category?.name,
           description: category?.description || `Preparation hub for ${category?.name}`,
-          provider: { '@type': 'Organization', name: 'CivicsHub' },
+          provider: { '@type': 'Organization', name: 'CivicsEdu' },
         }}
       />
       {/* ════════ HERO SECTION (Without Key Dates Widget) ════════ */}

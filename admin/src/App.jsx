@@ -51,8 +51,14 @@ const BlogForm = lazy(() => import('@/features/blog/pages/BlogForm'));
 const JobAlertList = lazy(() => import('@/features/blog/pages/JobAlertList'));
 const AnnouncementCenter = lazy(() => import('@/features/notification/pages/AnnouncementCenter'));
 const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingSettings'));
+const LegalSettings = lazy(() => import('@/features/settings/pages/LegalSettings'));
+const HelpSettings = lazy(() => import('@/features/settings/pages/HelpSettings'));
+const SuccessStoriesSettings = lazy(
+  () => import('@/features/settings/pages/SuccessStoriesSettings')
+);
 const LiveClassesPage = lazy(() => import('@/features/liveclass/pages/LiveClassesPage'));
 const PaymentList = lazy(() => import('@/features/payment/pages/PaymentList'));
+const LogsExplorer = lazy(() => import('@/features/logs/pages/LogsExplorer'));
 
 export default function App() {
   const dispatch = useDispatch();
@@ -140,7 +146,11 @@ export default function App() {
             <Route path="announcements" element={<AnnouncementCenter />} />
             <Route path="library" element={<LibraryAdmin />} />
             <Route path="branding" element={<BrandingSettings />} />
+            <Route path="legal-settings" element={<LegalSettings />} />
+            <Route path="help-settings" element={<HelpSettings />} />
+            <Route path="success-stories-settings" element={<SuccessStoriesSettings />} />
             <Route path="live-classes" element={<LiveClassesPage />} />
+            <Route path="logs" element={<LogsExplorer />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

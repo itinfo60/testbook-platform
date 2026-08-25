@@ -108,7 +108,7 @@ export default function RegisterPage() {
       }
     };
 
-    // 1. Check direct URL hash immediately
+    // Process OAuth token if and only if returned from OAuth redirect with hash
     if (window.location.hash && window.location.hash.includes('access_token=')) {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const token = hashParams.get('access_token');
@@ -117,18 +117,15 @@ export default function RegisterPage() {
       }
     }
 
-    // 2. Check Supabase existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.access_token) {
-        processToken(session.access_token);
-      }
-    });
-
-    // 3. Listen to auth state changes
+    // Listen to auth state changes only for explicit SIGNED_IN event with active hash
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.access_token && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+      if (
+        session?.access_token &&
+        event === 'SIGNED_IN' &&
+        window.location.hash.includes('access_token=')
+      ) {
         processToken(session.access_token);
       }
     });

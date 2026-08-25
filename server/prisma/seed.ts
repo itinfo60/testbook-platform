@@ -12,17 +12,17 @@ async function main() {
     update: {},
     create: {
       id: tenantId,
-      name: 'CivicsHub Default Institute',
+      name: 'CivicsEdu Default Institute',
       subdomain: 'default',
     },
   });
 
   const adminPassword = await bcrypt.hash('Admin@123456', 10);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@civicshub.com' },
+    where: { email: 'admin@civicsedu.com' },
     update: {},
     create: {
-      email: 'admin@civicshub.com',
+      email: 'admin@civicsedu.com',
       name: 'Super Admin',
       password: adminPassword,
       role: 'super_admin',
@@ -32,10 +32,10 @@ async function main() {
 
   const studentPassword = await bcrypt.hash('Student@123', 10);
   const student = await prisma.user.upsert({
-    where: { email: 'student@civicshub.com' },
+    where: { email: 'student@civicsedu.com' },
     update: {},
     create: {
-      email: 'student@civicshub.com',
+      email: 'student@civicsedu.com',
       name: 'Test Student',
       password: studentPassword,
       role: 'student',

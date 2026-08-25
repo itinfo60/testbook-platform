@@ -126,6 +126,7 @@ model Course {
 
   teacherId     String
   teacher       User     @relation("TeacherCourses", fields: [teacherId], references: [id])
+  instructors   Json?    @default("[]")
 
   categoryId    String?
   category      Category? @relation(fields: [categoryId], references: [id])
@@ -459,3 +460,32 @@ model SubscriptionPlan {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────────
+// APP LOGS & TELEMETRY (CLIENT & ADMIN ACTION / ERROR AUDIT)
+// ─────────────────────────────────────────────────────────────────
+model AppLog {
+  id         String   @id @default(uuid())
+  app        String   @default("client") // "client" | "admin" | "server"
+  level      String   @default("info")   // "error" | "warn" | "info" | "action"
+  event      String                      // "PAGE_VIEW" | "API_ERROR" | "USER_ACTION" | "ADMIN_MUTATION" | "AUTH"
+  message    String?
+  details    Json?    @default("{}")     // stack trace, payload, parameters, state context
+  path       String?                     // current route / URL
+  method     String?                     // HTTP method if API action
+  statusCode Int?                        // response status code
+  userId     String?
+  userEmail  String?
+  userName   String?
+  ip         String?
+  userAgent  String?
+  tenantId   String?
+
+  createdAt  DateTime @default(now())
+
+  @@index([app, level])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([event])
+}
+

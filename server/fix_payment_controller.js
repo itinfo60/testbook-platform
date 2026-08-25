@@ -1,6 +1,6 @@
 import fs from 'fs';
 const file =
-  '/Users/balveerchoudhary/civicshub-platform/server/src/modules/payment/payment.controller.ts';
+  '/Users/balveerchoudhary/civicsedu-platform/server/src/modules/payment/payment.controller.ts';
 let code = fs.readFileSync(file, 'utf8');
 
 code = code.replace(

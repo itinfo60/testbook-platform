@@ -114,7 +114,7 @@ export default function Navbar() {
                   <HiAcademicCap className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-xl font-bold font-display text-dark-900 dark:text-white">
-                  Civics<span className="text-primary-600">Hub</span>
+                  Civics<span className="text-primary-600">Edu</span>
                 </span>
               </Link>
 
@@ -204,9 +204,11 @@ export default function Navbar() {
                             {user?.name}
                           </p>
                           <p className="text-xs text-dark-500 truncate">{user?.email}</p>
-                          <span className="inline-block mt-1 badge-primary capitalize">
-                            {user?.role}
-                          </span>
+                          {user?.role && user?.role !== 'student' && (
+                            <span className="inline-block mt-1 badge-primary capitalize">
+                              {user.role}
+                            </span>
+                          )}
                         </div>
                         <div className="py-1">
                           {userLinks.map((link) => (

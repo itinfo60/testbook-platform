@@ -50,8 +50,10 @@ router.post('/teachers', adminController.createTeacher);
 router.put('/teachers/:id', adminController.updateTeacher);
 router.delete('/teachers/:id', adminController.deleteTeacher);
 router.patch('/teachers/:id/verify', adminController.verifyTeacher);
+router.patch('/teachers/:id/faculty-visibility', adminController.toggleFacultyVisibility);
 
 // Announcements
+router.get('/announcements', adminController.getAnnouncements);
 router.post('/announcements', adminController.sendAnnouncement);
 
 // Coupons (no requireTenant — tenantId taken from authenticated user)

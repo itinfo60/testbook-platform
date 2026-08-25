@@ -1,4 +1,5 @@
 import axios from 'axios';
+import clientLogger from './logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -156,6 +157,20 @@ api.interceptors.response.use(
           .join(', ');
         data.message = `Validation error: ${details}`;
       }
+    }
+
+    const reqUrl = error.config?.url || '';
+    if (reqUrl && !reqUrl.includes('/logs') && !reqUrl.includes('/auth/refresh-token')) {
+      clientLogger.error(
+        'API_ERROR',
+        `${error.config?.method?.toUpperCase() || 'GET'} ${reqUrl} failed: ${error.response?.status || 'Network Error'}`,
+        {
+          status: error.response?.status,
+          url: reqUrl,
+          method: error.config?.method,
+          message: error.response?.data?.message || error.message,
+        }
+      );
     }
 
     return Promise.reject(error);

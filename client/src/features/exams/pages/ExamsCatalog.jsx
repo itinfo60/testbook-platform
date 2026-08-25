@@ -69,17 +69,6 @@ export default function ExamsCatalog() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const categoryParam = params.get('category');
-    if (categoryParam) {
-      setSelectedGroup(categoryParam);
-    } else if (location.state?.filterGroup) {
-      setSelectedGroup(location.state.filterGroup);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.search, location.state]);
-
   // Filter exams by search term
   const searchedExams = useMemo(() => {
     return categories.filter((exam) => {
@@ -139,6 +128,33 @@ export default function ExamsCatalog() {
     });
     return tabs;
   }, [dynamicGroups, searchedExams.length]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const categoryParam = params.get('category');
+    if (categoryParam) {
+      const norm = categoryParam.toLowerCase().replace(/_/g, '-');
+      const matched = dynamicGroups.find((g) => {
+        const gSlug = (g.id || '').toLowerCase();
+        const gName = (g.name || '').toLowerCase();
+        return (
+          gSlug === norm ||
+          gSlug.startsWith(norm) ||
+          (norm === 'rajasthan' && (gSlug.includes('rajasthan') || gName.includes('rajasthan'))) ||
+          ((norm.includes('political') || norm.includes('polity')) &&
+            (gSlug.includes('political') || gName.includes('political')))
+        );
+      });
+      if (matched) {
+        setSelectedGroup(matched.id);
+      } else {
+        setSelectedGroup(categoryParam);
+      }
+    } else if (location.state?.filterGroup) {
+      setSelectedGroup(location.state.filterGroup);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.search, location.state, dynamicGroups]);
 
   const renderCategoryCard = (cat) => (
     <div
@@ -220,19 +236,32 @@ export default function ExamsCatalog() {
         {/* Group Filter Tabs (Loaded dynamically from backend categories) */}
         {!loading && filterTabs.length > 1 && (
           <div className="flex justify-center gap-2 mb-10 overflow-x-auto pb-2 flex-wrap">
-            {filterTabs.map((group) => (
-              <button
-                key={group.id}
-                onClick={() => setSelectedGroup(group.id)}
-                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                  selectedGroup === group.id
-                    ? 'bg-amber-800 text-white shadow-lg shadow-amber-500/30'
-                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                {group.label}
-              </button>
-            ))}
+            {filterTabs.map((group) => {
+              const isActive =
+                selectedGroup === group.id ||
+                (selectedGroup !== 'all' &&
+                  dynamicGroups.some(
+                    (g) =>
+                      g.id === group.id &&
+                      (g.id.includes(selectedGroup) ||
+                        (selectedGroup.includes('rajasthan') && g.id.includes('rajasthan')) ||
+                        (selectedGroup.includes('political') && g.id.includes('political')))
+                  ));
+
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => setSelectedGroup(group.id)}
+                  className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-amber-800 text-white shadow-lg shadow-amber-500/30'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {group.label}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -262,7 +291,17 @@ export default function ExamsCatalog() {
           <div className="space-y-16">
             {dynamicGroups.length > 0 ? (
               dynamicGroups
-                .filter((group) => selectedGroup === 'all' || selectedGroup === group.id)
+                .filter((group) => {
+                  if (selectedGroup === 'all') return true;
+                  if (selectedGroup === group.id) return true;
+                  const s = selectedGroup.toLowerCase().replace(/_/g, '-');
+                  const g = (group.id || '').toLowerCase();
+                  return (
+                    g.includes(s) ||
+                    (s.includes('rajasthan') && g.includes('rajasthan')) ||
+                    (s.includes('political') && g.includes('political'))
+                  );
+                })
                 .map((group) => (
                   <section key={group.id}>
                     <div className="flex items-center gap-3 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import adminLogger from './logger';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -137,6 +138,21 @@ api.interceptors.response.use(
     if (error.response?.status !== 401 && error.response?.status !== 404) {
       toast.error(msg);
     }
+
+    const reqUrl = error.config?.url || '';
+    if (reqUrl && !reqUrl.includes('/logs') && !reqUrl.includes('/auth/refresh-token')) {
+      adminLogger.error(
+        'API_ERROR',
+        `${error.config?.method?.toUpperCase() || 'GET'} ${reqUrl} failed: ${error.response?.status || 'Network Error'}`,
+        {
+          status: error.response?.status,
+          url: reqUrl,
+          method: error.config?.method,
+          message: msg,
+        }
+      );
+    }
+
     return Promise.reject(error);
   }
 );
@@ -255,6 +271,7 @@ export const teachersAPI = {
   update: (id, data) => api.put(`/admin/teachers/${id}`, data),
   delete: (id) => api.delete(`/admin/teachers/${id}`),
   verify: (id) => api.patch(`/admin/teachers/${id}/verify`),
+  toggleFacultyVisibility: (id) => api.patch(`/admin/teachers/${id}/faculty-visibility`),
   toggleStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }),
 };
 
@@ -287,6 +304,7 @@ export const examCategoriesAPI = {
 // ══════════════════════════════════════════════
 export const notificationsAPI = {
   send: (data) => api.post('/admin/announcements', data),
+  getAnnouncements: (params) => api.get(`/admin/announcements${qs(params)}`),
   getAll: (params) => api.get(`/notifications${qs(params)}`),
 };
 
@@ -340,6 +358,20 @@ export const uploadsAPI = {
   deleteFile: (publicId, type = 'image') => {
     return api.delete(`/uploads/${encodeURIComponent(publicId)}?type=${type}`);
   },
+};
+
+// ══════════════════════════════════════════════
+// SETTINGS, LEGAL & HELP CMS
+// ══════════════════════════════════════════════
+export const settingsAPI = {
+  getAdmin: () => api.get('/settings/admin'),
+  updateAdmin: (data) => api.put('/settings/admin', data),
+  getLegal: () => api.get('/settings/legal'),
+  updateLegal: (data) => api.put('/settings/legal', data),
+  getHelp: () => api.get('/settings/help'),
+  updateHelp: (data) => api.put('/settings/help', data),
+  getSuccessStories: () => api.get('/settings/success-stories'),
+  updateSuccessStories: (data) => api.put('/settings/success-stories', data),
 };
 
 export default api;
