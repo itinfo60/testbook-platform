@@ -4,7 +4,7 @@ services:
     name: civicsedu-backend-api
     env: node
     rootDir: server
-    buildCommand: npm install && npx prisma generate
+    buildCommand: npm install --include=dev && npx prisma generate
     startCommand: npm start
     envVars:
       - key: NODE_ENV
