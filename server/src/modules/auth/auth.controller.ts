@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { BaseController } from '../../core/base.controller.js';
 import { AuthService } from './auth.service.js';
 import { ApiError } from '../../core/api-error.js';
@@ -7,6 +8,7 @@ import { IUser } from './auth.dto.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 import prisma from '../../config/prisma.js';
 import { generateAccessToken, generateRefreshToken } from '../user/user.utils.js';
+import { getSupabase } from '../../config/supabase.js';
 
 export interface CustomRequest extends Request {
   tenantId?: string | null;
@@ -151,6 +153,19 @@ export class AuthController extends BaseController {
     return this.ok(res, null, 'Email verified successfully');
   });
 
+  resendVerification = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      throw ApiError.badRequest('Email is required');
+    }
+    await this.authService.resendVerificationEmail(email.trim());
+    return this.ok(
+      res,
+      null,
+      'If an unverified account exists with this email, a new verification link has been sent.'
+    );
+  });
+
   getMe = this.catchAsync(async (req: CustomRequest, res: Response) => {
     if (!req.userId) {
       throw ApiError.unauthorized();
@@ -283,6 +298,104 @@ export class AuthController extends BaseController {
 
     const redirectUrl = `${config.clientUrl}/auth/callback?token=${accessToken}`;
     return res.redirect(redirectUrl);
+  });
+
+  handleSupabaseAuth = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    const authHeader = req.headers.authorization;
+    const token =
+      req.body.accessToken ||
+      req.body.token ||
+      (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
+
+    if (!token) {
+      throw ApiError.badRequest('Supabase authentication token is required');
+    }
+
+    const supabase = getSupabase();
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data?.user) {
+      throw ApiError.unauthorized(error?.message || 'Invalid or expired Supabase token');
+    }
+
+    const sbUser = data.user;
+    const email = sbUser.email?.toLowerCase().trim();
+    if (!email) {
+      throw ApiError.badRequest('Supabase user profile is missing an email address');
+    }
+
+    const name =
+      sbUser.user_metadata?.full_name ||
+      sbUser.user_metadata?.name ||
+      sbUser.user_metadata?.user_name ||
+      email.split('@')[0];
+    const avatar = sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.picture || null;
+
+    const isEmailConfirmed = Boolean(
+      sbUser.email_confirmed_at ||
+      sbUser.confirmed_at ||
+      sbUser.app_metadata?.provider === 'google' ||
+      sbUser.identities?.some((i) => i.provider === 'google')
+    );
+
+    if (!isEmailConfirmed) {
+      throw ApiError.unauthorized(
+        'Please verify your email address before logging in. Check your inbox for the verification link.'
+      );
+    }
+
+    // Look up user by email or Supabase ID
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { id: sbUser.id }],
+      },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: sbUser.id,
+          name,
+          email,
+          avatar,
+          role: 'student',
+          isEmailVerified: isEmailConfirmed,
+          isActive: true,
+          tenantId: req.tenantId || null,
+        },
+      });
+    } else {
+      const updateData: any = {};
+      if (isEmailConfirmed && !user.isEmailVerified) updateData.isEmailVerified = true;
+      if (!user.avatar && avatar) updateData.avatar = avatar;
+      if (Object.keys(updateData).length > 0) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: updateData,
+        });
+      }
+    }
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    res.cookie('refreshToken', refreshToken, getCookieOptions(true));
+
+    const { password, ...userClean } = user;
+
+    return this.ok(
+      res,
+      {
+        user: userClean,
+        accessToken,
+        refreshToken,
+        tokens: {
+          accessToken,
+          refreshToken,
+        },
+      },
+      'Supabase authentication successful'
+    );
   });
 }
 export default AuthController;

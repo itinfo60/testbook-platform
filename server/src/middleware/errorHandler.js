@@ -45,36 +45,71 @@ export const errorConverter = (err, req, res, next) => {
       err instanceof Prisma.PrismaClientValidationError ||
       err.name === 'PrismaClientValidationError'
     ) {
-      error = new ApiError(400, 'Database validation error: Invalid input data', [], err.stack);
+      const msgLines = (err.message || '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(
+          (l) =>
+            l.length > 0 &&
+            !l.includes('Invocation:') &&
+            !l.includes('prisma.') &&
+            !l.includes('where:')
+        );
+      const relevant = msgLines.find(
+        (l) =>
+          l.includes('Unknown') ||
+          l.includes('Invalid') ||
+          l.includes('Missing') ||
+          l.includes('Argument') ||
+          l.includes('Expected') ||
+          l.includes('needs at least')
+      );
+      const cleanMsg = relevant
+        ? relevant.replace(/`+/g, "'")
+        : 'Invalid input data format. Please check submitted fields.';
+      error = new ApiError(400, `Validation error: ${cleanMsg}`, [], err.stack);
       error.isOperational = true;
     } else if (
       err instanceof Prisma.PrismaClientInitializationError ||
       err.name === 'PrismaClientInitializationError'
     ) {
-      error = new ApiError(503, 'Database service temporarily unavailable', [], err.stack);
+      error = new ApiError(
+        503,
+        'Database connection is temporarily unavailable. Please try again shortly.',
+        [],
+        err.stack
+      );
       error.isOperational = false;
     } else if (err.name === 'ValidationError' && err.errors) {
       const errors = Object.values(err.errors).map((e) => ({
         field: e.path,
         message: e.message,
       }));
-      error = new ApiError(400, 'Validation Error', errors, err.stack);
+      const reason = errors
+        .map((e) => (e.field ? `${e.field}: ${e.message}` : e.message))
+        .join(', ');
+      error = new ApiError(400, `Validation error: ${reason}`, errors, err.stack);
       error.isOperational = true;
     } else if (err.name === 'CastError') {
-      error = new ApiError(400, `Invalid ${err.path}: ${err.value}`, [], err.stack);
+      error = new ApiError(
+        400,
+        `Invalid value provided for ${err.path}: "${err.value}"`,
+        [],
+        err.stack
+      );
       error.isOperational = true;
     } else if (err.code === 11000) {
       const field = Object.keys(err.keyValue || {})[0] || 'field';
       error = new ApiError(
         409,
-        `Duplicate value for '${field}'`,
+        `An item with this '${field}' already exists. Please use a different value.`,
         [{ field, message: `Duplicate value for '${field}'` }],
         err.stack
       );
       error.isOperational = true;
     } else {
       const statusCode = error.statusCode || error.status || 500;
-      const message = error.message || 'Internal Server Error';
+      const message = error.message || 'An unexpected error occurred. Please try again.';
       error = new ApiError(statusCode, message, [], err.stack);
       error.isOperational = false;
     }
@@ -95,18 +130,18 @@ export const errorHandler = (err, req, res, _next) => {
       statusCode = 409;
       const target = err.meta?.target;
       const field = Array.isArray(target) ? target.join(', ') : target || 'field';
-      message = `Duplicate value for '${field}'`;
+      message = `An entry with this '${field}' already exists.`;
       errors = [{ field, message }];
     } else if (err.code === 'P2025') {
       statusCode = 404;
-      message = err.meta?.cause || 'Record not found';
+      message = err.meta?.cause || 'The requested record was not found.';
     } else if (err.code === 'P2003') {
       statusCode = 400;
       const field = err.meta?.field_name || 'relation';
-      message = `Invalid relation reference: ${field}`;
+      message = `Invalid reference: The associated ${field} does not exist.`;
     } else if (err.code === 'P2000') {
       statusCode = 400;
-      message = 'Provided value exceeds maximum length';
+      message = 'Provided value exceeds the allowed maximum length.';
     }
   }
 
@@ -116,7 +151,28 @@ export const errorHandler = (err, req, res, _next) => {
     err.name === 'PrismaClientValidationError'
   ) {
     statusCode = 400;
-    message = 'Database validation error: Invalid input data';
+    const msgLines = (err.message || '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(
+        (l) =>
+          l.length > 0 &&
+          !l.includes('Invocation:') &&
+          !l.includes('prisma.') &&
+          !l.includes('where:')
+      );
+    const relevant = msgLines.find(
+      (l) =>
+        l.includes('Unknown') ||
+        l.includes('Invalid') ||
+        l.includes('Missing') ||
+        l.includes('Argument') ||
+        l.includes('Expected') ||
+        l.includes('needs at least')
+    );
+    message = relevant
+      ? `Validation error: ${relevant.replace(/`+/g, "'")}`
+      : 'Invalid input data format. Please check submitted fields.';
   }
 
   // Prisma Initialization Error
@@ -125,7 +181,7 @@ export const errorHandler = (err, req, res, _next) => {
     err.name === 'PrismaClientInitializationError'
   ) {
     statusCode = 503;
-    message = 'Database service temporarily unavailable';
+    message = 'Database service is temporarily unavailable. Please try again shortly.';
   }
 
   // Validation errors

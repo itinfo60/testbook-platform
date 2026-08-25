@@ -53,7 +53,7 @@ export const submitQuiz = createAsyncThunk(
   'quizzes/submit',
   async ({ id, answers }, { rejectWithValue }) => {
     try {
-      const { data } = await quizAPI.submit(id, { answers });
+      const { data } = await quizAPI.submit(id, { quizId: id, answers });
       return data.data || data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to submit quiz');
@@ -123,14 +123,16 @@ const quizSlice = createSlice({
       })
       .addCase(submitQuiz.pending, (state) => {
         state.loading = true;
+        state.submitError = null;
       })
       .addCase(submitQuiz.fulfilled, (state, action) => {
         state.loading = false;
         state.result = action.payload;
+        state.submitError = null;
       })
       .addCase(submitQuiz.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.submitError = action.payload;
       })
       .addCase(fetchTeacherQuizzes.fulfilled, (state, action) => {
         state.teacherQuizzes = Array.isArray(action.payload)

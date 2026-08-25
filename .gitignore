@@ -9,3 +9,8 @@ server/logs/*.log
 client/playwright-report/
 client/test-results/
 .sfdx/
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+!.env.example

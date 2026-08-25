@@ -74,14 +74,20 @@ const reviewSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(createReview.fulfilled, (state, action) => {
-        state.reviews.unshift(action.payload);
+        const newRev = action.payload;
+        const revId = newRev?.id || newRev?._id;
+        const existingIdx = state.reviews.findIndex((r) => (r.id || r._id) === revId);
+        if (existingIdx >= 0) {
+          state.reviews[existingIdx] = { ...state.reviews[existingIdx], ...newRev };
+        } else {
+          state.reviews.unshift(newRev);
+        }
       })
       .addCase(updateReview.fulfilled, (state, action) => {
-        const idx = state.reviews.findIndex((r) => r._id === action.payload._id);
+        const newRev = action.payload;
+        const revId = newRev?.id || newRev?._id;
+        const idx = state.reviews.findIndex((r) => (r.id || r._id) === revId);
         if (idx >= 0) {
-          // Server returns the saved review but user may not be populated yet —
-          // preserve the existing populated user object so the card never
-          // reverts to "Anonymous".
           const existingUser = state.reviews[idx].user;
           state.reviews[idx] = {
             ...action.payload,
@@ -93,7 +99,7 @@ const reviewSlice = createSlice({
         }
       })
       .addCase(deleteReview.fulfilled, (state, action) => {
-        state.reviews = state.reviews.filter((r) => r._id !== action.payload);
+        state.reviews = state.reviews.filter((r) => (r.id || r._id) !== action.payload);
       });
   },
 });

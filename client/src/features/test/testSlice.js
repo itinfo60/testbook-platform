@@ -76,6 +76,18 @@ export const fetchLatestTestResult = createAsyncThunk(
   }
 );
 
+export const fetchAttemptResult = createAsyncThunk(
+  'tests/fetchAttemptResult',
+  async (attemptId, { rejectWithValue }) => {
+    try {
+      const { data: resultData } = await testAPI.getAttemptResult(attemptId);
+      return resultData.data || resultData;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to fetch test result');
+    }
+  }
+);
+
 export const fetchTestAnalytics = createAsyncThunk(
   'tests/analytics',
   async (id, { rejectWithValue }) => {
@@ -201,7 +213,7 @@ const testSlice = createSlice({
         state.currentTest = action.payload.test || action.payload;
         state.attemptCount = action.payload.attemptCount ?? 0;
         state.isPurchased = action.payload.isPurchased ?? false;
-        state.activeAttempt = action.payload.activeAttempt || null;
+        state.activeAttempt = null;
       })
       .addCase(fetchTestById.rejected, (state, action) => {
         state.loading = false;
@@ -232,6 +244,9 @@ const testSlice = createSlice({
       .addCase(submitTest.fulfilled, (state, action) => {
         state.loading = false;
         state.result = action.payload;
+        if (action.payload?.questions && action.payload.questions.length > 0) {
+          state.questions = action.payload.questions;
+        }
       })
       .addCase(submitTest.rejected, (state, action) => {
         state.loading = false;
@@ -248,6 +263,20 @@ const testSlice = createSlice({
           action.payload?.attempt?.test?.questions || action.payload?.questions || [];
       })
       .addCase(fetchLatestTestResult.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchAttemptResult.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAttemptResult.fulfilled, (state, action) => {
+        state.loading = false;
+        state.result = action.payload;
+        state.questions =
+          action.payload?.attempt?.test?.questions || action.payload?.questions || [];
+      })
+      .addCase(fetchAttemptResult.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

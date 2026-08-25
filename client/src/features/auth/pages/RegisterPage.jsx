@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiUser, HiMail, HiLockClosed, HiExclamationCircle, HiCheckCircle } from 'react-icons/hi';
-import { register as registerUser } from '@/features/auth/authSlice';
+import { register as registerUser, loginWithSupabase } from '@/features/auth/authSlice';
 import { authAPI } from '@/services/api';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import supabase from '@/services/supabase';
+import toast from 'react-hot-toast';
 
 const registerSchema = z
   .object({
@@ -30,6 +32,7 @@ export default function RegisterPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
     register,
@@ -52,6 +55,8 @@ export default function RegisterPage() {
 
   const [serverError, setServerError] = useState('');
   const [emailStatus, setEmailStatus] = useState({ loading: false, available: null, message: '' });
+  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const passwordValue = watch('password');
 
@@ -71,8 +76,84 @@ export default function RegisterPage() {
   const passwordStrength = getPasswordStrength(passwordValue);
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/dashboard', { replace: true });
-  }, [isAuthenticated, navigate]);
+    // Check URL search params for OAuth errors
+    const params = new URLSearchParams(window.location.search);
+    const errorDesc = params.get('error_description') || params.get('error');
+    if (errorDesc) {
+      setServerError(decodeURIComponent(errorDesc).replace(/\+/g, ' '));
+    }
+
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
+    let isHandled = false;
+    const processToken = async (accessToken) => {
+      if (!accessToken || isHandled) return;
+      isHandled = true;
+      setGoogleLoading(true);
+      try {
+        const result = await dispatch(loginWithSupabase({ accessToken }));
+        if (loginWithSupabase.fulfilled.match(result)) {
+          window.history.replaceState(null, '', window.location.pathname);
+          navigate('/dashboard', { replace: true });
+        } else {
+          setServerError(result.payload || 'Failed to complete Google registration');
+          setGoogleLoading(false);
+        }
+      } catch (err) {
+        setServerError('Authentication error occurred');
+        setGoogleLoading(false);
+      }
+    };
+
+    // 1. Check direct URL hash immediately
+    if (window.location.hash && window.location.hash.includes('access_token=')) {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const token = hashParams.get('access_token');
+      if (token) {
+        processToken(token);
+      }
+    }
+
+    // 2. Check Supabase existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) {
+        processToken(session.access_token);
+      }
+    });
+
+    // 3. Listen to auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.access_token && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        processToken(session.access_token);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [isAuthenticated, navigate, dispatch]);
+
+  const handleGoogleSignUp = async () => {
+    setServerError('');
+    setGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/register`,
+        },
+      });
+      if (error) throw error;
+    } catch (err) {
+      setServerError(err.message || 'Failed to sign up with Google');
+      setGoogleLoading(false);
+    }
+  };
 
   const handleEmailBlur = async (e) => {
     const emailVal = e.target.value;
@@ -102,17 +183,127 @@ export default function RegisterPage() {
   };
 
   const onSubmit = async (data) => {
-    if (emailStatus.available === false) return;
     setServerError('');
     try {
-      const result = await dispatch(registerUser(data));
-      if (registerUser.rejected.match(result)) {
-        setServerError(result.payload || 'Registration failed. Please try again.');
+      // 1. Sign up with Supabase Email & Password
+      const { data: sbData, error: sbError } = await supabase.auth.signUp({
+        email: data.email.trim(),
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.name.trim(),
+            name: data.name.trim(),
+            phone: data.phone || '',
+          },
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+
+      if (sbError) {
+        console.warn('Supabase registration fallback:', sbError.message);
+        const result = await dispatch(registerUser(data));
+        if (registerUser.rejected.match(result)) {
+          setServerError(result.payload || sbError.message || 'Registration failed');
+        }
+        return;
+      }
+
+      // If Supabase sent email verification link
+      if (sbData?.user && !sbData?.session) {
+        setRegisteredEmail(data.email);
+        setEmailConfirmationRequired(true);
+        return;
+      }
+
+      // If session immediately returned
+      if (sbData?.session?.access_token) {
+        const res = await dispatch(loginWithSupabase({ accessToken: sbData.session.access_token }));
+        if (loginWithSupabase.fulfilled.match(res)) {
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch (err) {
-      setServerError('Registration failed');
+      setServerError(err.message || 'Registration failed. Please try again.');
     }
   };
+
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0 || resendLoading || !registeredEmail) return;
+    setResendLoading(true);
+    try {
+      // 1. Supabase Resend
+      const { error: sbError } = await supabase.auth.resend({
+        type: 'signup',
+        email: registeredEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+
+      // 2. Also trigger backend resend
+      await authAPI.resendVerification(registeredEmail).catch(() => {});
+
+      if (sbError) {
+        console.warn('Supabase resend note:', sbError.message);
+      }
+
+      toast.success('Verification link has been resent! Please check your inbox.');
+      setResendCooldown(60);
+      const interval = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend verification email');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  if (emailConfirmationRequired) {
+    return (
+      <div className="bg-white dark:bg-slate-950 shadow-premium rounded-2xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 animate-fade-in text-center max-w-md mx-auto">
+        <div className="text-5xl mb-4">📧</div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 mb-2">
+          Verify Your Email
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm leading-relaxed">
+          We've sent a verification link to <strong>{registeredEmail}</strong>. Please check your
+          inbox (and spam folder) and click the link to confirm your email and activate your
+          account.
+        </p>
+
+        <div className="space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleResendVerification}
+            loading={resendLoading}
+            disabled={resendCooldown > 0 || resendLoading}
+            className="w-full !py-2.5 text-sm font-medium"
+          >
+            {resendCooldown > 0
+              ? `Resend available in ${resendCooldown}s`
+              : 'Resend Verification Email'}
+          </Button>
+
+          <Link to="/login" className="block">
+            <Button variant="primary" className="w-full !py-2.5">
+              Back to Login
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-slate-950 shadow-premium rounded-2xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 animate-fade-in relative overflow-hidden transition-all duration-300">
@@ -120,12 +311,14 @@ export default function RegisterPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
           Create Account
         </h1>
-        <p className="text-slate-500 mt-2 font-medium">Start your learning journey today</p>
+        <p className="text-slate-500 mt-2 font-medium">Join thousands of students today</p>
       </div>
 
-      <a
-        href={`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/google`}
-        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-premium rounded-xl text-sm font-medium transition-all duration-300 mb-6 group"
+      <button
+        type="button"
+        onClick={handleGoogleSignUp}
+        disabled={googleLoading || isSubmitting}
+        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-premium rounded-xl text-sm font-medium transition-all duration-300 mb-6 group cursor-pointer disabled:opacity-60"
       >
         <svg
           viewBox="0 0 24 24"
@@ -153,8 +346,10 @@ export default function RegisterPage() {
             />
           </g>
         </svg>
-        <span className="text-slate-900 dark:text-slate-50 font-medium">Sign up with Google</span>
-      </a>
+        <span className="text-slate-900 dark:text-slate-50 font-medium">
+          {googleLoading ? 'Connecting with Google...' : 'Sign up with Google'}
+        </span>
+      </button>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">

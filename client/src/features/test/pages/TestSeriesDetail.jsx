@@ -97,11 +97,8 @@ export default function TestSeriesDetail() {
       if (el) el.scrollIntoView({ behavior: 'smooth' });
       return;
     }
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: location } });
-      return;
-    }
-    navigate(`/checkout/${series._id}?type=test_series`);
+    const seriesId = series?.id || series?._id || series?.slug;
+    navigate(`/checkout/${seriesId}?type=test_series`);
   };
 
   const handleShare = () => {

@@ -122,7 +122,18 @@ api.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    const msg = error.response?.data?.message || error.message || 'Something went wrong';
+    let msg = error.response?.data?.message;
+    if (
+      Array.isArray(error.response?.data?.errors) &&
+      error.response.data.errors.length > 0 &&
+      (!msg || msg === 'Validation failed' || msg === 'Validation Error')
+    ) {
+      const details = error.response.data.errors
+        .map((e) => (e.field ? `${e.field}: ${e.message}` : e.message))
+        .join(', ');
+      msg = `Validation error: ${details}`;
+    }
+    msg = msg || error.message || 'Something went wrong';
     if (error.response?.status !== 401 && error.response?.status !== 404) {
       toast.error(msg);
     }
@@ -299,6 +310,36 @@ export const blogsAPI = {
   create: (data) => api.post('/blogs', data),
   update: (id, data) => api.put(`/blogs/${id}`, data),
   delete: (id) => api.delete(`/blogs/${id}`),
+};
+
+// ══════════════════════════════════════════════
+// UPLOADS (SUPABASE STORAGE)
+// ══════════════════════════════════════════════
+export const uploadsAPI = {
+  uploadImage: (file, folder = 'images') => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post(`/uploads/image?folder=${folder}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadVideo: (file, folder = 'videos') => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post(`/uploads/video?folder=${folder}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadDocument: (file, folder = 'documents') => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post(`/uploads/document?folder=${folder}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteFile: (publicId, type = 'image') => {
+    return api.delete(`/uploads/${encodeURIComponent(publicId)}?type=${type}`);
+  },
 };
 
 export default api;

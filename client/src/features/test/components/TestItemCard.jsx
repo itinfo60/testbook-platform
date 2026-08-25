@@ -17,7 +17,7 @@ export default function TestItemCard({ test, isLocked, onShare, onUnlock }) {
   const [showSyllabusModal, setShowSyllabusModal] = useState(false);
 
   const attempt = test.userAttempt;
-  const targetTestId = test._id && /^[0-9a-fA-F]{24}$/.test(test._id) ? test._id : test.realTestId;
+  const targetTestId = test.id || test._id || test.realTestId || test.slug;
 
   return (
     <div className="bg-white dark:bg-dark-900 rounded-2xl p-4 sm:p-4.5 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md hover:border-primary-400 dark:hover:border-primary-500 transition-all duration-200 relative group flex flex-col justify-between h-full">

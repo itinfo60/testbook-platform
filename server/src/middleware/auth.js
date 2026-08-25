@@ -5,6 +5,7 @@ import catchAsync from '../utils/catchAsync.js';
 import config from '../config/index.js';
 import redis from '../config/redis.js';
 import { runWithTenant } from '../utils/TenantContext.js';
+import { getSupabase } from '../config/supabase.js';
 
 export const authenticate = catchAsync(async (req, res, next) => {
   let token;
@@ -31,37 +32,67 @@ export const authenticate = catchAsync(async (req, res, next) => {
     throw ApiError.unauthorized('Token has been revoked. Please login again.');
   }
 
-  // Verify token
-  let decoded;
+  // Verify token (Primary: Platform JWT, Fallback: Supabase JWT)
+  let decoded = null;
+  let isSupabase = false;
+  let supabaseUserId = null;
+  let supabaseEmail = null;
+
   try {
     decoded = jwt.verify(token, config.jwt.secret);
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      throw ApiError.unauthorized('Session expired. Please login again.');
+    // Attempt Supabase token verification
+    try {
+      const { data, error } = await getSupabase().auth.getUser(token);
+      if (!error && data?.user) {
+        isSupabase = true;
+        supabaseUserId = data.user.id;
+        supabaseEmail = data.user.email?.toLowerCase().trim();
+      }
+    } catch {
+      // Supabase verification failed
     }
-    throw ApiError.unauthorized('Invalid token. Please login again.');
+
+    if (!isSupabase) {
+      if (err.name === 'TokenExpiredError') {
+        throw ApiError.unauthorized('Session expired. Please login again.');
+      }
+      throw ApiError.unauthorized('Invalid token. Please login again.');
+    }
   }
+
+  const targetId = decoded?.id || supabaseUserId;
+  const targetEmail = decoded?.email || supabaseEmail;
 
   // Look up user globally (bypassing tenant filter so we can authenticate them)
   let user = await runWithTenant(null, true, async () => {
     let cachedUser = null;
-    try {
-      cachedUser = await redis.get(`user_${decoded.id}`);
-    } catch (err) {
-      // Redis offline fallback
+    if (targetId) {
+      try {
+        cachedUser = await redis.get(`user_${targetId}`);
+      } catch (err) {
+        // Redis offline fallback
+      }
     }
     if (!cachedUser) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: decoded.id },
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            ...(targetId ? [{ id: targetId }] : []),
+            ...(targetEmail ? [{ email: targetEmail }] : []),
+          ],
+        },
       });
       if (dbUser) {
         const { password, ...userClean } = dbUser;
         userClean._id = userClean.id; // Compatibility shim
         // Cache for 5 minutes
-        try {
-          await redis.set(`user_${decoded.id}`, userClean, 300);
-        } catch (err) {
-          // Redis offline fallback
+        if (targetId) {
+          try {
+            await redis.set(`user_${targetId}`, userClean, 300);
+          } catch (err) {
+            // Redis offline fallback
+          }
         }
         return userClean;
       }

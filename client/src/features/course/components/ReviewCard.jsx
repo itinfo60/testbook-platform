@@ -11,14 +11,16 @@ export default function ReviewCard({ review, currentUserId, onEdit }) {
   const [saving, setSaving] = useState(false);
 
   const isOwn =
-    !!currentUserId && String(review.user?.id || _id || review.user) === String(currentUserId);
+    !!currentUserId &&
+    String(review.user?.id || review.user?._id || review.user || review.userId) ===
+      String(currentUserId);
 
   const handleSave = async () => {
     if (!editRating) return;
     if (editComment.trim().length < 5) return;
     setSaving(true);
     try {
-      await onEdit(review.id || _id, { rating: editRating, comment: editComment.trim() });
+      await onEdit(review.id || review._id, { rating: editRating, comment: editComment.trim() });
       setEditing(false);
     } finally {
       setSaving(false);
@@ -26,7 +28,10 @@ export default function ReviewCard({ review, currentUserId, onEdit }) {
   };
 
   return (
-    <div className="bg-white dark:bg-dark-900 rounded-2xl p-5 border border-slate-200 dark:border-dark-800 shadow-sm">
+    <div
+      id={`review-${review.id || review._id}`}
+      className="bg-white dark:bg-dark-900 rounded-2xl p-5 border border-slate-200 dark:border-dark-800 shadow-sm"
+    >
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm">
@@ -55,10 +60,10 @@ export default function ReviewCard({ review, currentUserId, onEdit }) {
               {isOwn && !editing && (
                 <button
                   onClick={() => setEditing(true)}
-                  className="p-1.5 rounded-lg bg-slate-50 hover:bg-primary-50 dark:bg-dark-800 dark:hover:bg-primary-950/40 text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800/60 transition-all shadow-xs"
                   title="Edit your review"
                 >
-                  <HiPencil className="h-3.5 w-3.5" />
+                  <HiPencil className="h-3 w-3" /> Edit
                 </button>
               )}
             </div>

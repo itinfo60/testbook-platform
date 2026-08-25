@@ -34,8 +34,17 @@ export default function TestCard({ test }) {
     hard: 'badge-danger',
   };
 
+  const testId = id || _id || test?.slug;
+
+  const effectiveIsFree =
+    typeof isFree === 'boolean'
+      ? isFree
+      : Boolean(test.settings && test.settings.isFree === true && test.settings.isTrial === true);
+
+  const effectivePrice = price ?? test.settings?.price ?? 0;
+
   return (
-    <Link to={`/tests/${_id}`} className="card-hover p-4 sm:p-5 group">
+    <Link to={`/tests/${testId}`} className="card-hover p-4 sm:p-5 group">
       <div className="flex items-start justify-between mb-3 gap-2">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
           <span className="badge-primary truncate max-w-[120px] sm:max-w-none">
@@ -51,10 +60,12 @@ export default function TestCard({ test }) {
           )}
         </div>
         <div className="flex-shrink-0">
-          {isFree === true && !price ? (
+          {effectiveIsFree ? (
             <span className="badge-success">Free</span>
-          ) : price > 0 ? (
-            <span className="text-sm font-semibold text-dark-900 dark:text-white">₹{price}</span>
+          ) : effectivePrice > 0 ? (
+            <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+              ₹{effectivePrice}
+            </span>
           ) : (
             <span className="badge-success">Free</span>
           )}

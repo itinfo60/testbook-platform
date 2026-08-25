@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Video, Clock, Users, Filter, Plus, Edit2, XCircle } from 'lucide-react';
-import api from '@/services/api';
+import { Video, Clock, Users, Filter, Plus, Edit2, XCircle, StopCircle, Play } from 'lucide-react';
+import api, { coursesAPI } from '@/services/api';
 import LoadingSpinner from '@/components/loadingSpinner';
 import Modal from '@/components/Modal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -33,6 +33,7 @@ export default function LiveClassesPage() {
   const [total, setTotal] = useState(0);
 
   const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({
@@ -42,9 +43,13 @@ export default function LiveClassesPage() {
     scheduledAt: '',
     durationMinutes: 60,
     meetingUrl: '',
+    teacherName: '',
+    teacherId: '',
+    password: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [endTarget, setEndTarget] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -62,10 +67,29 @@ export default function LiveClassesPage() {
   };
 
   const loadCourses = () => {
-    api
-      .get('/admin/courses?limit=100')
+    coursesAPI
+      .getAll({ limit: 100 })
       .then(({ data }) => {
-        setCourses(data.data?.courses || data.data?.docs || []);
+        const raw =
+          data.data?.courses ||
+          data.data?.docs ||
+          (Array.isArray(data.data) ? data.data : []) ||
+          data.courses ||
+          data.docs ||
+          [];
+        setCourses(Array.isArray(raw) ? raw : []);
+      })
+      .catch((err) => {
+        console.error('Failed to load courses for live class', err);
+      });
+  };
+
+  const loadTeachers = () => {
+    api
+      .get('/admin/users?role=teacher&limit=100')
+      .then(({ data }) => {
+        const raw = data.data?.users || data.data?.docs || data.data || [];
+        setTeachers(Array.isArray(raw) ? raw : []);
       })
       .catch(() => {});
   };
@@ -76,7 +100,16 @@ export default function LiveClassesPage() {
 
   useEffect(() => {
     loadCourses();
+    loadTeachers();
   }, []);
+
+  const toLocalDatetimeInput = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    // Offset to local timezone
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+  };
 
   const handleOpenModal = (cls = null) => {
     if (cls) {
@@ -85,9 +118,12 @@ export default function LiveClassesPage() {
         title: cls.title || '',
         description: cls.description || '',
         courseId: cls.course?.id || cls.course?._id || cls.course || '',
-        scheduledAt: cls.scheduledAt ? new Date(cls.scheduledAt).toISOString().slice(0, 16) : '',
-        durationMinutes: cls.durationMinutes || 60,
+        scheduledAt: toLocalDatetimeInput(cls.scheduledAt),
+        durationMinutes: cls.durationMinutes || cls.duration || 60,
         meetingUrl: cls.meetingUrl || '',
+        teacherName: cls.teacherName || '',
+        teacherId: cls.teacherId || '',
+        password: '', // never prefill password
       });
     } else {
       setEditId(null);
@@ -98,6 +134,9 @@ export default function LiveClassesPage() {
         scheduledAt: '',
         durationMinutes: 60,
         meetingUrl: '',
+        teacherName: '',
+        teacherId: '',
+        password: '',
       });
     }
     setIsModalOpen(true);
@@ -132,6 +171,28 @@ export default function LiveClassesPage() {
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Cancel failed');
+    }
+  };
+
+  const handleStartClass = async (id) => {
+    try {
+      await api.post(`/live-classes/${id}/start`);
+      toast.success('Live class started successfully');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to start class');
+    }
+  };
+
+  const handleEndClass = async () => {
+    if (!endTarget) return;
+    try {
+      await api.post(`/live-classes/${endTarget}/end`);
+      toast.success('Live class ended successfully');
+      setEndTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to end class');
     }
   };
 
@@ -224,7 +285,7 @@ export default function LiveClassesPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
-                    {cls.teacher?.name || '—'}
+                    {cls.teacherName || cls.teacher?.name || '—'}
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-1.5">
@@ -233,12 +294,12 @@ export default function LiveClassesPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
-                    {cls.durationMinutes} min
+                    {cls.durationMinutes || cls.duration || 60} min
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5 text-gray-400" />
-                      {cls.attendance?.length || 0} / {cls.maxParticipants}
+                      {cls.attendance?.length || 0} / {cls.maxParticipants || 200}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -253,21 +314,45 @@ export default function LiveClassesPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenModal(cls)}
-                        className="p-1 text-gray-500 hover:text-blue-600"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      {cls.status === 'scheduled' && (
+                        <button
+                          onClick={() => handleStartClass(cls.id || cls._id)}
+                          className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition-colors"
+                          title="Start Live Class Now"
+                        >
+                          <Play className="w-4 h-4" />
+                        </button>
+                      )}
+                      {cls.status === 'live' && (
+                        <button
+                          onClick={() => setEndTarget(cls.id || cls._id)}
+                          className="px-2 py-1 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 hover:text-red-700 rounded-lg transition-colors font-medium flex items-center gap-1 text-xs"
+                          title="End Live Class"
+                        >
+                          <StopCircle className="w-3.5 h-3.5" />
+                          <span>End</span>
+                        </button>
+                      )}
                       {cls.status !== 'cancelled' && cls.status !== 'ended' && (
                         <button
+                          onClick={() => handleOpenModal(cls)}
+                          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {cls.status === 'scheduled' && (
+                        <button
                           onClick={() => setCancelTarget(cls.id || cls._id)}
-                          className="p-1 text-gray-500 hover:text-red-600"
+                          className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
                           title="Cancel Class"
                         >
                           <XCircle className="w-4 h-4" />
                         </button>
+                      )}
+                      {(cls.status === 'cancelled' || cls.status === 'ended') && (
+                        <span className="text-xs text-gray-400 italic">No actions</span>
                       )}
                     </div>
                   </td>
@@ -391,6 +476,57 @@ export default function LiveClassesPage() {
               placeholder="https://meet.google.com/..."
             />
           </div>
+
+          {/* Teacher Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Teacher Name
+              </label>
+              <input
+                type="text"
+                value={formData.teacherName}
+                onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}
+                className="input-field"
+                placeholder="e.g. Dr. Sharma"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Assign Teacher User
+              </label>
+              <select
+                value={formData.teacherId}
+                onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— Select Teacher (Optional) —</option>
+                {teachers.map((t) => (
+                  <option key={t.id || t._id} value={t.id || t._id}>
+                    {t.name} ({t.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Password (Optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Password{' '}
+              <span className="text-xs text-gray-400 font-normal">
+                (optional — leave blank for open access)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="input-field font-mono"
+              placeholder="e.g. class@2026"
+            />
+          </div>
+
           <div className="flex justify-end gap-2 pt-4 border-t dark:border-gray-700">
             <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">
               Cancel
@@ -409,6 +545,15 @@ export default function LiveClassesPage() {
         title="Cancel Live Class"
         message="Are you sure you want to cancel this live class? This action cannot be undone."
         confirmText="Cancel Class"
+      />
+
+      <ConfirmDialog
+        isOpen={!!endTarget}
+        onClose={() => setEndTarget(null)}
+        onConfirm={handleEndClass}
+        title="End Live Class"
+        message="Are you sure you want to end this live class session? All participants will be disconnected."
+        confirmText="End Class"
       />
     </div>
   );

@@ -3,10 +3,11 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function ProtectedRoute({ children, roles }) {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, loading, initialized } = useAuth();
   const location = useLocation();
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  // Wait until auth state is fully resolved (token validated via getProfile or loginWithSupabase)
+  if (loading || !initialized) return <LoadingSpinner fullScreen />;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;

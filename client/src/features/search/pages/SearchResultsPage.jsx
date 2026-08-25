@@ -109,16 +109,26 @@ export default function SearchResultsPage() {
                         {exam.icon || '📚'}
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">
-                          {exam.name}
-                        </h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
-                          {exam.description || exam.conductingBody}
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">
+                            {exam.name}
+                          </h3>
+                        </div>
+                        {exam.parent && (
+                          <div className="text-[11px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md inline-block mt-1">
+                            Under {exam.parent.name}
+                          </div>
+                        )}
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 line-clamp-2">
+                          {exam.description || exam.conductingBody || 'State & National Exam Hub'}
                         </p>
-                        <div className="flex items-center gap-3 mt-3 text-xs font-semibold text-primary-600 dark:text-primary-400">
-                          <span>{exam.courseCount || 0} Courses</span>
-                          <span>•</span>
-                          <span>{exam.testCount || 0} Tests</span>
+                        <div className="flex flex-wrap items-center gap-2 mt-3 text-xs font-semibold text-primary-600 dark:text-primary-400">
+                          <span className="bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
+                            {exam.courseCount || exam.coursesCount || 0} Courses
+                          </span>
+                          <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                            {exam.testCount || exam.testsCount || 0} Tests
+                          </span>
                         </div>
                       </div>
                     </Link>
@@ -142,12 +152,54 @@ export default function SearchResultsPage() {
               </section>
             )}
 
-            {/* Test Series */}
+            {/* Test Series Packages */}
+            {results.testSeries && results.testSeries.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                  <HiClipboardList className="h-6 w-6 text-indigo-600" />
+                  Test Series Packages ({results.testSeries.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {results.testSeries.map((series) => (
+                    <Link
+                      key={series.id || series._id}
+                      to={`/test-series/${series.slug || series.id || series._id}`}
+                      className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                            {series.category?.name || 'Test Series'}
+                          </span>
+                          <span className="text-sm font-black text-slate-900 dark:text-white">
+                            {series.price === 0 ? 'FREE' : `₹${series.price}`}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+                          {series.title}
+                        </h3>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
+                          {series.description}
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500">
+                        <span>{series.tests?.length || 0} Mock Tests Included</span>
+                        <span className="text-indigo-600 font-bold group-hover:translate-x-1 transition-transform">
+                          View Pack →
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Mock Tests */}
             {results.tests && results.tests.length > 0 && (
               <section>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                   <HiClipboardList className="h-6 w-6 text-green-600" />
-                  Test Series ({results.tests.length})
+                  Mock Tests ({results.tests.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {results.tests.map((test) => (

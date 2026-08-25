@@ -34,28 +34,28 @@ export default function StatsCard({
     <div
       onClick={onClick}
       className={cn(
-        'card p-6 transition-all duration-200 relative overflow-hidden',
+        'card p-5 sm:p-6 transition-all duration-200 relative overflow-hidden flex flex-col justify-between h-full',
         isInteractive &&
           'group cursor-pointer hover:shadow-lg hover:border-primary-400 dark:hover:border-primary-500 hover:-translate-y-0.5'
       )}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 leading-tight">
               {displayTitle}
             </p>
             {isInteractive && (
-              <ArrowRight className="w-3.5 h-3.5 text-gray-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-all" />
+              <ArrowRight className="w-3.5 h-3.5 text-gray-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-all flex-shrink-0" />
             )}
           </div>
-          <p className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+          <div className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none break-words">
             {value}
-          </p>
+          </div>
           {change !== undefined && (
             <p
               className={cn(
-                'mt-1 text-xs font-semibold flex items-center gap-1',
+                'text-xs font-semibold flex items-center gap-1 pt-0.5',
                 change >= 0 ? 'text-emerald-600' : 'text-rose-600'
               )}
             >
@@ -65,16 +65,20 @@ export default function StatsCard({
               <span className="text-gray-500 dark:text-gray-400 font-normal">vs last month</span>
             </p>
           )}
-          {subtitle && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>}
+          {subtitle && (
+            <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed pt-0.5">
+              {subtitle}
+            </p>
+          )}
         </div>
         {Icon && (
           <div
             className={cn(
-              'p-3.5 rounded-2xl shrink-0 ml-3 transition-colors shadow-sm',
+              'p-3 sm:p-3.5 rounded-2xl shrink-0 transition-colors shadow-sm self-start',
               colorMap[color] || colorMap.primary
             )}
           >
-            <Icon className="w-6 h-6 shrink-0" />
+            <Icon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
           </div>
         )}
       </div>

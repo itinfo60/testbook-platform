@@ -11,6 +11,8 @@ import { ApiError } from '../../core/api-error.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 import { transactionalEmailQueue } from '../../queues/index.js';
 import prisma from '../../config/prisma.js';
+import { getSupabase } from '../../config/supabase.js';
+import logger from '../../utils/logger.js';
 import {
   hashPassword,
   generateEmailVerificationToken,
@@ -106,6 +108,26 @@ export class AuthService {
       data: { user, token: verifyToken },
     });
 
+    try {
+      const supabase = getSupabase();
+      const linkRes = await supabase.auth.admin.generateLink({
+        type: 'signup',
+        email: user.email,
+        options: {
+          redirectTo: `${config.clientUrl}/login`,
+        },
+      });
+      if (linkRes.data?.properties?.action_link) {
+        logger.info(`
+══════════════════════════════════════════════════════════════════
+✨ [SUPABASE VERIFY LINK] Email: ${user.email}
+🔗 ${linkRes.data.properties.action_link}
+══════════════════════════════════════════════════════════════════`);
+      }
+    } catch (e) {
+      // ignore
+    }
+
     const accessToken = generateAccessToken(user);
     const rawRefreshToken = generateRefreshToken(user);
 
@@ -185,6 +207,13 @@ export class AuthService {
 
     // Clear lockout on success
     await redis.del(lockoutKey);
+
+    // Enforce Email Verification for standard user accounts
+    if (!user.isEmailVerified && user.role !== 'super_admin' && user.role !== 'admin') {
+      throw ApiError.unauthorized(
+        'Please verify your email address before logging in. Check your inbox for the verification link.'
+      );
+    }
 
     // MFA Enforcement Check
     if (user.mfaEnabled) {
@@ -307,7 +336,7 @@ export class AuthService {
       () =>
         prisma.$queryRaw<
           any[]
-        >`SELECT * FROM "User" WHERE refresh_tokens::jsonb @> ${JSON.stringify([{ token: hashedToken }])}::jsonb LIMIT 1`
+        >`SELECT * FROM "User" WHERE "refreshTokens"::jsonb @> ${JSON.stringify([{ token: hashedToken }])}::jsonb LIMIT 1`
     );
     const user = users && users.length > 0 ? users[0] : null;
 
@@ -401,7 +430,7 @@ export class AuthService {
       }
     }
 
-    const { resetToken, hashedToken, expire } = generateResetToken();
+    const { token: resetToken, hashedToken, expire } = generateResetToken();
 
     await runWithTenant(null, true, () =>
       this.authRepository.updateById(user.id, {
@@ -410,10 +439,27 @@ export class AuthService {
       })
     );
 
-    await transactionalEmailQueue.add('send', {
-      type: 'reset_password',
-      data: { user, token: resetToken },
-    });
+    // NOTE: Supabase handles sending the reset email (via supabase.auth.resetPasswordForEmail on the client).
+    // The backend nodemailer reset email is intentionally skipped to avoid sending two conflicting emails.
+
+    // Also generate a Supabase recovery link and log it (dev fallback)
+    try {
+      const supabase = getSupabase();
+      const linkRes = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: user.email,
+        options: { redirectTo: `${config.clientUrl}/reset-password` },
+      });
+      if (linkRes.data?.properties?.action_link) {
+        logger.info(`
+══════════════════════════════════════════════════════════════════
+🔑 [SUPABASE RECOVERY LINK] Email: ${user.email}
+🔗 ${linkRes.data.properties.action_link}
+══════════════════════════════════════════════════════════════════`);
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   async resetPassword(token: string, password: string): Promise<void> {
@@ -461,6 +507,53 @@ export class AuthService {
     );
 
     await redis.del(`user_${user.id}`);
+  }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const user = await runWithTenant(null, true, () =>
+      this.authRepository.findOne({ email: email.trim().toLowerCase(), isActive: true })
+    );
+
+    if (!user || user.isEmailVerified) {
+      return; // Return silently for security & idempotency
+    }
+
+    const {
+      token: verifyToken,
+      hashedToken: emailVerificationToken,
+      expire: emailVerificationExpire,
+    } = generateEmailVerificationToken();
+
+    await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
+      this.authRepository.updateById(user.id, {
+        emailVerificationToken,
+        emailVerificationExpire,
+      })
+    );
+
+    await transactionalEmailQueue.add('send', {
+      type: 'verification',
+      data: { user, token: verifyToken },
+    });
+
+    // Also generate a Supabase verification link and log it (dev fallback)
+    try {
+      const supabase = getSupabase();
+      const linkRes = await supabase.auth.admin.generateLink({
+        type: 'signup',
+        email: user.email,
+        options: { redirectTo: `${config.clientUrl}/login` },
+      });
+      if (linkRes.data?.properties?.action_link) {
+        logger.info(`
+══════════════════════════════════════════════════════════════════
+📧 [SUPABASE RESEND VERIFY LINK] Email: ${user.email}
+🔗 ${linkRes.data.properties.action_link}
+══════════════════════════════════════════════════════════════════`);
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   async getMe(userId: string): Promise<IUser> {

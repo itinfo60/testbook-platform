@@ -27,7 +27,10 @@ export const validate = (schema: ZodSchema, source: 'body' | 'query' | 'params' 
           field: Array.isArray(err.path) ? err.path.join('.') : String(err.path ?? ''),
           message: err.message,
         }));
-        return next(ApiError.badRequest('Validation failed', errs));
+        const reason = errs
+          .map((e: any) => (e.field ? `${e.field}: ${e.message}` : e.message))
+          .join(', ');
+        return next(ApiError.badRequest(`Validation error: ${reason}`, errs));
       }
       next(error);
     }

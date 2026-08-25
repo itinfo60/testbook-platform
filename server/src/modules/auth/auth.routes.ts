@@ -34,6 +34,7 @@ router.post(
   controller.register
 );
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
+router.post('/supabase-login', authLimiter, controller.handleSupabaseAuth);
 router.get('/check-email', authLimiter, controller.checkEmail);
 router.post('/logout', authenticate, controller.logout);
 router.post('/refresh-token', controller.refreshToken);
@@ -50,6 +51,7 @@ router.post(
   controller.resetPassword
 );
 router.get('/verify-email/:token', controller.verifyEmail);
+router.post('/resend-verification', authLimiter, controller.resendVerification);
 router.get('/me', authenticate, controller.getMe);
 router.get('/profile', authenticate, controller.getMe);
 router.patch('/profile', authenticate, validate(updateProfileSchema), controller.updateProfile);

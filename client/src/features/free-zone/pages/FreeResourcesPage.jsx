@@ -144,6 +144,13 @@ export default function FreeResourcesPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') || 'all';
+    setActiveTab(tabParam);
+    const catParam = searchParams.get('category') || 'all';
+    setActiveCategory(catParam);
+  }, [searchParams]);
+
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     const params = new URLSearchParams(searchParams);
@@ -175,18 +182,38 @@ export default function FreeResourcesPage() {
     return resources
       .filter((item) => {
         // 1. Tab / Type Match
-        const tabDef = RESOURCE_TYPES.find((t) => t.id === activeTab);
         let matchesTab = true;
-        if (tabDef && tabDef.types) {
-          matchesTab = tabDef.types.includes(item.resourceType);
+        if (activeTab && activeTab !== 'all') {
+          const tabDef = RESOURCE_TYPES.find((t) => t.id === activeTab);
+          const rawType = String(item.type || item.resourceType || '')
+            .toLowerCase()
+            .trim();
+          const rawCat = (
+            typeof item.category === 'string'
+              ? item.category
+              : item.category?.name || item.fileData?.category || item.fileData?.examCategory || ''
+          ).toLowerCase();
+
+          if (tabDef && tabDef.types) {
+            matchesTab =
+              tabDef.types.some(
+                (t) => rawType.includes(t.toLowerCase()) || rawCat.includes(t.toLowerCase())
+              ) ||
+              rawType === activeTab.toLowerCase() ||
+              rawCat.includes(activeTab.toLowerCase());
+          } else {
+            matchesTab =
+              rawType === activeTab.toLowerCase() || rawCat.includes(activeTab.toLowerCase());
+          }
         }
 
         // 2. Category Match — check both `category` and `examCategory` fields
         let matchesCategory = true;
         if (activeCategory !== 'all') {
-          const itemCatId = item.category?._id || item.category;
+          const itemCatId = item.category?._id || item.category?.id || item.category;
           const itemCatSlug = item.category?.slug;
-          const itemExamCatId = item.examCategory?._id || item.examCategory;
+          const itemExamCatId =
+            item.examCategory?._id || item.examCategory?.id || item.examCategory;
           const itemExamCatSlug = item.examCategory?.slug;
           matchesCategory =
             itemCatId === activeCategory ||
@@ -199,7 +226,8 @@ export default function FreeResourcesPage() {
         let matchesSearch = true;
         if (search.trim()) {
           const q = search.toLowerCase();
-          const catName = typeof item.category === 'object' ? item.category?.name : '';
+          const catName =
+            typeof item.category === 'object' ? item.category?.name : item.category || '';
           const combined =
             `${item.title || ''} ${item.description || ''} ${catName || ''} ${item.tags?.join(' ') || ''}`.toLowerCase();
           matchesSearch = combined.includes(q);
@@ -220,8 +248,37 @@ export default function FreeResourcesPage() {
 
   const handleDownload = async (resource) => {
     try {
-      if (resource.fileUrl) {
-        window.open(resource.fileUrl, '_blank');
+      const resId = resource?.id || resource?._id;
+      let targetUrl =
+        resource?.url ||
+        resource?.fileUrl ||
+        resource?.fileData?.fileUrl ||
+        resource?.fileData?.url;
+
+      if (resId) {
+        try {
+          const { data } = await api.get(`/library/${resId}/download?json=true`);
+          if (data?.data?.downloadUrl || data?.data?.fileUrl) {
+            targetUrl = data.data.downloadUrl || data.data.fileUrl;
+          }
+          // Increment count in local state
+          setResources((prev) =>
+            prev.map((r) =>
+              (r.id || r._id) === resId ? { ...r, downloadsCount: (r.downloadsCount || 0) + 1 } : r
+            )
+          );
+          if (selectedResource && (selectedResource.id || selectedResource._id) === resId) {
+            setSelectedResource((prev) =>
+              prev ? { ...prev, downloadsCount: (prev.downloadsCount || 0) + 1 } : prev
+            );
+          }
+        } catch {
+          // Fallback to direct URL if API route failed
+        }
+      }
+
+      if (targetUrl) {
+        window.open(targetUrl, '_blank');
         toast.success('Starting download...');
       } else {
         toast.error('File link currently unavailable');
@@ -400,10 +457,10 @@ export default function FreeResourcesPage() {
               </p>
             </div>
             <Link
-              to="/test-series"
+              to="/daily-quiz"
               className="bg-white text-orange-700 hover:bg-amber-50 font-black px-6 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm shrink-0 flex items-center gap-2 cursor-pointer"
             >
-              <span>Explore All Free Tests</span>
+              <span>Take Free Quizzes</span>
               <HiArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -456,9 +513,9 @@ export default function FreeResourcesPage() {
                           >
                             {typeConf.label}
                           </span>
-                          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                             <HiDownload className="h-3.5 w-3.5 text-emerald-500" />
-                            {resource.downloadsCount || 120}+ Downloads
+                            {resource.downloadsCount || 0} Downloads
                           </span>
                         </div>
 
@@ -571,7 +628,7 @@ export default function FreeResourcesPage() {
                   Total Downloads
                 </span>
                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                  {selectedResource.downloadsCount || 120}+ Times
+                  {selectedResource.downloadsCount || 0} Downloads
                 </span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-center col-span-2 sm:col-span-1">

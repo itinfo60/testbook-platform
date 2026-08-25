@@ -104,8 +104,13 @@ function OrderCard({ order }) {
   const payment = order.paymentId;
   const itemTitle = item?.title || 'Unknown item';
   const sc = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
-  // Nothing was charged: no payment record, or a zero-value enrollment
-  const isFree = !order.amountPaid && !payment?.amount;
+  const paidAmount = Number(
+    order.amountPaid ||
+      order.finalPrice ||
+      (order.amount !== null ? order.amount : payment?.amount) ||
+      0
+  );
+  const isFree = paidAmount === 0 && !payment?.amount;
 
   return (
     <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm overflow-hidden group">
@@ -141,7 +146,7 @@ function OrderCard({ order }) {
               </span>
               <span className="text-xs font-bold text-slate-400">•</span>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                {fmtDate(order.createdAt)}
+                {fmtDate(order.createdAt || order.enrolledAt)}
               </span>
             </div>
             <h3 className="font-bold text-dark-900 dark:text-white line-clamp-2 text-sm sm:text-base group-hover:text-amber-600 transition-colors">
@@ -151,7 +156,7 @@ function OrderCard({ order }) {
 
           <div className="flex items-center justify-between mt-3">
             <span className="font-extrabold text-slate-900 dark:text-white text-base">
-              {currency(order.finalPrice)}
+              {isFree ? 'Free Enrollment' : currency(paidAmount)}
             </span>
             <button className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-700 transition-colors">
               {expanded ? (
@@ -288,13 +293,15 @@ function OrderCard({ order }) {
                 to={
                   itemType === 'course'
                     ? `/courses/${item.slug || item.id || item._id}/learn`
-                    : `/tests/${item.slug || item.id || item._id}`
+                    : order.testSeries || order.paymentId?.notes?.testId
+                      ? `/test-series/${item.id || item._id || item.slug}`
+                      : `/tests/${item.id || item._id || item.slug}`
                 }
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-md transition-all active:scale-95"
                 onClick={(e) => e.stopPropagation()}
               >
                 <HiExternalLink className="w-4 h-4" />
-                {itemType === 'course' ? 'Continue Learning' : 'Go to Test'}
+                {itemType === 'course' ? 'Continue Learning' : 'View Test Series'}
               </Link>
             )}
             {order.certificateIssued && order.certificateUrl && (
@@ -357,18 +364,100 @@ export default function OrderHistory() {
       .finally(() => setLoading(false));
   }, [page, statusFilter]);
 
+  // Compute executive order summary stats
+  const totalSpent = orders.reduce(
+    (acc, o) =>
+      acc + (Number(o.amountPaid || o.finalPrice || (o.amount !== null ? o.amount : 0)) || 0),
+    0
+  );
+  const activeCount = orders.filter(
+    (o) => o.status === 'active' || o.status === 'completed'
+  ).length;
+  const completedCount = orders.filter(
+    (o) => o.status === 'completed' || o.progressPercentage >= 100
+  ).length;
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-dark-900 dark:text-white font-display tracking-tight">
           Purchase History & Invoices
         </h1>
-        <p className="mt-2 text-sm font-bold text-slate-500">
-          {total > 0
-            ? `${total} order${total !== 1 ? 's' : ''} found in your account`
-            : 'Your purchase history will appear here'}
+        <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+          Manage your enrolled courses, receipts, transaction IDs, and active subscriptions.
         </p>
+      </div>
+
+      {/* KPI Cards Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="bg-white dark:bg-dark-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-dark-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Total Invested
+            </span>
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+              <HiCreditCard className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xl sm:text-2xl font-black text-dark-900 dark:text-white tracking-tight">
+              {currency(totalSpent)}
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Cleared payments</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-dark-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-dark-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Active Courses
+            </span>
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+              <HiCheckCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xl sm:text-2xl font-black text-dark-900 dark:text-white tracking-tight">
+              {activeCount}
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">In learning library</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-dark-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-dark-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Completed
+            </span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+              <HiReceiptTax className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xl sm:text-2xl font-black text-dark-900 dark:text-white tracking-tight">
+              {completedCount}
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Finished courses</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-dark-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-dark-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Total Orders
+            </span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+              <HiShoppingBag className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xl sm:text-2xl font-black text-dark-900 dark:text-white tracking-tight">
+              {total}
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">All order records</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}

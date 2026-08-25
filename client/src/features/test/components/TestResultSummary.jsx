@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   HiCheckCircle,
@@ -19,6 +20,93 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
   const rank = attempt.rank || result?.rank;
   const resolvedTestId =
     testId || attempt.test?._id || attempt.test || result?.test?._id || result?.test;
+
+  // Real Topic / Area Analysis derived directly from questions & actual user answers
+  const topicAnalysis = useMemo(() => {
+    const questionsList = result?.questions || attempt.test?.questions || [];
+    const answersList = attempt.answers || [];
+
+    const map = new Map();
+
+    questionsList.forEach((q, idx) => {
+      const area = q.topic || q.topicName || q.subject || q.subjectName || q.sectionName;
+      if (!area || String(area).trim() === '') return;
+
+      const cleanArea = String(area).trim();
+      const qId = q.id || q._id || idx;
+      const ans = answersList.find(
+        (a) => a.questionId === qId || a.questionId === q.id || a.questionId === q._id
+      );
+
+      const isCorrect = ans ? Boolean(ans.isCorrect) : false;
+      const wasAnswered = ans
+        ? Boolean((ans.selectedOptions && ans.selectedOptions.length > 0) || ans.textAnswer)
+        : false;
+
+      if (!map.has(cleanArea)) {
+        map.set(cleanArea, {
+          name: cleanArea,
+          total: 0,
+          correct: 0,
+          incorrect: 0,
+          skipped: 0,
+          marksObtained: 0,
+          totalMarks: 0,
+        });
+      }
+
+      const item = map.get(cleanArea);
+      item.total += 1;
+      item.totalMarks += Number(q.marks) || 1;
+      if (ans) item.marksObtained += Number(ans.marksObtained) || 0;
+
+      if (isCorrect) {
+        item.correct += 1;
+      } else if (wasAnswered) {
+        item.incorrect += 1;
+      } else {
+        item.skipped += 1;
+      }
+    });
+
+    if (map.size === 0) return null;
+
+    return Array.from(map.values()).map((item) => {
+      const attempted = item.correct + item.incorrect;
+      const accuracy = attempted > 0 ? Math.round((item.correct / attempted) * 100) : 0;
+      const scorePct =
+        item.totalMarks > 0
+          ? Math.max(0, Math.round((item.marksObtained / item.totalMarks) * 100))
+          : 0;
+
+      let status = 'weak';
+      let statusLabel = 'Weak Area';
+      let color = 'text-rose-600 dark:text-rose-400';
+      let barBg = 'bg-rose-500';
+
+      if (accuracy >= 70 || (attempted === 0 && scorePct >= 70)) {
+        status = 'strong';
+        statusLabel = 'Strong Area';
+        color = 'text-emerald-600 dark:text-emerald-400';
+        barBg = 'bg-emerald-500';
+      } else if (accuracy >= 40 || (attempted === 0 && scorePct >= 40)) {
+        status = 'moderate';
+        statusLabel = 'Moderate';
+        color = 'text-amber-600 dark:text-amber-400';
+        barBg = 'bg-amber-500';
+      }
+
+      return {
+        ...item,
+        accuracy,
+        scorePct,
+        status,
+        statusLabel,
+        color,
+        barBg,
+      };
+    });
+  }, [result, attempt]);
 
   // If stats aren't provided (e.g. when fetching a past attempt), compute them from answers
   let stats = result?.stats || {};
@@ -296,69 +384,107 @@ export default function TestResultSummary({ result, onViewSolutions, testId }) {
         </div>
       )}
 
-      {/* Advanced Analytics (Rank, Percentile, Strong/Weak) */}
-      <div className="grid sm:grid-cols-2 gap-4 mb-8">
-        {(hasRank || hasPercentile) && (
-          <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 flex flex-col justify-center gap-6 shadow-sm">
-            {hasRank && (
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">
-                  Your Rank
-                </div>
-                <div className="text-2xl font-extrabold text-dark-900 dark:text-white bg-slate-100 dark:bg-dark-800 px-3 py-1 rounded-lg">
-                  #{rank}
-                </div>
+      {/* Rank & Percentile */}
+      {(hasRank || hasPercentile) && (
+        <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 flex flex-col sm:flex-row items-center justify-around gap-6 shadow-sm mb-6">
+          {hasRank && (
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">
+                Your Rank
               </div>
-            )}
-            {hasPercentile && (
-              <div className="flex items-center justify-between border-t border-slate-100 dark:border-dark-800 pt-6">
-                <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">
-                  Percentile
-                </div>
-                <div className="text-2xl font-extrabold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg">
-                  {percentile}%
-                </div>
+              <div className="text-2xl font-extrabold text-dark-900 dark:text-white bg-slate-100 dark:bg-dark-800 px-3 py-1 rounded-lg">
+                #{rank}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+          {hasPercentile && (
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">
+                Percentile
+              </div>
+              <div className="text-2xl font-extrabold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg">
+                {percentile}%
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* Mock Topic Analysis */}
-        <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-6 shadow-sm flex-1">
-          <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-dark-800 pb-2">
-            Topic Analysis
-          </h3>
-          <div className="space-y-4">
+      {/* Real Topic & Subject Area Analysis */}
+      {topicAnalysis && topicAnalysis.length > 0 && (
+        <div className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 p-6 sm:p-7 shadow-sm mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5 pb-3 border-b border-slate-100 dark:border-dark-800">
             <div>
-              <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                <span className="text-green-600">Strong Area: Indian Polity</span>
-                <span className="text-slate-600">85%</span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-[85%] rounded-full"></div>
-              </div>
+              <h3 className="text-base font-extrabold text-dark-900 dark:text-white flex items-center gap-2">
+                <span>📊 Topic & Subject Area Analysis</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Real performance breakdown based on questions attempted in each area.
+              </p>
             </div>
-            <div>
-              <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                <span className="text-orange-500">Average: Current Affairs</span>
-                <span className="text-slate-600">60%</span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-400 w-[60%] rounded-full"></div>
-              </div>
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Strong (≥70%)
+              </span>
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                <span className="h-2 w-2 rounded-full bg-amber-500"></span> Moderate (40-69%)
+              </span>
+              <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+                <span className="h-2 w-2 rounded-full bg-rose-500"></span> Weak (&lt;40%)
+              </span>
             </div>
-            <div>
-              <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                <span className="text-red-500">Weak Area: Rajasthan Geography</span>
-                <span className="text-slate-600">30%</span>
+          </div>
+
+          <div className="space-y-5">
+            {topicAnalysis.map((item) => (
+              <div
+                key={item.name}
+                className="bg-slate-50 dark:bg-dark-950/60 p-4 rounded-2xl border border-slate-100 dark:border-dark-800"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                        item.status === 'strong'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          : item.status === 'moderate'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                      }`}
+                    >
+                      {item.statusLabel}
+                    </span>
+                    <h4 className="font-bold text-sm text-dark-900 dark:text-white">{item.name}</h4>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    <span>
+                      {item.correct}/{item.total} Correct
+                    </span>
+                    {item.incorrect > 0 && (
+                      <span className="text-rose-500">({item.incorrect} Wrong)</span>
+                    )}
+                    {item.skipped > 0 && (
+                      <span className="text-slate-400">({item.skipped} Skipped)</span>
+                    )}
+                    <span className={`font-black text-sm ${item.color}`}>
+                      {item.accuracy}% Accuracy
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="h-2.5 w-full bg-slate-200 dark:bg-dark-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${item.barBg} rounded-full transition-all duration-500`}
+                    style={{ width: `${Math.max(5, item.accuracy)}%` }}
+                  ></div>
+                </div>
               </div>
-              <div className="h-2 w-full bg-slate-100 dark:bg-dark-800 rounded-full overflow-hidden">
-                <div className="h-full bg-red-500 w-[30%] rounded-full"></div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Actions */}
       <div className="flex flex-wrap items-center justify-center gap-3">

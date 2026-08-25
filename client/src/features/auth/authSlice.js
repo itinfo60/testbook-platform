@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { authAPI } from '@/services/api';
+import api, { authAPI } from '@/services/api';
+import supabase from '@/services/supabase';
 
 const getStoredAuth = () => {
   try {
@@ -23,6 +24,30 @@ const extractAuthData = (data) => {
     refreshToken: payload.refreshToken || payload.refresh_token || null,
   };
 };
+
+export const loginWithSupabase = createAsyncThunk(
+  'auth/loginWithSupabase',
+  async ({ accessToken }, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/supabase-login', { accessToken });
+      const { user, token, refreshToken } = extractAuthData(response.data);
+
+      if (!token) {
+        return rejectWithValue('Authentication failed: No token returned from server.');
+      }
+
+      localStorage.setItem('token', token);
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      if (user) localStorage.setItem('user', JSON.stringify(user));
+
+      return { user, token, accessToken: token, refreshToken };
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || err.message || 'Supabase authentication failed'
+      );
+    }
+  }
+);
 
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
@@ -197,6 +222,23 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(loginWithSupabase.pending, (s) => {
+        s.loading = true;
+        s.error = null;
+      })
+      .addCase(loginWithSupabase.fulfilled, (s, a) => {
+        s.loading = false;
+        s.isAuthenticated = true;
+        s.initialized = true;
+        s.user = a.payload.user;
+        s.token = a.payload.accessToken || a.payload.token;
+        s.refreshToken = a.payload.refreshToken;
+      })
+      .addCase(loginWithSupabase.rejected, (s, a) => {
+        s.loading = false;
+        s.initialized = true;
+        s.error = a.payload;
+      })
       .addCase(login.pending, (s) => {
         s.loading = true;
         s.error = null;

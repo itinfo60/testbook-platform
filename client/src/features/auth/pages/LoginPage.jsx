@@ -5,8 +5,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { HiMail, HiLockClosed, HiExclamationCircle } from 'react-icons/hi';
-import { login, verifyMfaLogin } from '@/features/auth/authSlice';
+import { login, verifyMfaLogin, loginWithSupabase } from '@/features/auth/authSlice';
 import { Button } from '@/components/ui';
+import { authAPI } from '@/services/api';
+import supabase from '@/services/supabase';
+import toast from 'react-hot-toast';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -24,17 +27,138 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState('');
   const [requiresMfa, setRequiresMfa] = useState(false);
   const [mfaUserId, setMfaUserId] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
     setValue,
   } = useForm({ resolver: zodResolver(loginSchema) });
 
+  const handleResendVerification = async () => {
+    const emailVal = getValues('email') || '';
+    if (!emailVal || !emailVal.includes('@')) {
+      toast.error('Please enter your email in the field above to resend the link');
+      return;
+    }
+    if (resendCooldown > 0 || resendLoading) return;
+
+    setResendLoading(true);
+    try {
+      // 1. Supabase resend
+      await supabase.auth.resend({
+        type: 'signup',
+        email: emailVal.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+
+      // 2. Also trigger backend resend
+      await authAPI.resendVerification(emailVal.trim()).catch(() => {});
+
+      toast.success('Verification link resent! Please check your email inbox.');
+      setResendCooldown(60);
+      const interval = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend verification link');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (isAuthenticated) navigate(from, { replace: true });
-  }, [isAuthenticated, navigate, from]);
+    // Check URL search params for OAuth errors
+    const params = new URLSearchParams(window.location.search);
+    const errorDesc = params.get('error_description') || params.get('error');
+    if (errorDesc) {
+      setServerError(decodeURIComponent(errorDesc).replace(/\+/g, ' '));
+    }
+
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+      return;
+    }
+
+    let isHandled = false;
+    const processToken = async (accessToken) => {
+      if (!accessToken || isHandled) return;
+      isHandled = true;
+      setGoogleLoading(true);
+      try {
+        const result = await dispatch(loginWithSupabase({ accessToken }));
+        if (loginWithSupabase.fulfilled.match(result)) {
+          // Clean URL hash
+          window.history.replaceState(null, '', window.location.pathname);
+          navigate(from, { replace: true });
+        } else {
+          setServerError(result.payload || 'Failed to complete login');
+          setGoogleLoading(false);
+        }
+      } catch (err) {
+        setServerError('Authentication error occurred');
+        setGoogleLoading(false);
+      }
+    };
+
+    // 1. Check direct URL hash immediately
+    if (window.location.hash && window.location.hash.includes('access_token=')) {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const token = hashParams.get('access_token');
+      if (token) {
+        processToken(token);
+      }
+    }
+
+    // 2. Check Supabase existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) {
+        processToken(session.access_token);
+      }
+    });
+
+    // 3. Listen to Supabase auth state changes (e.g. SIGNED_IN after hash parsed)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.access_token && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        processToken(session.access_token);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [isAuthenticated, navigate, from, dispatch]);
+
+  const handleGoogleLogin = async () => {
+    setServerError('');
+    setGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/login`,
+        },
+      });
+      if (error) throw error;
+    } catch (err) {
+      setServerError(err.message || 'Failed to sign in with Google');
+      setGoogleLoading(false);
+    }
+  };
 
   const onSubmit = async (data) => {
     setServerError('');
@@ -47,6 +171,40 @@ export default function LoginPage() {
       return;
     }
 
+    // 1. Check with Supabase Auth
+    try {
+      const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
+        email: data.email.trim(),
+        password: data.password,
+      });
+
+      if (sbError) {
+        const msg = (sbError.message || '').toLowerCase();
+        if (msg.includes('email not confirmed') || msg.includes('not confirmed')) {
+          setServerError(
+            'Please verify your email address before logging in. Check your inbox for the verification link.'
+          );
+          return;
+        }
+      }
+
+      if (sbData?.session?.access_token) {
+        const result = await dispatch(
+          loginWithSupabase({ accessToken: sbData.session.access_token })
+        );
+        if (loginWithSupabase.fulfilled.match(result)) {
+          navigate(from, { replace: true });
+          return;
+        } else {
+          setServerError(result.payload || 'Login failed');
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase sign-in exception:', err);
+    }
+
+    // 2. Fallback to platform login (which also enforces isEmailVerified)
     const result = await dispatch(login(data));
     if (login.rejected.match(result)) {
       setServerError(result.payload || 'Invalid email or password');
@@ -65,9 +223,11 @@ export default function LoginPage() {
         <p className="text-slate-500 mt-2 font-medium">Sign in to continue learning</p>
       </div>
 
-      <a
-        href={`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/google`}
-        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-premium rounded-xl text-sm font-medium transition-all duration-300 mb-6 group"
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        disabled={googleLoading || isSubmitting}
+        className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-premium rounded-xl text-sm font-medium transition-all duration-300 mb-6 group cursor-pointer disabled:opacity-60"
       >
         <svg
           viewBox="0 0 24 24"
@@ -95,8 +255,10 @@ export default function LoginPage() {
             />
           </g>
         </svg>
-        <span className="text-slate-900 dark:text-slate-50 font-medium">Continue with Google</span>
-      </a>
+        <span className="text-slate-900 dark:text-slate-50 font-medium">
+          {googleLoading ? 'Connecting with Google...' : 'Continue with Google'}
+        </span>
+      </button>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
@@ -161,9 +323,25 @@ export default function LoginPage() {
         )}
 
         {serverError && (
-          <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2.5">
-            <HiExclamationCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700 dark:text-red-400">{serverError}</p>
+          <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <HiExclamationCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 dark:text-red-400">{serverError}</p>
+            </div>
+            {serverError.toLowerCase().includes('verify') && (
+              <div className="pt-1 pl-7">
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendLoading || resendCooldown > 0}
+                  className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  {resendCooldown > 0
+                    ? `Resend link available in ${resendCooldown}s`
+                    : '👉 Resend Verification Email'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

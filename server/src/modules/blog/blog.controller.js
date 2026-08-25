@@ -23,13 +23,12 @@ export const getBlogs = catchAsync(async (req, res) => {
   }
   if (req.query.status) {
     where.status = req.query.status;
-  }
-  if (req.query.type) {
-    where.type = req.query.type;
+  } else if (req.user?.role !== 'admin' && req.user?.role !== 'teacher') {
+    where.status = 'published';
   }
 
-  if (req.user?.role !== 'admin') {
-    where.status = 'published';
+  if (req.query.type) {
+    where.type = req.query.type;
   }
 
   const sortMap = {
@@ -63,21 +62,110 @@ export const getBlogBySlug = catchAsync(async (req, res) => {
   const { slug } = req.params;
 
   const blog = await prisma.blog.findFirst({
-    where: { slug },
+    where: {
+      OR: [{ slug }, { id: slug }],
+    },
   });
 
   if (!blog) {
     throw ApiError.notFound('Blog post not found');
   }
 
-  if (blog.status !== 'published' && req.user?.role !== 'admin') {
+  if (blog.status !== 'published' && req.user?.role !== 'admin' && req.user?.role !== 'teacher') {
     throw ApiError.forbidden('This blog post is not yet published');
   }
 
-  ApiResponse.ok(res, { blog });
+  // Increment views count in database
+  const updatedBlog = await prisma.blog
+    .update({
+      where: { id: blog.id },
+      data: { views: { increment: 1 } },
+    })
+    .catch(() => blog);
+
+  // If blog has attached resourceIds, fetch them from Library
+  let attachedResources = [];
+  const resourceIds = blog.resourceIds || blog.resources || [];
+  if (Array.isArray(resourceIds) && resourceIds.length > 0) {
+    const validIds = resourceIds.filter((id) => typeof id === 'string');
+    if (validIds.length > 0) {
+      attachedResources = await prisma.library.findMany({
+        where: { id: { in: validIds } },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          url: true,
+          fileData: true,
+          accessLevel: true,
+          downloadsCount: true,
+        },
+      });
+    }
+  }
+
+  // Also include exam category info if examCategory is present
+  let categoryInfo = null;
+  if (blog.examCategory) {
+    categoryInfo = await prisma.category.findFirst({
+      where: {
+        OR: [{ id: blog.examCategory }, { slug: blog.examCategory }],
+      },
+      select: { id: true, name: true, slug: true, icon: true },
+    });
+  }
+
+  ApiResponse.ok(res, {
+    blog: {
+      ...updatedBlog,
+      attachedResources,
+      categoryInfo,
+    },
+  });
 });
 
 // ===== ADMIN =====
+
+function sanitizeBlogData(body, slug) {
+  const {
+    title,
+    content,
+    excerpt,
+    status,
+    type,
+    tags,
+    coverImage,
+    thumbnail,
+    examCategory,
+    jobAlert,
+    resourceIds,
+    resources,
+    tenantId,
+  } = body;
+
+  const resolvedResourceIds = Array.isArray(resourceIds)
+    ? resourceIds
+    : Array.isArray(resources)
+      ? resources.map((r) => (typeof r === 'string' ? r : r.id || r._id)).filter(Boolean)
+      : [];
+
+  return {
+    title,
+    slug,
+    content,
+    excerpt: excerpt || null,
+    status: status || 'draft',
+    type: type || 'article',
+    tags: Array.isArray(tags) ? tags : [],
+    coverImage: coverImage || thumbnail || null,
+    thumbnail: thumbnail || coverImage || null,
+    examCategory: examCategory || null,
+    jobAlert: jobAlert || null,
+    resourceIds: resolvedResourceIds,
+    ...(tenantId ? { tenantId } : {}),
+  };
+}
 
 export const createBlog = catchAsync(async (req, res) => {
   const { title } = req.body;
@@ -91,10 +179,7 @@ export const createBlog = catchAsync(async (req, res) => {
   }
 
   const blog = await prisma.blog.create({
-    data: {
-      ...req.body,
-      slug,
-    },
+    data: sanitizeBlogData(req.body, slug),
   });
 
   ApiResponse.created(res, { blog }, 'Blog post created successfully');
@@ -107,17 +192,14 @@ export const updateBlog = catchAsync(async (req, res) => {
     throw ApiError.notFound('Blog post not found');
   }
 
-  let slug = req.body.slug;
+  let slug = req.body.slug || existing.slug;
   if (req.body.title && req.body.title !== existing.title && !req.body.slug) {
     slug = generateSlug(req.body.title);
   }
 
   const blog = await prisma.blog.update({
     where: { id: req.params.id },
-    data: {
-      ...req.body,
-      ...(slug && { slug }),
-    },
+    data: sanitizeBlogData(req.body, slug),
   });
 
   ApiResponse.ok(res, { blog }, 'Blog post updated successfully');

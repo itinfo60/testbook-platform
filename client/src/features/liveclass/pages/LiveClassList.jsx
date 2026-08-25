@@ -19,12 +19,19 @@ export default function LiveClassList() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchClasses = () => {
     api
       .get('/live-classes/upcoming')
       .then(({ data }) => setClasses(data.data?.classes || []))
-      .catch(() => toast.error('Failed to load classes'))
+      .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchClasses();
+    // Poll every 15s to catch real-time status transitions
+    const timer = setInterval(fetchClasses, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   if (loading) return <LoadingSpinner />;
@@ -50,52 +57,69 @@ export default function LiveClassList() {
         </div>
       ) : (
         <div className="space-y-4">
-          {classes.map((cls) => (
-            <div
-              key={cls.id || cls._id}
-              className="bg-white dark:bg-dark-800 rounded-2xl border border-slate-100 dark:border-dark-700 p-5 flex items-center gap-4"
-            >
+          {classes.map((cls) => {
+            const isLive = cls.status === 'live';
+            const teacherName = cls.teacherName || cls.teacher?.name;
+            return (
               <div
-                className={`flex-shrink-0 h-12 w-12 rounded-2xl flex items-center justify-center ${cls.status === 'live' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-slate-100 dark:bg-dark-700'}`}
+                key={cls.id || cls._id}
+                className="bg-white dark:bg-dark-800 rounded-2xl border border-slate-100 dark:border-dark-700 p-5 flex items-center gap-4 transition-all hover:border-slate-300 dark:hover:border-dark-600"
               >
-                <HiVideoCamera
-                  className={`h-6 w-6 ${cls.status === 'live' ? 'text-red-500' : 'text-slate-400'}`}
-                />
-              </div>
+                <div
+                  className={`flex-shrink-0 h-12 w-12 rounded-2xl flex items-center justify-center ${
+                    isLive ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-50 dark:bg-blue-900/20'
+                  }`}
+                >
+                  <HiVideoCamera
+                    className={`h-6 w-6 ${isLive ? 'text-red-500 animate-pulse' : 'text-blue-500'}`}
+                  />
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-slate-900 dark:text-white text-sm truncate">
-                    {cls.title}
-                  </h3>
-                  {cls.status === 'live' && (
-                    <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> LIVE
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                      {cls.title}
+                    </h3>
+                    {isLive ? (
+                      <span className="flex-shrink-0 px-2.5 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-red-500/20">
+                        <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> LIVE
+                      </span>
+                    ) : (
+                      <span className="flex-shrink-0 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                        Scheduled
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <HiClock className="h-3.5 w-3.5" /> {formatDate(cls.scheduledAt)}
                     </span>
+                    <span className="flex items-center gap-1">
+                      <HiUsers className="h-3.5 w-3.5" />{' '}
+                      {cls.durationMinutes || cls.duration || 60} min
+                    </span>
+                    {teacherName && <span>by {teacherName}</span>}
+                  </div>
+                  {cls.course && (
+                    <p className="text-xs text-primary-500 mt-0.5">
+                      {cls.course.title || cls.course}
+                    </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <HiClock className="h-3.5 w-3.5" /> {formatDate(cls.scheduledAt)}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <HiUsers className="h-3.5 w-3.5" /> {cls.durationMinutes} min
-                  </span>
-                  {cls.teacher && <span>by {cls.teacher.name}</span>}
-                </div>
-                {cls.course && (
-                  <p className="text-xs text-primary-500 mt-0.5">{cls.course.title}</p>
-                )}
-              </div>
 
-              <Link
-                to={`/live-classes/${cls._id}/room`}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${cls.status === 'live' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-600'}`}
-              >
-                {cls.status === 'live' ? 'Join Now' : 'View'}
-              </Link>
-            </div>
-          ))}
+                <Link
+                  to={`/live-classes/${cls.id || cls._id}/room`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm ${
+                    isLive
+                      ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
+                      : 'bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-600'
+                  }`}
+                >
+                  {isLive ? 'Join Now →' : 'Enter Waiting Room'}
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

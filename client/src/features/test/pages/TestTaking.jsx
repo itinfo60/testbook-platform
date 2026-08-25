@@ -64,7 +64,7 @@ export default function TestTaking() {
   const duration = attempt?.duration || 60;
   const isTestActive = !!attempt && !result;
 
-  const attemptId = attempt?.attempt?._id || attempt?._id;
+  const attemptId = attempt?.attempt?.id || attempt?.attempt?._id || attempt?.id || attempt?._id;
   const startTime = attempt?.attempt?.startedAt || attempt?.startedAt;
   const testTitle = attempt?.title || attempt?.test?.title || 'Test';
 

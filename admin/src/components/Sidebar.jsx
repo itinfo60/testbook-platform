@@ -7,6 +7,7 @@ import {
   GraduationCap,
   FolderOpen,
   Trophy,
+  BookmarkCheck,
   BookOpen,
   ClipboardList,
   FileText,
@@ -33,8 +34,8 @@ const navSections = [
     title: '2. Analytics & Revenue',
     items: [
       { label: 'Revenue Analytics', path: '/revenue', icon: TrendingUp },
-      { label: 'Orders & Payments', path: '/payments', icon: CreditCard },
-      { label: 'Enrollments', path: '/enrollments', icon: BookOpen },
+      { label: 'Payments', path: '/payments', icon: CreditCard },
+      { label: 'Enrollments', path: '/enrollments', icon: GraduationCap },
     ],
   },
   {
@@ -49,6 +50,7 @@ const navSections = [
     items: [
       { label: 'Categories', path: '/categories', icon: FolderOpen },
       { label: 'Exams', path: '/exam-categories', icon: Trophy },
+      { label: 'Resource Categories', path: '/resource-categories', icon: BookmarkCheck },
     ],
   },
   {

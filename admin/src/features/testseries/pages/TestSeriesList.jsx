@@ -16,15 +16,24 @@ export default function TestSeriesList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'published' | 'draft'
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const debouncedSearch = useDebounce(search);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit: 10, search: debouncedSearch };
-      if (statusFilter === 'published') params.isPublished = true;
-      else if (statusFilter === 'draft') params.isPublished = false;
+      const params = {
+        page,
+        limit: 10,
+        search: debouncedSearch || undefined,
+        sort: sortField,
+        order: sortOrder,
+      };
+      if (statusFilter === 'published') params.isPublished = 'true';
+      else if (statusFilter === 'draft') params.isPublished = 'false';
+      else params.isPublished = 'all';
 
       const res = await testSeriesAPI.getAll(params);
       const data = res.data?.data || res.data || {};
@@ -35,11 +44,20 @@ export default function TestSeriesList() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, statusFilter]);
+  }, [page, debouncedSearch, statusFilter, sortField, sortOrder]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -96,12 +114,14 @@ export default function TestSeriesList() {
     {
       key: 'price',
       label: 'Price',
+      sortable: true,
       render: (val) =>
         val > 0 ? `₹${val}` : <span className="text-emerald-600 font-semibold">Free</span>,
     },
     {
       key: 'isPublished',
       label: 'Status',
+      sortable: true,
       render: (val) => (
         <span className={val ? 'badge-success' : 'badge-gray'}>{val ? 'Live' : 'Draft'}</span>
       ),
@@ -109,11 +129,31 @@ export default function TestSeriesList() {
     {
       key: 'enrollmentCount',
       label: 'Enrolled',
-      render: (val) => val || 0,
+      sortable: true,
+      render: (val, row) => {
+        const count =
+          row.enrollmentCount ||
+          row.enrollmentsCount ||
+          row._count?.enrollments ||
+          row.totalEnrollments ||
+          0;
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+              count > 0
+                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                : 'text-gray-400 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            {count} {count === 1 ? 'Student' : 'Students'}
+          </span>
+        );
+      },
     },
     {
       key: 'createdAt',
       label: 'Created',
+      sortable: true,
       render: (val) => formatDate(val),
     },
   ];
@@ -162,6 +202,9 @@ export default function TestSeriesList() {
         loading={loading}
         pagination={pagination}
         onPageChange={setPage}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         searchable
         searchValue={search}
         onSearch={(val) => {

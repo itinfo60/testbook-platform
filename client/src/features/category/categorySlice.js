@@ -8,8 +8,10 @@ export const fetchExamCategories = createAsyncThunk(
     try {
       const { data } = await api.get('/categories', { params: { type: 'category' } });
       const raw = data?.data;
-      // public endpoint: { categories: [...], allCategories: [...] }
-      const list = Array.isArray(raw) ? raw : raw?.allCategories || raw?.categories || [];
+      // Use categories (which has the root categories with populated subcategories)
+      const list = Array.isArray(raw)
+        ? raw
+        : raw?.categories || raw?.allCategories || data?.categories || [];
       return list;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed');

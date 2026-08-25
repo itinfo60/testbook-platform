@@ -76,7 +76,7 @@ export default function JourneyHero() {
                 style={{
                   display: 'flex',
                   width: 'max-content',
-                  animation: 'marqueeContinuous 45s linear infinite',
+                  animation: 'marqueeContinuous 160s linear infinite',
                   willChange: 'transform',
                 }}
               >
@@ -116,41 +116,56 @@ export default function JourneyHero() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-8 gap-y-3.5 text-xs sm:text-sm font-bold text-navy-700">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm font-bold text-navy-700">
             <Link
               to="/exams"
-              className="whitespace-nowrap flex items-center gap-2 hover:text-accent-600 transition-colors py-1 group"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 hover:bg-white border border-slate-200/80 hover:border-rose-300 shadow-sm hover:shadow transition-all group cursor-pointer"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500 ring-4 ring-rose-100/80 group-hover:scale-110 transition-transform"></span>{' '}
-              Explore Exams
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500 ring-4 ring-rose-100/80 group-hover:scale-110 transition-transform"></span>
+              <span>Explore Exams</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-50 text-rose-700 border border-rose-200/60">
+                {examChips.length > 0 ? `${examChips.length}+` : '20+'}
+              </span>
             </Link>
             <Link
               to="/courses"
-              className="whitespace-nowrap flex items-center gap-2 hover:text-accent-600 transition-colors py-1 group"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 hover:bg-white border border-slate-200/80 hover:border-blue-300 shadow-sm hover:shadow transition-all group cursor-pointer"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-blue-100/80 group-hover:scale-110 transition-transform"></span>{' '}
-              Premium Courses
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-blue-100/80 group-hover:scale-110 transition-transform"></span>
+              <span>Premium Courses</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200/60">
+                45+
+              </span>
             </Link>
             <Link
               to="/tests"
-              className="whitespace-nowrap flex items-center gap-2 hover:text-accent-600 transition-colors py-1 group"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 hover:bg-white border border-slate-200/80 hover:border-purple-300 shadow-sm hover:shadow transition-all group cursor-pointer"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-purple-500 ring-4 ring-purple-100/80 group-hover:scale-110 transition-transform"></span>{' '}
-              Mock Test Series
+              <span className="h-2.5 w-2.5 rounded-full bg-purple-500 ring-4 ring-purple-100/80 group-hover:scale-110 transition-transform"></span>
+              <span>Mock Test Series</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-purple-50 text-purple-700 border border-purple-200/60">
+                120+
+              </span>
             </Link>
             <Link
               to="/daily-quiz"
-              className="whitespace-nowrap flex items-center gap-2 hover:text-accent-600 transition-colors py-1 group"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 hover:bg-white border border-slate-200/80 hover:border-amber-300 shadow-sm hover:shadow transition-all group cursor-pointer"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 ring-4 ring-amber-100/80 group-hover:scale-110 transition-transform"></span>{' '}
-              Daily Quizzes
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 ring-4 ring-amber-100/80 group-hover:scale-110 transition-transform"></span>
+              <span>Daily Quizzes</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-50 text-amber-700 border border-amber-200/60">
+                Live
+              </span>
             </Link>
             <Link
-              to="/blog"
-              className="whitespace-nowrap flex items-center gap-2 hover:text-accent-600 transition-colors py-1 group"
+              to="/free-resources"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 hover:bg-white border border-slate-200/80 hover:border-emerald-300 shadow-sm hover:shadow transition-all group cursor-pointer"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100/80 group-hover:scale-110 transition-transform"></span>{' '}
-              Updates &amp; Free Resources
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100/80 group-hover:scale-110 transition-transform"></span>
+              <span>Updates &amp; Free Resources</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                Free
+              </span>
             </Link>
           </div>
         </div>

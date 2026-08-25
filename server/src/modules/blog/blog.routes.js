@@ -26,6 +26,13 @@ router.patch(
   validate(blogSchemas.update),
   blogController.updateBlog
 );
+router.put(
+  '/:id',
+  authenticate,
+  authorize('admin', 'teacher'),
+  validate(blogSchemas.update),
+  blogController.updateBlog
+);
 router.delete('/:id', authenticate, authorize('admin', 'teacher'), blogController.deleteBlog);
 
 export default router;

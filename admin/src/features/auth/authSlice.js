@@ -1,10 +1,36 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { authAPI } from '@/services/api';
+import api, { authAPI } from '@/services/api';
 import toast from 'react-hot-toast';
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'superadmin'];
 
 const isAdminRole = (role) => ADMIN_ROLES.includes((role || '').toLowerCase().trim());
+
+export const loginWithSupabase = createAsyncThunk(
+  'auth/loginWithSupabase',
+  async ({ accessToken }, { rejectWithValue }) => {
+    try {
+      const res = await api.post('/auth/supabase-login', { accessToken });
+
+      const data = res.data.data || res.data;
+      const user = data.user || data;
+      const token = data.accessToken || data.token;
+      const refreshToken = data.refreshToken;
+
+      if (!isAdminRole(user?.role)) {
+        return rejectWithValue({ message: `Access denied. Role "${user?.role}" is not admin.` });
+      }
+
+      if (token) localStorage.setItem('adminToken', token);
+      if (refreshToken) localStorage.setItem('adminRefreshToken', refreshToken);
+      if (user?.tenantId) localStorage.setItem('adminTenantId', user.tenantId);
+
+      return user;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
 
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
@@ -93,6 +119,24 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(loginWithSupabase.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginWithSupabase.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload;
+        state.initialized = true;
+        toast.success('Welcome back!');
+      })
+      .addCase(loginWithSupabase.rejected, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.initialized = true;
+        state.error = action.payload?.message || 'Supabase authentication failed';
+        toast.error(state.error);
+      })
       .addCase(login.pending, (state) => {
         state.loading = true;
         state.error = null;

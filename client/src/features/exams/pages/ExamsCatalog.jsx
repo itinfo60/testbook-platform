@@ -1,5 +1,5 @@
 import SeoHead from '@/components/SeoHead';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   HiAcademicCap,
@@ -19,6 +19,7 @@ export default function ExamsCatalog() {
   const navigate = useNavigate();
   const location = useLocation();
   const [categories, setCategories] = useState([]);
+  const [allParentCategories, setAllParentCategories] = useState([]);
   const [featuredCourses, setFeaturedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,19 +31,31 @@ export default function ExamsCatalog() {
       try {
         setLoading(true);
         const [catRes, courseRes] = await Promise.all([
-          api.get('/categories', { params: { type: 'exam' } }),
+          api.get('/categories'),
           api
             .get('/courses', { params: { limit: 8, isPublished: true } })
             .catch(() => ({ data: { data: [] } })),
         ]);
 
-        const catData =
-          catRes.data?.categories ||
+        const allCatsRaw =
+          catRes.data?.data?.allCategories ||
+          catRes.data?.allCategories ||
           catRes.data?.data?.categories ||
+          catRes.data?.categories ||
           catRes.data?.data ||
           catRes.data ||
           [];
-        setCategories(Array.isArray(catData) ? catData : []);
+        const rawList = Array.isArray(allCatsRaw) ? allCatsRaw : [];
+
+        // Parent root categories (parentId === null or type === 'category') are for grouping/tabs
+        const parentCats = rawList.filter((c) => !c.parentId && c.type !== 'resource');
+        // All exams & sub-exams (items that have a parentId or type === 'exam')
+        const examList = rawList.filter(
+          (c) => (c.parentId || c.type === 'exam') && c.type !== 'resource'
+        );
+
+        setAllParentCategories(parentCats);
+        setCategories(examList);
 
         const courseData =
           courseRes.data?.data?.courses || courseRes.data?.courses || courseRes.data?.data || [];
@@ -60,44 +73,72 @@ export default function ExamsCatalog() {
     const params = new URLSearchParams(location.search);
     const categoryParam = params.get('category');
     if (categoryParam) {
-      if (categoryParam === 'rajasthan' || categoryParam === 'rajasthan-exams') {
-        setSelectedGroup('rajasthan');
-      } else if (
-        categoryParam === 'political_science' ||
-        categoryParam === 'political-science' ||
-        categoryParam === 'pol-sci'
-      ) {
-        setSelectedGroup('political_science');
-      }
+      setSelectedGroup(categoryParam);
     } else if (location.state?.filterGroup) {
       setSelectedGroup(location.state.filterGroup);
       window.history.replaceState({}, document.title);
     }
   }, [location.search, location.state]);
 
-  // Use the categories list directly — the API already returns all exam records flat.
-  // No need to flatten subcategories; each exam is its own item.
-  const filteredExams = categories.filter((exam) => {
-    return (
-      !search ||
-      exam.name?.toLowerCase().includes(search.toLowerCase()) ||
-      exam.description?.toLowerCase().includes(search.toLowerCase())
-    );
-  });
+  // Filter exams by search term
+  const searchedExams = useMemo(() => {
+    return categories.filter((exam) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return exam.name?.toLowerCase().includes(q) || exam.description?.toLowerCase().includes(q);
+    });
+  }, [categories, search]);
 
-  // Group by slug patterns (client-side classification until tags/groups are added)
-  const rajasthanExams = filteredExams.filter((exam) => {
-    const slug = exam.slug || '';
-    const name = exam.name?.toLowerCase() || '';
-    return (
-      name.includes('rajasthan') ||
-      ['ras', 'rpsc', 'rsmssb', 'patwari', 'vdo', 'rajasthan-cet'].some(
-        (s) => slug.includes(s) || name.includes(s)
-      )
-    );
-  });
+  // Build dynamic parent groups from actual backend parent categories
+  const dynamicGroups = useMemo(() => {
+    // Map parent categories and their matching exams (including recursively nested sub-exams)
+    const getDescendantExamIds = (parentId, list) => {
+      const directSubs = list.filter(
+        (e) => e.parentId === parentId || e.parent?.id === parentId || e.parent?._id === parentId
+      );
+      let ids = directSubs.map((e) => e.id || e._id);
+      directSubs.forEach((sub) => {
+        ids = ids.concat(getDescendantExamIds(sub.id || sub._id, list));
+      });
+      return ids;
+    };
 
-  const polSciExams = filteredExams.filter((exam) => !rajasthanExams.includes(exam));
+    return allParentCategories.map((parent) => {
+      const parentId = parent.id || parent._id;
+      const descendantIds = getDescendantExamIds(parentId, categories);
+
+      const examsUnderParent = searchedExams.filter((exam) => {
+        const examId = exam.id || exam._id;
+        return (
+          exam.parentId === parentId ||
+          exam.parent?.id === parentId ||
+          exam.parent?._id === parentId ||
+          descendantIds.includes(examId)
+        );
+      });
+
+      return {
+        id: parent.slug || parentId,
+        rawId: parentId,
+        name: parent.name,
+        icon: parent.icon || '🎯',
+        exams: examsUnderParent,
+      };
+    });
+  }, [allParentCategories, searchedExams, categories]);
+
+  // Tabs for switching between groups
+  const filterTabs = useMemo(() => {
+    const tabs = [{ id: 'all', label: 'All Exams', count: searchedExams.length }];
+    dynamicGroups.forEach((g) => {
+      tabs.push({
+        id: g.id,
+        label: `${g.icon ? g.icon + ' ' : ''}${g.name}`,
+        count: g.exams.length,
+      });
+    });
+    return tabs;
+  }, [dynamicGroups, searchedExams.length]);
 
   const renderCategoryCard = (cat) => (
     <div
@@ -128,15 +169,17 @@ export default function ExamsCatalog() {
       <div>
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 mb-4 gap-2">
           <span className="flex items-center gap-1">
-            <HiBookOpen className="h-4 w-4 text-blue-500" /> {cat.courseCount || 0} Courses
+            <HiBookOpen className="h-4 w-4 text-blue-500" />{' '}
+            {cat.courseCount || cat.coursesCount || 0} Courses
           </span>
           <span className="flex items-center gap-1">
-            <HiClipboardList className="h-4 w-4 text-amber-500" /> {cat.testCount || 0} Tests
+            <HiClipboardList className="h-4 w-4 text-amber-500" />{' '}
+            {cat.testCount || cat.testsCount || 0} Tests
           </span>
         </div>
 
         <button
-          onClick={() => navigate(`/exams/${cat.slug || cat._id}`)}
+          onClick={() => navigate(`/exams/${cat.slug || cat._id || cat.id}`)}
           className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
         >
           <span>View Exam Hub</span>
@@ -149,8 +192,8 @@ export default function ExamsCatalog() {
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-screen py-10 px-4 sm:px-6 lg:px-8 text-slate-900 dark:text-slate-100">
       <SeoHead
-        title="Explore Exams — RPSC, RAS, RJS, Political Science"
-        description="Browse all competitive exams. Access syllabus, PYQs, mock tests, and specialized courses for RPSC, RAS, RJS, and Political Science."
+        title="Explore Exams — Competitive Exam Hubs"
+        description="Browse all competitive exams. Access syllabus, PYQs, mock tests, and specialized courses for your target exam."
       />
       <div className="max-w-7xl mx-auto">
         {/* Header Banner */}
@@ -174,26 +217,24 @@ export default function ExamsCatalog() {
           </div>
         </div>
 
-        {/* Group Filter Tabs */}
-        <div className="flex justify-center gap-2 mb-10 overflow-x-auto pb-2">
-          {[
-            { id: 'all', label: 'All Exams' },
-            { id: 'rajasthan', label: '🟢 Rajasthan Specific' },
-            { id: 'political_science', label: '🔵 Political Science Special' },
-          ].map((group) => (
-            <button
-              key={group.id}
-              onClick={() => setSelectedGroup(group.id)}
-              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                selectedGroup === group.id
-                  ? 'bg-amber-800 text-white shadow-lg shadow-amber-500/30'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              {group.label}
-            </button>
-          ))}
-        </div>
+        {/* Group Filter Tabs (Loaded dynamically from backend categories) */}
+        {!loading && filterTabs.length > 1 && (
+          <div className="flex justify-center gap-2 mb-10 overflow-x-auto pb-2 flex-wrap">
+            {filterTabs.map((group) => (
+              <button
+                key={group.id}
+                onClick={() => setSelectedGroup(group.id)}
+                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  selectedGroup === group.id
+                    ? 'bg-amber-800 text-white shadow-lg shadow-amber-500/30'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {group.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Loading / Error States */}
         {loading && (
@@ -204,58 +245,54 @@ export default function ExamsCatalog() {
 
         {error && <div className="text-center py-20 text-red-500 font-semibold">{error}</div>}
 
-        {!loading && !error && filteredExams.length === 0 && (
+        {!loading && !error && searchedExams.length === 0 && (
           <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
             <div className="text-5xl mb-4">🔍</div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
               No exams found
             </h3>
             <p className="text-slate-600 dark:text-slate-400">
-              No categories matching your search query.
+              No exam categories matching your search query.
             </p>
           </div>
         )}
 
-        {/* Exams Content Sections */}
-        {!loading && !error && filteredExams.length > 0 && (
+        {/* Dynamic Exams Content Sections */}
+        {!loading && !error && (
           <div className="space-y-16">
-            {/* 🟢 Rajasthan Specific Exams */}
-            {(selectedGroup === 'all' || selectedGroup === 'rajasthan') &&
-              rajasthanExams.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
-                    <span className="h-4 w-4 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                      Rajasthan Specific Exams
-                    </h2>
-                    <span className="text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full">
-                      {rajasthanExams.length} Exams
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {rajasthanExams.map(renderCategoryCard)}
-                  </div>
-                </section>
-              )}
-
-            {/* 🔵 Political Science Special Exams */}
-            {(selectedGroup === 'all' || selectedGroup === 'political_science') &&
-              polSciExams.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
-                    <span className="h-4 w-4 rounded-full bg-blue-500 inline-block animate-pulse"></span>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                      Political Science Special
-                    </h2>
-                    <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
-                      {polSciExams.length} Exams
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {polSciExams.map(renderCategoryCard)}
-                  </div>
-                </section>
-              )}
+            {dynamicGroups.length > 0 ? (
+              dynamicGroups
+                .filter((group) => selectedGroup === 'all' || selectedGroup === group.id)
+                .map((group) => (
+                  <section key={group.id}>
+                    <div className="flex items-center gap-3 mb-6 border-b border-slate-200 dark:border-slate-800 pb-4">
+                      <span className="text-2xl">{group.icon}</span>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                        {group.name}
+                      </h2>
+                      <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full">
+                        {group.exams.length} {group.exams.length === 1 ? 'Exam' : 'Exams'}
+                      </span>
+                    </div>
+                    {group.exams.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {group.exams.map(renderCategoryCard)}
+                      </div>
+                    ) : (
+                      <div className="py-8 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          No specific exams listed under {group.name} yet.
+                        </p>
+                      </div>
+                    )}
+                  </section>
+                ))
+            ) : searchedExams.length > 0 ? (
+              /* Fallback if no parent categories are configured */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {searchedExams.map(renderCategoryCard)}
+              </div>
+            ) : null}
           </div>
         )}
 

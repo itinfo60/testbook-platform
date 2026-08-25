@@ -12,6 +12,11 @@ export const createLiveClassSchema = z.object({
   maxParticipants: z.coerce.number().int().min(2).max(500).default(200),
   isRecorded: z.boolean().default(false),
   chatEnabled: z.boolean().default(true),
+  // Teacher assignment (admin only)
+  teacherName: z.string().trim().max(200).optional().nullable().or(z.literal('')),
+  teacherId: z.string().optional().nullable().or(z.literal('')),
+  // Optional password protection
+  password: z.string().trim().max(100).optional().nullable().or(z.literal('')),
 });
 
 export const updateLiveClassSchema = createLiveClassSchema.partial();

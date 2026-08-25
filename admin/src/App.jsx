@@ -34,6 +34,7 @@ const TeacherList = lazy(() => import('@/features/teacher/pages/TeacherList'));
 const CategoryList = lazy(() => import('@/features/category/pages/CategoryList'));
 const CategoryForm = lazy(() => import('@/features/category/pages/CategoryForm'));
 const CategoryDetail = lazy(() => import('@/features/category/pages/CategoryDetail'));
+const ResourceCategoryList = lazy(() => import('@/features/category/pages/ResourceCategoryList'));
 const ExamCategoryList = lazy(() => import('@/features/examcategory/pages/ExamCategoryList'));
 const ExamCategoryForm = lazy(() => import('@/features/examcategory/pages/ExamCategoryForm'));
 const ExamCategoryDetail = lazy(() => import('@/features/examcategory/pages/ExamCategoryDetail'));
@@ -124,6 +125,7 @@ export default function App() {
             <Route path="categories/create" element={<CategoryForm />} />
             <Route path="categories/:id" element={<CategoryDetail />} />
             <Route path="categories/:id/edit" element={<CategoryForm />} />
+            <Route path="resource-categories" element={<ResourceCategoryList />} />
             <Route path="exam-categories" element={<ExamCategoryList />} />
             <Route path="exam-categories/create" element={<ExamCategoryForm />} />
             <Route path="exam-categories/:id" element={<ExamCategoryDetail />} />

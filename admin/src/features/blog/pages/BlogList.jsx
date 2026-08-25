@@ -39,9 +39,12 @@ export default function BlogList() {
         type: typeFilter || undefined,
         status: statusFilter || undefined,
       });
-      const data = res.data?.data || res.data || {};
-      setBlogs(data.blogs || data.docs || []);
-      setTotalPages(data.pagination?.pages || data.pages || 1);
+      const resData = res.data?.data;
+      const blogsList = Array.isArray(resData)
+        ? resData
+        : resData?.blogs || resData?.docs || res.data?.blogs || res.data?.docs || [];
+      setBlogs(blogsList);
+      setTotalPages(res.data?.pagination?.pages || resData?.pagination?.pages || 1);
     } catch {
       toast.error('Failed to fetch posts');
     } finally {

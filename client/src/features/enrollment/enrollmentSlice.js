@@ -72,6 +72,21 @@ const enrollmentSlice = createSlice({
           ? action.payload
           : { lessonId: action.payload, completed: true };
       const lessonId = String(payloadLessonId);
+
+      if (!Array.isArray(state.currentProgress.completedLessons)) {
+        state.currentProgress.completedLessons = [];
+      }
+
+      if (completed) {
+        if (!state.currentProgress.completedLessons.includes(lessonId)) {
+          state.currentProgress.completedLessons.push(lessonId);
+        }
+      } else {
+        state.currentProgress.completedLessons = state.currentProgress.completedLessons.filter(
+          (id) => String(id) !== lessonId
+        );
+      }
+
       const existing = state.currentProgress.progress?.find(
         (p) => String(p.lessonId || p.lesson) === lessonId
       );
@@ -115,8 +130,16 @@ const enrollmentSlice = createSlice({
       })
       .addCase(completeLesson.fulfilled, (state, action) => {
         if (state.currentProgress) {
-          state.currentProgress.progressPercentage =
-            action.payload.progress ?? state.currentProgress.progressPercentage;
+          const payload = action.payload?.enrollment || action.payload;
+          if (Array.isArray(payload?.completedLessons)) {
+            state.currentProgress.completedLessons = payload.completedLessons;
+          }
+          if (payload?.progress !== undefined || payload?.progressPercentage !== undefined) {
+            state.currentProgress.progressPercentage =
+              payload.progress ??
+              payload.progressPercentage ??
+              state.currentProgress.progressPercentage;
+          }
         }
       });
   },

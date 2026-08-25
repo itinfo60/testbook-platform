@@ -10,10 +10,10 @@ export const getCategories = catchAsync(async (req, res) => {
   const isFlat = req.query.flat === 'true';
   const typeFilter = req.query.type ? { type: req.query.type } : {};
 
-  const [allCats, courses, tests, testSeries] = await runWithTenant(null, true, async () => {
+  const [allCatsRaw, courses, tests, testSeries] = await runWithTenant(null, true, async () => {
     return await Promise.all([
       prisma.category.findMany({
-        where: { isActive: true, ...typeFilter },
+        where: { isActive: true },
         orderBy: [{ name: 'asc' }],
       }),
       prisma.course.groupBy({
@@ -38,26 +38,64 @@ export const getCategories = catchAsync(async (req, res) => {
   const testCountMap = Object.fromEntries(tests.map((t) => [t.categoryId, t._count._all]));
   const seriesCountMap = Object.fromEntries(testSeries.map((s) => [s.categoryId, s._count._all]));
 
-  // Build parent-to-subcategories map
-  const subCatsByParent: Record<string, string[]> = {};
-  allCats.forEach((sc) => {
-    if (sc.parentId) {
-      if (!subCatsByParent[sc.parentId]) subCatsByParent[sc.parentId] = [];
-      subCatsByParent[sc.parentId].push(sc.id);
-    }
-  });
+  // Recursive function to build descendants list for count rollups
+  const getDescendantIds = (catId: string): string[] => {
+    const directChildren = allCatsRaw.filter((c) => c.parentId === catId);
+    let ids = [catId];
+    directChildren.forEach((child) => {
+      ids = ids.concat(getDescendantIds(child.id));
+    });
+    return ids;
+  };
+
+  // Build recursive subcategories tree
+  const buildSubcategoryTree = (parentId: string): any[] => {
+    const children = allCatsRaw.filter((c) => c.parentId === parentId);
+    return children.map((sub) => {
+      const allSubIds = getDescendantIds(sub.id);
+      const courseCount = allSubIds.reduce((sum, id) => sum + (courseCountMap[id] || 0), 0);
+      const testCount = allSubIds.reduce((sum, id) => sum + (testCountMap[id] || 0), 0);
+      const testSeriesCount = allSubIds.reduce((sum, id) => sum + (seriesCountMap[id] || 0), 0);
+      const nestedSubs = buildSubcategoryTree(sub.id);
+
+      return {
+        id: sub.id,
+        _id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+        icon: sub.icon,
+        description: sub.description,
+        type: sub.type,
+        parentId: sub.parentId,
+        courseCount,
+        coursesCount: courseCount,
+        testCount,
+        testsCount: testCount,
+        testSeriesCount,
+        examsCount: nestedSubs.length,
+        subcategories: nestedSubs,
+        _count: {
+          courses: courseCount,
+          tests: testCount,
+          testSeries: testSeriesCount,
+        },
+      };
+    });
+  };
 
   const parentMap = Object.fromEntries(
-    allCats.map((c) => [c.id, { id: c.id, name: c.name, slug: c.slug, icon: c.icon }])
+    allCatsRaw.map((c) => [c.id, { id: c.id, name: c.name, slug: c.slug, icon: c.icon }])
   );
 
-  const enrichedAll = allCats.map((cat) => {
-    const subIds = subCatsByParent[cat.id] || [];
-    const directAndSubIds = [cat.id, ...subIds];
-
-    const courseCount = directAndSubIds.reduce((sum, id) => sum + (courseCountMap[id] || 0), 0);
-    const testCount = directAndSubIds.reduce((sum, id) => sum + (testCountMap[id] || 0), 0);
-    const testSeriesCount = directAndSubIds.reduce((sum, id) => sum + (seriesCountMap[id] || 0), 0);
+  const enrichedAll = allCatsRaw.map((cat) => {
+    const allDescendantIds = getDescendantIds(cat.id);
+    const courseCount = allDescendantIds.reduce((sum, id) => sum + (courseCountMap[id] || 0), 0);
+    const testCount = allDescendantIds.reduce((sum, id) => sum + (testCountMap[id] || 0), 0);
+    const testSeriesCount = allDescendantIds.reduce(
+      (sum, id) => sum + (seriesCountMap[id] || 0),
+      0
+    );
+    const subTree = buildSubcategoryTree(cat.id);
 
     return {
       ...cat,
@@ -70,8 +108,8 @@ export const getCategories = catchAsync(async (req, res) => {
       testCount,
       testsCount: testCount,
       testSeriesCount,
-      examsCount: subIds.length,
-      subcategories: [],
+      examsCount: subTree.length,
+      subcategories: subTree,
       _count: {
         courses: courseCount,
         tests: testCount,
@@ -80,12 +118,23 @@ export const getCategories = catchAsync(async (req, res) => {
     };
   });
 
-  const rootCategories = enrichedAll.filter((c) => !c.parentId);
-  const isTypeScoped = !!req.query.type;
+  // Filter for output if type filter requested
+  let outputCategories = enrichedAll;
+  const nonResourceAll = enrichedAll.filter((c) => c.type !== 'resource');
+
+  if (req.query.type) {
+    outputCategories = enrichedAll.filter((c) => c.type === req.query.type);
+  } else if (!isFlat) {
+    // Default public hierarchy: ONLY parent academic categories (strictly exclude resource categories and sub-exams)
+    outputCategories = enrichedAll.filter((c) => !c.parentId && c.type !== 'resource');
+  } else {
+    // Flat list without type: default to academic categories only
+    outputCategories = nonResourceAll;
+  }
 
   const data = {
-    categories: isFlat || isTypeScoped ? enrichedAll : rootCategories,
-    allCategories: enrichedAll,
+    categories: outputCategories,
+    allCategories: req.query.type === 'resource' ? outputCategories : nonResourceAll,
   };
 
   ApiResponse.ok(res, data);

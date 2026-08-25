@@ -65,7 +65,12 @@ export default function LessonSidebar({
         {sections.map((section, si) => {
           const isOpen = !collapsed[si];
           const sectionCompleted = section.lessons.filter(
-            (l) => l.type !== 'quiz' && completedLessonIds.includes(l._id)
+            (l) =>
+              l.type !== 'quiz' &&
+              completedLessonIds.some(
+                (cid) =>
+                  cid && (String(cid) === String(l.id || '') || String(cid) === String(l._id || ''))
+              )
           ).length;
           const sectionLessons = section.lessons.filter((l) => l.type !== 'quiz');
 
@@ -95,14 +100,25 @@ export default function LessonSidebar({
               {/* Lessons list */}
               {isOpen &&
                 sectionLessons.map((lesson, li) => {
-                  const isActive = lesson._id === currentLessonId;
-                  const isDone = completedLessonIds.includes(lesson._id);
+                  const lessonId = lesson._id || lesson.id || `lesson-${si}-${li}`;
+                  const activeLessonId = currentLessonId ? String(currentLessonId) : null;
+                  const isActive = Boolean(
+                    activeLessonId &&
+                    (String(lesson._id || '') === activeLessonId ||
+                      String(lesson.id || '') === activeLessonId)
+                  );
+                  const isDone = completedLessonIds.some(
+                    (cid) =>
+                      cid &&
+                      (String(cid) === String(lesson._id || '') ||
+                        String(cid) === String(lesson.id || ''))
+                  );
                   // Free lessons are the demo classes — open to everyone.
                   const isLocked = (!isEnrolled && !lesson.isFree) || !!lesson.dripLocked;
 
                   return (
                     <button
-                      key={lesson._id || li}
+                      key={lessonId}
                       onClick={() => onSelectLesson(lesson, section)}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-dark-50 dark:border-dark-800/50 transition-colors ${
                         isActive

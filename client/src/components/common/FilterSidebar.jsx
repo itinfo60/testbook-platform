@@ -1,5 +1,87 @@
 import { useState } from 'react';
 import { Filter, X, ChevronDown, ChevronRight } from 'lucide-react';
+function FilterOptionItem({
+  option,
+  filter,
+  activeFilters,
+  onFilterChange,
+  expandedNodes,
+  toggleExpand,
+  level = 0,
+}) {
+  const hasChildren = option.children && option.children.length > 0;
+  const isExpanded = expandedNodes[option.value];
+  const isChecked =
+    activeFilters[filter.key] === option.value ||
+    (Array.isArray(activeFilters[filter.key]) && activeFilters[filter.key].includes(option.value));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 group">
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={(e) => toggleExpand(e, option.value)}
+            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5" />
+            )}
+          </button>
+        ) : (
+          <div className="w-5" />
+        )}
+        <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+          <input
+            type={filter.type === 'radio' ? 'radio' : 'checkbox'}
+            name={filter.key}
+            checked={isChecked}
+            onChange={() => onFilterChange(filter.key, option.value)}
+            className={`text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 transition-colors ${
+              level === 0 ? 'h-4 w-4' : 'h-3.5 w-3.5'
+            }`}
+          />
+          <span
+            className={`truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors ${
+              level === 0
+                ? 'text-sm font-semibold text-gray-800 dark:text-gray-200'
+                : level === 1
+                  ? 'text-[13px] font-medium text-gray-700 dark:text-gray-300'
+                  : 'text-xs text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            {option.label}
+          </span>
+          {option.count !== undefined && (
+            <span className="text-xs font-medium text-gray-400 ml-auto bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full shrink-0">
+              {option.count}
+            </span>
+          )}
+        </label>
+      </div>
+
+      {hasChildren && isExpanded && (
+        <div className="pl-6 space-y-2 relative before:absolute before:left-3 before:top-0 before:bottom-2 before:w-[1.5px] before:bg-gray-200 dark:before:bg-gray-700">
+          {option.children.map((child) => (
+            <FilterOptionItem
+              key={child.value}
+              option={child}
+              filter={filter}
+              activeFilters={activeFilters}
+              onFilterChange={onFilterChange}
+              expandedNodes={expandedNodes}
+              toggleExpand={toggleExpand}
+              level={level + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FilterSidebar({
   filters = [],
   activeFilters = {},
@@ -39,73 +121,16 @@ export default function FilterSidebar({
           </h3>
           <div className="space-y-3">
             {filter.options.map((option) => (
-              <div key={option.value} className="space-y-2">
-                <div className="flex items-center gap-2 group">
-                  {option.children && option.children.length > 0 ? (
-                    <button
-                      onClick={(e) => toggleExpand(e, option.value)}
-                      className="p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                    >
-                      {expandedNodes[option.value] ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4" />
-                      )}
-                    </button>
-                  ) : (
-                    <div className="w-5" /> // spacer
-                  )}
-                  <label className="flex items-center gap-3 cursor-pointer flex-1">
-                    <input
-                      type={filter.type === 'radio' ? 'radio' : 'checkbox'}
-                      name={filter.key}
-                      checked={
-                        activeFilters[filter.key] === option.value ||
-                        (Array.isArray(activeFilters[filter.key]) &&
-                          activeFilters[filter.key].includes(option.value))
-                      }
-                      onChange={() => onFilterChange(filter.key, option.value)}
-                      className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 transition-colors"
-                    />
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {option.label}
-                    </span>
-                    {option.count !== undefined && (
-                      <span className="text-xs font-medium text-gray-400 ml-auto bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                        {option.count}
-                      </span>
-                    )}
-                  </label>
-                </div>
-
-                {/* Nested Children */}
-                {option.children && option.children.length > 0 && expandedNodes[option.value] && (
-                  <div className="pl-9 space-y-2 relative before:absolute before:left-[19px] before:top-0 before:bottom-2 before:w-[1.5px] before:bg-gray-200 dark:before:bg-gray-700">
-                    {option.children.map((child) => (
-                      <label
-                        key={child.value}
-                        className="flex items-center gap-3 cursor-pointer group relative"
-                      >
-                        <span className="absolute -left-[17px] top-1/2 w-3 h-[1.5px] bg-gray-200 dark:bg-gray-700 -translate-y-1/2"></span>
-                        <input
-                          type={filter.type === 'radio' ? 'radio' : 'checkbox'}
-                          name={filter.key}
-                          checked={
-                            activeFilters[filter.key] === child.value ||
-                            (Array.isArray(activeFilters[filter.key]) &&
-                              activeFilters[filter.key].includes(child.value))
-                          }
-                          onChange={() => onFilterChange(filter.key, child.value)}
-                          className="h-[14px] w-[14px] text-primary-500 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 transition-colors"
-                        />
-                        <span className="text-[13px] text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                          {child.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <FilterOptionItem
+                key={option.value}
+                option={option}
+                filter={filter}
+                activeFilters={activeFilters}
+                onFilterChange={onFilterChange}
+                expandedNodes={expandedNodes}
+                toggleExpand={toggleExpand}
+                level={0}
+              />
             ))}
           </div>
         </div>

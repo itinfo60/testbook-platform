@@ -92,15 +92,16 @@ export class CourseService {
       include: {
         teacher: { select: { name: true, avatar: true, bio: true, teacherProfile: true } },
         category: { select: { name: true, slug: true } },
+        _count: { select: { enrollments: true, reviews: true } },
       },
     });
     if (!course) throw ApiError.notFound('Course not found');
 
     const reviews = await prisma.review.findMany({
       where: { courseId: course.id, isApproved: true },
-      include: { user: { select: { name: true, avatar: true } } },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 50,
     });
 
     let isEnrolled = false;
@@ -114,7 +115,12 @@ export class CourseService {
 
     const isAuthor = this.isCourseAuthor(course, userId, role);
     const courseObj = this.applyLessonVisibility(
-      { ...course },
+      {
+        ...course,
+        enrollmentCount: course._count?.enrollments || (course as any).enrollmentCount || 0,
+        totalReviews: course._count?.reviews || reviews.length || 0,
+        averageRating: course.rating || 0,
+      },
       { isAuthor, isEnrolled, enrollment }
     );
     const result = { course: courseObj, reviews, isEnrolled: isEnrolled || isAuthor };

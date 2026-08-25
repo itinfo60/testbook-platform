@@ -55,6 +55,7 @@ export const enrollInCourse = catchAsync(async (req, res) => {
   });
 
   await scheduleDripContent(req.userId, course.id);
+  await redis.delPattern('admin:dashboard:*').catch(() => {});
 
   ApiResponse.created(res, { enrollment }, 'Enrolled successfully');
 });
@@ -99,12 +100,81 @@ export const getMyEnrollments = catchAsync(async (req, res) => {
 });
 
 export const getMyTestEnrollments = catchAsync(async (req, res) => {
-  // Assuming test series is handled similarly
+  const payments = await prisma.payment.findMany({
+    where: {
+      userId: req.userId,
+      status: { in: ['captured', 'success', 'completed', 'paid'] },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const purchasedTestIds = new Set();
+  const purchasedSeriesIds = new Set();
+
+  payments.forEach((p) => {
+    const notes = p.notes;
+    if (!notes) return;
+    if (notes.testId) purchasedTestIds.add(notes.testId);
+    if (notes.testSeriesId) purchasedSeriesIds.add(notes.testSeriesId);
+    if (notes.itemId) {
+      purchasedTestIds.add(notes.itemId);
+      purchasedSeriesIds.add(notes.itemId);
+    }
+  });
+
+  const allPurchasedIds = Array.from(new Set([...purchasedTestIds, ...purchasedSeriesIds]));
+
+  // Fetch corresponding test series and tests
+  const [seriesList, testsList] = await Promise.all([
+    prisma.testSeries.findMany({
+      where: { id: { in: allPurchasedIds } },
+      include: { category: { select: { name: true, slug: true } } },
+    }),
+    prisma.test.findMany({
+      where: { id: { in: allPurchasedIds } },
+      include: { category: { select: { name: true, slug: true } } },
+    }),
+  ]);
+
+  const docs = [
+    ...seriesList.map((s) => ({
+      id: s.id,
+      type: 'test_series',
+      isSeries: true,
+      title: s.title,
+      description: s.description,
+      testsCount: Array.isArray(s.tests) ? s.tests.length : 0,
+      test: {
+        id: s.id,
+        _id: s.id,
+        title: s.title,
+        isSeries: true,
+        questionsCount: (Array.isArray(s.tests) ? s.tests.length : 0) + ' Tests',
+        duration: 'Multiple Tests',
+      },
+    })),
+    ...testsList.map((t) => ({
+      id: t.id,
+      type: 'test',
+      isSeries: false,
+      title: t.title,
+      description: t.description,
+      test: {
+        id: t.id,
+        _id: t.id,
+        title: t.title,
+        isSeries: false,
+        questionsCount: t.totalQuestions || (Array.isArray(t.questions) ? t.questions.length : 0),
+        duration: t.duration,
+      },
+    })),
+  ];
+
   ApiResponse.paginated(res, {
-    docs: [],
+    docs,
     page: 1,
-    limit: 10,
-    total: 0,
+    limit: docs.length || 10,
+    total: docs.length,
   });
 });
 
@@ -146,9 +216,19 @@ export const updateProgress = catchAsync(async (req, res) => {
 
   if (!enrollment) throw ApiError.notFound('Active enrollment not found');
 
-  let completedLessons = enrollment.completedLessons || [];
-  if (completed && !completedLessons.includes(lessonId)) {
-    completedLessons.push(lessonId);
+  let completedLessons = Array.isArray(enrollment.completedLessons)
+    ? enrollment.completedLessons.filter((id) => typeof id === 'string' && id.trim().length > 0)
+    : [];
+
+  if (lessonId !== undefined && lessonId !== null) {
+    const lid = String(lessonId).trim();
+    if (lid.length > 0) {
+      if (completed === false) {
+        completedLessons = completedLessons.filter((id) => id !== lid);
+      } else if (!completedLessons.includes(lid)) {
+        completedLessons.push(lid);
+      }
+    }
   }
 
   const totalLessons = course.totalLessons || 0;
@@ -159,7 +239,10 @@ export const updateProgress = catchAsync(async (req, res) => {
 
   if (progressPercentage >= 100) {
     status = 'completed';
-    completedAt = new Date();
+    if (!completedAt) completedAt = new Date();
+  } else if (status === 'completed' && progressPercentage < 100) {
+    status = 'active';
+    completedAt = null;
   }
 
   await prisma.enrollment.update({
@@ -182,7 +265,8 @@ export const updateProgress = catchAsync(async (req, res) => {
     {
       progress: progressPercentage,
       status,
-      completedLessons: completedLessons.length,
+      completedLessons,
+      completedLessonsCount: completedLessons.length,
       totalLessons: course.totalLessons,
     },
     'Progress updated'
@@ -247,26 +331,147 @@ export const getOrderHistory = catchAsync(async (req, res) => {
   const filter = { userId: req.userId };
   if (req.query.status) filter.status = req.query.status;
 
-  const [enrollments, total] = await Promise.all([
+  const [enrollments, allUserPayments] = await Promise.all([
     prisma.enrollment.findMany({
       where: filter,
       include: {
         course: {
-          select: { title: true, slug: true, thumbnail: true, price: true, categoryId: true },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            thumbnail: true,
+            price: true,
+            categoryId: true,
+          },
         },
       },
       orderBy: { enrolledAt: 'desc' },
-      skip,
-      take: limit,
     }),
-    prisma.enrollment.count({ where: filter }),
+    prisma.payment.findMany({
+      where: {
+        userId: req.userId,
+        status: { in: ['captured', 'success', 'completed', 'paid'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
   ]);
 
+  const paymentMap = new Map(allUserPayments.map((p) => [p.id, p]));
+
+  // Track which payments are linked to course enrollments
+  const linkedPaymentIds = new Set(enrollments.map((e) => e.paymentId).filter(Boolean));
+
+  // Build course orders
+  const courseOrders = enrollments.map((e) => {
+    const payment = e.paymentId ? paymentMap.get(e.paymentId) : null;
+    const paidAmount =
+      e.amount !== null && e.amount !== undefined
+        ? e.amount
+        : payment?.amount || e.course?.price || 0;
+
+    return {
+      ...e,
+      id: e.id,
+      itemType: 'course',
+      course: e.course,
+      finalPrice: paidAmount,
+      amountPaid: paidAmount,
+      createdAt: e.enrolledAt,
+      paymentId: payment
+        ? {
+            id: payment.id,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            orderId: payment.orderId,
+            paymentId:
+              payment.transactionId ||
+              (payment.notes && typeof payment.notes === 'object'
+                ? payment.notes.paymentId
+                : null) ||
+              payment.id,
+            provider: payment.transactionId ? 'razorpay' : 'free',
+            createdAt: payment.createdAt,
+          }
+        : null,
+    };
+  });
+
+  // Find standalone test / test series payments that don't have a course enrollment
+  const standalonePayments = allUserPayments.filter((p) => !linkedPaymentIds.has(p.id));
+
+  // Extract target test/series IDs
+  const targetSeriesOrTestIds = standalonePayments
+    .map((p) => {
+      const notes = p.notes || {};
+      return notes.testSeriesId || notes.testId || notes.itemId;
+    })
+    .filter(Boolean);
+
+  const [seriesList, testList] = await Promise.all([
+    prisma.testSeries.findMany({
+      where: { id: { in: targetSeriesOrTestIds } },
+      select: { id: true, title: true, description: true, price: true },
+    }),
+    prisma.test.findMany({
+      where: { id: { in: targetSeriesOrTestIds } },
+      select: { id: true, title: true, description: true, duration: true, totalMarks: true },
+    }),
+  ]);
+
+  const seriesMap = new Map(seriesList.map((s) => [s.id, s]));
+  const testMap = new Map(testList.map((t) => [t.id, t]));
+
+  const testOrders = standalonePayments.map((p) => {
+    const notes = p.notes || {};
+    const targetId = notes.testSeriesId || notes.testId || notes.itemId;
+    const series = seriesMap.get(targetId);
+    const test = testMap.get(targetId);
+    const itemTitle = notes.itemTitle || series?.title || test?.title || 'Test Series Package';
+
+    return {
+      id: p.id,
+      itemType: series ? 'test_series' : 'test',
+      status: 'active',
+      progressPercentage: 0,
+      amount: p.amount,
+      finalPrice: p.amount,
+      amountPaid: p.amount,
+      createdAt: p.createdAt,
+      enrolledAt: p.createdAt,
+      test: {
+        id: targetId,
+        _id: targetId,
+        title: itemTitle,
+        isSeries: Boolean(series || notes.testSeriesId || notes.testId),
+      },
+      testSeries: series || null,
+      paymentId: {
+        id: p.id,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        orderId: p.orderId,
+        paymentId: p.transactionId || notes.paymentId || p.id,
+        provider: p.transactionId ? 'razorpay' : 'online',
+        createdAt: p.createdAt,
+        notes: p.notes,
+      },
+    };
+  });
+
+  const allOrders = [...courseOrders, ...testOrders].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const paginatedOrders = allOrders.slice(skip, skip + limit);
+
   ApiResponse.ok(res, {
-    orders: enrollments,
-    total,
+    orders: paginatedOrders,
+    total: allOrders.length,
     page,
-    pages: Math.ceil(total / limit),
+    pages: Math.ceil(allOrders.length / limit),
   });
 });
 

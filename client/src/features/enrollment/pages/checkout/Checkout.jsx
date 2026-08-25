@@ -13,7 +13,7 @@ import {
   clearPaymentState,
   clearCoupon,
 } from '@/features/payment/paymentSlice';
-import api, { enrollmentAPI } from '@/services/api';
+import api, { enrollmentAPI, paymentAPI } from '@/services/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import PriceTag from '@/components/common/PriceTag';
 import toast from 'react-hot-toast';
@@ -239,7 +239,13 @@ export default function Checkout() {
         toast.success('Payment successful!');
         navigate('/checkout/success', {
           state: isTest
-            ? { testId: resolvedId, itemName: item?.title, isTest: true }
+            ? {
+                testId: resolvedId,
+                testSeriesId: type === 'test_series' ? resolvedId : null,
+                itemName: item?.title,
+                isTest: true,
+                isSeries: type === 'test_series',
+              }
             : { courseId: resolvedId, itemName: item?.title, isTest: false },
         });
         return;
@@ -273,7 +279,13 @@ export default function Checkout() {
           },
           theme: { color: '#92400e' },
           modal: {
-            ondismiss: () => {
+            ondismiss: async () => {
+              try {
+                await paymentAPI.recordFailure({
+                  orderId,
+                  error: { reason: 'User closed payment window before completing' },
+                });
+              } catch (e) {}
               toast('Payment cancelled.', { icon: '⚠️' });
               reject(new Error('dismissed'));
             },
@@ -292,16 +304,39 @@ export default function Checkout() {
               toast.success('Payment verified! You are now enrolled.');
               navigate('/checkout/success', {
                 state: isTest
-                  ? { testId: resolvedId, itemName: item?.title, isTest: true }
+                  ? {
+                      testId: resolvedId,
+                      testSeriesId: type === 'test_series' ? resolvedId : null,
+                      itemName: item?.title,
+                      isTest: true,
+                      isSeries: type === 'test_series',
+                    }
                   : { courseId: resolvedId, itemName: item?.title, isTest: false },
               });
               resolve();
             } catch (err) {
+              try {
+                await paymentAPI.recordFailure({
+                  orderId,
+                  error: { reason: 'Signature verification failed', details: err },
+                });
+              } catch (e) {}
               toast.error(err || 'Payment verification failed. Contact support.');
               reject(err);
             }
           },
         });
+
+        rzp.on('payment.failed', async (response) => {
+          try {
+            await paymentAPI.recordFailure({
+              orderId,
+              error: response.error || { reason: 'Gateway payment failed' },
+            });
+          } catch (e) {}
+          toast.error(response.error?.description || 'Payment failed at gateway');
+        });
+
         rzp.open();
       });
     } catch (err) {

@@ -55,6 +55,20 @@ export const deleteCategory = createAsyncThunk(
   }
 );
 
+export const toggleCategoryStatus = createAsyncThunk(
+  'categories/toggleStatus',
+  async ({ id, isActive }, { rejectWithValue }) => {
+    try {
+      const res = await examCategoriesAPI.update(id, { isActive });
+      toast.success(`Category ${isActive ? 'activated' : 'deactivated'}`);
+      return { id, isActive };
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update status');
+      return rejectWithValue(err.response?.data);
+    }
+  }
+);
+
 const categorySlice = createSlice({
   name: 'categories',
   initialState: { list: [], selected: null, pagination: null, loading: false, error: null },
@@ -86,6 +100,10 @@ const categorySlice = createSlice({
       })
       .addCase(deleteCategory.fulfilled, (state, action) => {
         state.list = state.list.filter((c) => (c.id || c._id) !== action.payload);
+      })
+      .addCase(toggleCategoryStatus.fulfilled, (state, action) => {
+        const item = state.list.find((c) => (c.id || c._id) === action.payload.id);
+        if (item) item.isActive = action.payload.isActive;
       });
   },
 });

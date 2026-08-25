@@ -116,6 +116,11 @@ class EmailService {
 
   async sendVerificationEmail(user, token) {
     const verifyUrl = `${config.clientUrl}/verify-email/${token}`;
+    logger.info(`
+══════════════════════════════════════════════════════════════════
+📧 [DEV EMAIL DISPATCH] Verify Email Link for ${user.email}:
+🔗 ${verifyUrl}
+══════════════════════════════════════════════════════════════════`);
     return this.send({
       to: user.email,
       subject: 'Verify Your Email - CivicsHub',
@@ -133,6 +138,11 @@ class EmailService {
 
   async sendResetPasswordEmail(user, token) {
     const resetUrl = `${config.clientUrl}/reset-password/${token}`;
+    logger.info(`
+══════════════════════════════════════════════════════════════════
+📧 [DEV EMAIL DISPATCH] Password Reset Link for ${user.email}:
+🔗 ${resetUrl}
+══════════════════════════════════════════════════════════════════`);
     return this.send({
       to: user.email,
       subject: 'Reset Password - CivicsHub',

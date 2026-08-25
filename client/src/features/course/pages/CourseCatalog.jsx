@@ -48,6 +48,16 @@ export default function CourseCatalog() {
     dispatch(fetchCourses(params));
   }, [dispatch, page, filters]);
 
+  const mapCategoryNode = (node) => {
+    const nodeId = node.id || node._id || node.slug;
+    return {
+      value: nodeId,
+      label: node.name,
+      count: node.courseCount || node.coursesCount || 0,
+      children: (node.subcategories || []).map(mapCategoryNode),
+    };
+  };
+
   const filterConfig = [
     {
       key: 'sort',
@@ -64,19 +74,7 @@ export default function CourseCatalog() {
       key: 'category',
       label: 'Filter by Category',
       type: 'checkbox',
-      options: [
-        ...(examCategories?.map((cat) => ({
-          value: cat._id || cat.slug,
-          label: cat.name,
-          count: cat.courseCount || cat.coursesCount,
-          children:
-            cat.subcategories?.map((sub) => ({
-              value: sub._id || sub.slug,
-              label: sub.name,
-              count: sub.courseCount || sub.coursesCount,
-            })) || [],
-        })) || []),
-      ],
+      options: (examCategories || []).map(mapCategoryNode),
     },
   ];
 
@@ -86,46 +84,49 @@ export default function CourseCatalog() {
     if (key === 'category') {
       let currentCategories = filters.category ? filters.category.split(',').filter(Boolean) : [];
 
-      const parentCat = examCategories?.find((c) => c._id === value);
+      const parentCat = examCategories?.find((c) => (c.id || c._id || c.slug) === value);
 
-      if (parentCat) {
-        // Toggling a PARENT
-        const childIds = parentCat.subcategories?.map((s) => s._id) || [];
-        const allRelatedIds = [value, ...childIds];
+      // Find node anywhere in tree
+      const findNodeAndChildren = (nodes) => {
+        for (const n of nodes) {
+          const nKey = n.id || n._id || n.slug;
+          if (nKey === value) {
+            // Collect all descendants
+            const collectDescendants = (item) => {
+              let ids = [item.id || item._id || item.slug];
+              (item.subcategories || []).forEach((child) => {
+                ids = ids.concat(collectDescendants(child));
+              });
+              return ids;
+            };
+            return { node: n, allDescendantIds: collectDescendants(n) };
+          }
+          if (n.subcategories && n.subcategories.length > 0) {
+            const found = findNodeAndChildren(n.subcategories);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
 
-        if (currentCategories.includes(value)) {
-          currentCategories = currentCategories.filter((c) => !allRelatedIds.includes(c));
+      const match = findNodeAndChildren(examCategories || []);
+
+      if (match && match.node.subcategories && match.node.subcategories.length > 0) {
+        // Toggling a node with children
+        const isSelected = currentCategories.includes(value);
+        if (isSelected) {
+          currentCategories = currentCategories.filter((c) => !match.allDescendantIds.includes(c));
         } else {
-          allRelatedIds.forEach((id) => {
+          match.allDescendantIds.forEach((id) => {
             if (!currentCategories.includes(id)) currentCategories.push(id);
           });
         }
       } else {
-        // Toggling a CHILD
+        // Toggling a leaf child node
         if (currentCategories.includes(value)) {
-          // Deselect child
           currentCategories = currentCategories.filter((c) => c !== value);
-
-          // Deselect parent
-          examCategories?.forEach((parent) => {
-            if (parent.subcategories?.some((s) => s._id === value)) {
-              currentCategories = currentCategories.filter((c) => c !== parent._id);
-            }
-          });
         } else {
-          // Select child
           currentCategories.push(value);
-
-          // Auto-select parent if all children are now selected
-          examCategories?.forEach((parent) => {
-            const childIds = parent.subcategories?.map((s) => s._id) || [];
-            if (childIds.includes(value)) {
-              const allChildrenSelected = childIds.every((id) => currentCategories.includes(id));
-              if (allChildrenSelected && !currentCategories.includes(parent._id)) {
-                currentCategories.push(parent._id);
-              }
-            }
-          });
         }
       }
       newValue = currentCategories.join(',');

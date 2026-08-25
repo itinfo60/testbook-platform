@@ -43,6 +43,14 @@ dunningQueue.add(
   { repeat: { pattern: '0 9 * * *' }, jobId: 'dunning_expired' }
 );
 
+// ── Live class status transitions (every minute) ─────────────────────────────
+export const liveClassQueue = new Queue('liveclass', { connection, defaultJobOptions });
+liveClassQueue.add(
+  'auto_transition',
+  { type: 'auto_transition' },
+  { repeat: { every: 60000 }, jobId: 'liveclass_auto_transition', removeOnComplete: { count: 5 } }
+);
+
 export const queueConnection = connection;
 
 // ── Dev utility: drain all stale failed jobs from every queue ────────────────

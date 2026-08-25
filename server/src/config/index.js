@@ -30,6 +30,12 @@ const config = {
     verifyEmailExpiry: process.env.JWT_VERIFY_EMAIL_EXPIRY || '24h',
   },
 
+  supabase: {
+    url: process.env.SUPABASE_URL || 'https://adzwarjoradodbdzlldu.supabase.co',
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    bucket: process.env.SUPABASE_STORAGE_BUCKET || 'CivicsEdu_files',
+  },
+
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,

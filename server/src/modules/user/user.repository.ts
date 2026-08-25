@@ -18,6 +18,10 @@ export class UserRepository extends TenantRepository<IUser> {
     // Default to active users only; allow explicit override to show inactive
     filter.isActive = query.isActive !== undefined ? query.isActive : true;
 
+    if (query.isEmailVerified !== undefined) {
+      filter.isEmailVerified = query.isEmailVerified;
+    }
+
     if (query.search) {
       filter.OR = [
         { name: { contains: query.search, mode: 'insensitive' } },

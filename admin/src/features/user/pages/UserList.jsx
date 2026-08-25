@@ -37,6 +37,7 @@ export default function UserList() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('student');
   const [statusFilter, setStatusFilter] = useState(''); // '' = all, 'true' = active, 'false' = inactive
+  const [verificationFilter, setVerificationFilter] = useState(''); // '' = all, 'true' = verified, 'false' = unverified
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -59,11 +60,21 @@ export default function UserList() {
         role: roleFilter || 'student',
         // pass isActive explicitly so backend shows inactive when selected
         ...(statusFilter !== '' && { isActive: statusFilter === 'true' }),
+        ...(verificationFilter !== '' && { isEmailVerified: verificationFilter === 'true' }),
         sort: sortField,
         order: sortOrder,
       })
     );
-  }, [dispatch, page, debouncedSearch, roleFilter, statusFilter, sortField, sortOrder]);
+  }, [
+    dispatch,
+    page,
+    debouncedSearch,
+    roleFilter,
+    statusFilter,
+    verificationFilter,
+    sortField,
+    sortOrder,
+  ]);
 
   useEffect(() => {
     loadUsers();
@@ -92,19 +103,36 @@ export default function UserList() {
       sortable: true,
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-bold">
+          <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-bold shrink-0">
             {row.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">{row.name}</p>
-            <p className="text-xs text-gray-500">{row.email}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-gray-900 dark:text-white truncate">{row.name}</p>
+              {row.isEmailVerified ? (
+                <span
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                  title="Email Verified"
+                >
+                  <CheckCircle2 className="w-3 h-3" /> Verified
+                </span>
+              ) : (
+                <span
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                  title="Email Not Verified"
+                >
+                  Unverified
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 truncate">{row.email}</p>
           </div>
         </div>
       ),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: 'Account Status',
       sortable: true,
       render: (_, row) => {
         const isActive = row.isActive !== false;
@@ -126,7 +154,7 @@ export default function UserList() {
   // Student KPIs
   const totalStudents = pagination?.total || list.length;
   const activeStudents = list.filter((u) => u.isActive !== false).length;
-  const verifiedStudents = list.filter((u) => u.isEmailVerified !== false).length;
+  const verifiedStudents = list.filter((u) => u.isEmailVerified === true).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -166,7 +194,14 @@ export default function UserList() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div
+          onClick={() => {
+            setStatusFilter('');
+            setVerificationFilter('');
+            setPage(1);
+          }}
+          className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between cursor-pointer hover:border-primary-300 transition-all"
+        >
           <div>
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Total Students
@@ -177,7 +212,18 @@ export default function UserList() {
             <GraduationCap className="w-5 h-5" />
           </div>
         </div>
-        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+
+        <div
+          onClick={() => {
+            setStatusFilter(statusFilter === 'true' ? '' : 'true');
+            setPage(1);
+          }}
+          className={`p-4 rounded-2xl bg-white dark:bg-gray-800 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${
+            statusFilter === 'true'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+          }`}
+        >
           <div>
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Active Students
@@ -190,7 +236,18 @@ export default function UserList() {
             <ToggleRight className="w-5 h-5" />
           </div>
         </div>
-        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+
+        <div
+          onClick={() => {
+            setVerificationFilter(verificationFilter === 'true' ? '' : 'true');
+            setPage(1);
+          }}
+          className={`p-4 rounded-2xl bg-white dark:bg-gray-800 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${
+            verificationFilter === 'true'
+              ? 'border-blue-500 ring-2 ring-blue-500/20'
+              : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
+          }`}
+        >
           <div>
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Verified Accounts
@@ -216,9 +273,23 @@ export default function UserList() {
           className="input-field w-44 py-2"
           title="Filter by student active status"
         >
-          <option value="">All Statuses</option>
+          <option value="">All Account Statuses</option>
           <option value="true">Active Only</option>
           <option value="false">Inactive (Deactivated)</option>
+        </select>
+
+        <select
+          value={verificationFilter}
+          onChange={(e) => {
+            setVerificationFilter(e.target.value);
+            setPage(1);
+          }}
+          className="input-field w-48 py-2"
+          title="Filter by email verification status"
+        >
+          <option value="">All Verification Status</option>
+          <option value="true">Verified Email Only</option>
+          <option value="false">Unverified Email Only</option>
         </select>
       </div>
 

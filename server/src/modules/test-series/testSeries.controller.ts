@@ -6,9 +6,28 @@ import { generateSlug } from '../../utils/helpers.js';
 import prisma from '../../config/prisma.js';
 
 export const getTestSeries = catchAsync(async (req, res) => {
-  const { examCategory, testType, isFree, search, page = 1, limit = 20 } = req.query;
+  const {
+    examCategory,
+    testType,
+    isFree,
+    search,
+    isPublished,
+    sort,
+    order = 'desc',
+    page = 1,
+    limit = 20,
+  } = req.query;
 
-  const where: any = { isPublished: true };
+  const where: any = {};
+
+  if (isPublished !== undefined && isPublished !== 'all') {
+    where.isPublished = isPublished === 'true' || isPublished === true;
+  } else if (
+    !req.user ||
+    (req.user.role !== 'admin' && req.user.role !== 'teacher' && req.user.role !== 'super_admin')
+  ) {
+    where.isPublished = true;
+  }
 
   if (examCategory) {
     where.categoryId = examCategory;
@@ -16,9 +35,20 @@ export const getTestSeries = catchAsync(async (req, res) => {
 
   if (search) {
     where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
+      { title: { contains: String(search), mode: 'insensitive' } },
+      { description: { contains: String(search), mode: 'insensitive' } },
     ];
+  }
+
+  const sortDirection = String(order).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  let orderBy: any = [{ createdAt: 'desc' }];
+  if (sort) {
+    const sField = String(sort);
+    if (sField === 'enrollmentCount' || sField === 'enrollmentsCount' || sField === 'enrollments') {
+      orderBy = [{ enrollments: { _count: sortDirection } }];
+    } else if (['title', 'price', 'isPublished', 'createdAt', 'updatedAt'].includes(sField)) {
+      orderBy = [{ [sField]: sortDirection }];
+    }
   }
 
   const result = await runWithTenant(null, true, async () => {
@@ -26,8 +56,11 @@ export const getTestSeries = catchAsync(async (req, res) => {
     const [seriesList, total] = await Promise.all([
       prisma.testSeries.findMany({
         where,
-        include: { category: { select: { name: true, slug: true, icon: true } } },
-        orderBy: [{ createdAt: 'desc' }],
+        include: {
+          category: { select: { name: true, slug: true, icon: true } },
+          _count: { select: { enrollments: true } },
+        },
+        orderBy,
         skip,
         take: Number(limit),
       }),
@@ -36,8 +69,48 @@ export const getTestSeries = catchAsync(async (req, res) => {
     return { seriesList, total };
   });
 
+  let userPayments: any[] = [];
+  if (req.userId) {
+    userPayments = await prisma.payment.findMany({
+      where: {
+        userId: req.userId,
+        status: { in: ['captured', 'success', 'completed', 'paid'] },
+      },
+      select: { notes: true },
+    });
+  }
+
+  const enrichedSeriesList = result.seriesList.map((s: any) => {
+    const isFree = s.price === 0;
+    const testIds = Array.isArray(s.tests) ? s.tests : [];
+    const targetIds = [s.id, ...testIds];
+
+    const hasPaid = userPayments.some((p) => {
+      const notes: any = p.notes;
+      if (!notes) return false;
+      return (
+        targetIds.includes(notes.testId) ||
+        targetIds.includes(notes.testSeriesId) ||
+        targetIds.includes(notes.itemId)
+      );
+    });
+
+    const isPurchased = isFree || hasPaid;
+    const enrollmentCount = s._count?.enrollments || 0;
+
+    return {
+      ...s,
+      isPurchased,
+      isEnrolled: isPurchased,
+      testsCount: testIds.length,
+      enrollmentCount,
+      enrollmentsCount: enrollmentCount,
+      totalEnrollments: enrollmentCount,
+    };
+  });
+
   ApiResponse.ok(res, {
-    testSeries: result.seriesList,
+    testSeries: enrichedSeriesList,
     pagination: {
       total: result.total,
       page: Number(page),
@@ -104,13 +177,41 @@ export const getTestSeriesBySlug = catchAsync(async (req, res) => {
         })
       : [];
 
-  const isPurchased = Boolean(series.price === 0);
+  let isPurchased = Boolean(series.price === 0);
+
+  if (req.userId && !isPurchased) {
+    const targetIds = [series.id, ...testIds];
+    const payments = await prisma.payment.findMany({
+      where: {
+        userId: req.userId,
+        status: { in: ['captured', 'success', 'completed', 'paid'] },
+      },
+      select: { notes: true },
+    });
+
+    const hasPaid = payments.some((p) => {
+      const notes: any = p.notes;
+      if (!notes) return false;
+      return (
+        targetIds.includes(notes.testId) ||
+        targetIds.includes(notes.testSeriesId) ||
+        targetIds.includes(notes.itemId)
+      );
+    });
+
+    if (hasPaid) {
+      isPurchased = true;
+    }
+  }
 
   const enrichedTests = tests.map((t, idx) => {
     const { questions, ...restT } = t as any;
+    const testIsFree = Boolean(
+      (t.settings && (t.settings as any).isFree === true) || series.price === 0 || isPurchased
+    );
     return {
       ...restT,
-      isPurchased,
+      isPurchased: isPurchased || testIsFree,
       testNumber: idx + 1,
     };
   });

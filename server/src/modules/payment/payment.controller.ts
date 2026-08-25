@@ -20,7 +20,11 @@ export class PaymentController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized('Authentication required to create a checkout order');
     }
-    const result = await this.paymentService.createCheckoutOrder(req.userId, req.body);
+    const result = await this.paymentService.createCheckoutOrder(
+      req.userId,
+      req.tenantId || null,
+      req.body
+    );
     return this.created(res, result, 'Order created successfully');
   });
 
@@ -34,6 +38,18 @@ export class PaymentController extends BaseController {
       req.body
     );
     return this.ok(res, result, 'Payment verified successfully');
+  });
+
+  recordFailure = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    if (!req.userId) {
+      throw ApiError.unauthorized('Authentication required');
+    }
+    const { orderId, error } = req.body;
+    if (!orderId) {
+      throw ApiError.badRequest('orderId is required');
+    }
+    const result = await this.paymentService.recordPaymentFailure(req.userId, orderId, error || {});
+    return this.ok(res, result, 'Payment failure recorded');
   });
 
   processWebhook = this.catchAsync(async (req: Request, res: Response) => {

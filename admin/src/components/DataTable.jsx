@@ -1,7 +1,7 @@
 import { Search, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import LoadingSpinner from '@/components/loadingSpinner';
 import Pagination from '@/components/Pagination';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/utils';
 
 export default function DataTable({
@@ -28,18 +28,70 @@ export default function DataTable({
   onSelectAll,
 }) {
   const [localSearch, setLocalSearch] = useState(searchValue);
+  const [internalSortField, setInternalSortField] = useState(sortField || null);
+  const [internalSortOrder, setInternalSortOrder] = useState(sortOrder || 'desc');
+
+  const activeSortField = sortField !== undefined ? sortField : internalSortField;
+  const activeSortOrder = sortOrder !== undefined ? sortOrder : internalSortOrder;
 
   const handleSearch = (val) => {
     setLocalSearch(val);
     onSearch?.(val);
   };
 
+  const handleHeaderClick = (col) => {
+    if (col.sortable === false) return;
+    const colKey = col.key;
+    if (onSort) {
+      onSort(colKey);
+    } else {
+      if (internalSortField === colKey) {
+        setInternalSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setInternalSortField(colKey);
+        setInternalSortOrder('asc');
+      }
+    }
+  };
+
+  // Client-side sorted data if external onSort is not provided
+  const processedData = useMemo(() => {
+    if (onSort || !activeSortField || !Array.isArray(data)) return data;
+    return [...data].sort((a, b) => {
+      const aVal = a[activeSortField];
+      const bVal = b[activeSortField];
+
+      if (aVal === bVal) return 0;
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
+
+      let comparison = 0;
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        comparison = aVal - bVal;
+      } else if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+        comparison = aVal === bVal ? 0 : aVal ? -1 : 1;
+      } else if (aVal instanceof Date || (!isNaN(Date.parse(aVal)) && isNaN(aVal))) {
+        comparison = new Date(aVal).getTime() - new Date(bVal).getTime();
+      } else {
+        comparison = String(aVal).localeCompare(String(bVal), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
+      }
+
+      return activeSortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [data, activeSortField, activeSortOrder, onSort]);
+
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />;
-    return sortOrder === 'asc' ? (
-      <ArrowUp className="w-3.5 h-3.5 text-primary-600" />
+    if (activeSortField !== field)
+      return (
+        <ArrowUpDown className="w-3.5 h-3.5 opacity-30 group-hover:opacity-70 transition-opacity" />
+      );
+    return activeSortOrder === 'asc' ? (
+      <ArrowUp className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
     ) : (
-      <ArrowDown className="w-3.5 h-3.5 text-primary-600" />
+      <ArrowDown className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
     );
   };
 
@@ -95,24 +147,28 @@ export default function DataTable({
                   />
                 </th>
               )}
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className={cn(
-                    'px-6 py-3.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
-                    col.sortable &&
-                      'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200',
-                    col.className
-                  )}
-                  style={{ width: col.width }}
-                  onClick={() => col.sortable && onSort?.(col.key)}
-                >
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    {col.label}
-                    {col.sortable && <SortIcon field={col.key} />}
-                  </div>
-                </th>
-              ))}
+              {columns.map((col) => {
+                const isSortable = col.sortable !== false;
+                return (
+                  <th
+                    key={col.key}
+                    className={cn(
+                      'px-6 py-3.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider group',
+                      isSortable &&
+                        'cursor-pointer select-none hover:text-gray-900 dark:hover:text-white',
+                      col.className
+                    )}
+                    style={{ width: col.width }}
+                    onClick={() => handleHeaderClick(col)}
+                    title={isSortable ? `Sort by ${col.label}` : undefined}
+                  >
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      {col.label}
+                      {isSortable && <SortIcon field={col.key} />}
+                    </div>
+                  </th>
+                );
+              })}
               {actions && (
                 <th className="px-6 py-3.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                   Actions
@@ -130,7 +186,7 @@ export default function DataTable({
                   <LoadingSpinner size="md" />
                 </td>
               </tr>
-            ) : data.length === 0 ? (
+            ) : processedData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)}
@@ -145,7 +201,7 @@ export default function DataTable({
                 </td>
               </tr>
             ) : (
-              data.map((row, idx) => {
+              processedData.map((row, idx) => {
                 const rowId = row.id || row._id || idx;
                 return (
                   <tr

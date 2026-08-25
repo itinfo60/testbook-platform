@@ -45,6 +45,11 @@ export const userQuerySchema = z.object({
     if (val === 'false') return false;
     return val;
   }, z.boolean().optional()),
+  isEmailVerified: z.preprocess((val) => {
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return val;
+  }, z.boolean().optional()),
 });
 
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;

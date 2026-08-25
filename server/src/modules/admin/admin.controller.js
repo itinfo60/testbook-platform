@@ -15,8 +15,12 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   const periodDays = parseInt(req.query.period) || 30;
   const tenantId = req.tenantId || 'global';
   const cacheKey = `admin:dashboard:${tenantId}:${periodDays}`;
-  const cached = await redis.get(cacheKey);
-  if (cached) return ApiResponse.ok(res, typeof cached === 'string' ? JSON.parse(cached) : cached);
+
+  if (req.query.refresh !== 'true') {
+    const cached = await redis.get(cacheKey);
+    if (cached)
+      return ApiResponse.ok(res, typeof cached === 'string' ? JSON.parse(cached) : cached);
+  }
 
   const now = new Date();
   const periodStart = new Date(now.getTime() - periodDays * 86400000);
@@ -31,15 +35,21 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     newUsersThisPeriod,
     newUsersPrevPeriod,
     activeUsersCount,
-    totalEnrollments,
-    enrollmentsThisPeriod,
-    enrollmentsPrevPeriod,
-    paidEnrollments,
-    freeEnrollments,
+    totalCourseEnrollments,
+    totalTSEnrollments,
+    courseEnrollmentsThisPeriod,
+    tsEnrollmentsThisPeriod,
+    courseEnrollmentsPrevPeriod,
+    tsEnrollmentsPrevPeriod,
+    paidCourseEnrollments,
+    paidTSEnrollments,
+    freeCourseEnrollments,
+    freeTSEnrollments,
     completedEnrollments,
     completedEnrollmentsThisPeriod,
     completedEnrollmentsPrevPeriod,
-    activeEnrollments,
+    activeCourseEnrollments,
+    activeTSEnrollments,
     avgProgressAgg,
     allEnrollmentsLessons,
     totalTestsAttempted,
@@ -64,7 +74,8 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     unverifiedTeachers,
     failedPayments,
     recentUsers,
-    recentEnrollments,
+    recentCourseEnrollments,
+    recentTSEnrollments,
     revenueStatsRaw,
     revenueThisPeriodAgg,
     revenuePrevPeriodAgg,
@@ -88,15 +99,27 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     }),
     prisma.user.count({ where: { ...tenantFilter, isActive: true } }),
     prisma.enrollment.count({ where: { ...tenantFilter } }),
+    prisma.testSeriesEnrollment.count({ where: { ...tenantFilter } }),
     prisma.enrollment.count({ where: { ...tenantFilter, enrolledAt: { gte: periodStart } } }),
+    prisma.testSeriesEnrollment.count({
+      where: { ...tenantFilter, enrolledAt: { gte: periodStart } },
+    }),
     prisma.enrollment.count({
       where: {
         ...tenantFilter,
         enrolledAt: { gte: prevPeriodStart, lt: prevPeriodEnd },
       },
     }),
+    prisma.testSeriesEnrollment.count({
+      where: {
+        ...tenantFilter,
+        enrolledAt: { gte: prevPeriodStart, lt: prevPeriodEnd },
+      },
+    }),
     prisma.enrollment.count({ where: { ...tenantFilter, amount: { gt: 0 } } }),
+    prisma.testSeriesEnrollment.count({ where: { ...tenantFilter, amount: { gt: 0 } } }),
     prisma.enrollment.count({ where: { ...tenantFilter, amount: 0 } }),
+    prisma.testSeriesEnrollment.count({ where: { ...tenantFilter, amount: 0 } }),
     prisma.enrollment.count({ where: { ...tenantFilter, status: 'completed' } }),
     prisma.enrollment.count({
       where: { ...tenantFilter, status: 'completed', completedAt: { gte: periodStart } },
@@ -109,6 +132,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       },
     }),
     prisma.enrollment.count({ where: { ...tenantFilter, status: 'active' } }),
+    prisma.testSeriesEnrollment.count({ where: { ...tenantFilter, status: 'active' } }),
     prisma.enrollment.aggregate({ where: { ...tenantFilter }, _avg: { progressPercentage: true } }),
     prisma.enrollment.findMany({
       where: { ...tenantFilter },
@@ -156,6 +180,15 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       include: {
         user: { select: { name: true, email: true, avatar: true } },
         course: { select: { title: true, thumbnail: true, price: true } },
+      },
+    }),
+    prisma.testSeriesEnrollment.findMany({
+      where: { ...tenantFilter },
+      orderBy: { enrolledAt: 'desc' },
+      take: 5,
+      include: {
+        user: { select: { name: true, email: true, avatar: true } },
+        testSeries: { select: { title: true, price: true } },
       },
     }),
     prisma.payment.aggregate({
@@ -218,6 +251,29 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       orderBy: { attempts: { _count: 'desc' } },
     }),
   ]);
+
+  const totalEnrollments = totalCourseEnrollments + totalTSEnrollments;
+  const enrollmentsThisPeriod = courseEnrollmentsThisPeriod + tsEnrollmentsThisPeriod;
+  const enrollmentsPrevPeriod = courseEnrollmentsPrevPeriod + tsEnrollmentsPrevPeriod;
+  const paidEnrollments = paidCourseEnrollments + paidTSEnrollments;
+  const freeEnrollments = freeCourseEnrollments + freeTSEnrollments;
+  const activeEnrollments = activeCourseEnrollments + activeTSEnrollments;
+
+  const recentEnrollments = [
+    ...recentCourseEnrollments.map((e) => ({
+      ...e,
+      type: 'course',
+      itemTitle: e.course?.title,
+    })),
+    ...recentTSEnrollments.map((e) => ({
+      ...e,
+      type: 'testSeries',
+      itemTitle: e.testSeries?.title,
+      course: { title: e.testSeries?.title, price: e.testSeries?.price },
+    })),
+  ]
+    .sort((a, b) => new Date(b.enrolledAt).getTime() - new Date(a.enrolledAt).getTime())
+    .slice(0, 5);
 
   // Helper: calculate growth percentage
   const calcGrowth = (current, previous) => {
@@ -501,7 +557,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     },
   };
 
-  await redis.set(cacheKey, data, 120);
+  await redis.set(cacheKey, data, 30);
 
   ApiResponse.ok(res, data);
 });
@@ -635,6 +691,8 @@ export const createUser = catchAsync(async (req, res) => {
     },
   });
 
+  await redis.delPattern('admin:dashboard:*').catch(() => {});
+
   ApiResponse.created(
     res,
     { user: { _id: user.id, id: user.id, name: user.name, email: user.email, role: user.role } },
@@ -668,7 +726,10 @@ export const updateUser = catchAsync(async (req, res) => {
 
   if (!user) throw ApiError.notFound('User not found');
 
-  await redis.del(`user_${user.id}`);
+  await Promise.all([
+    redis.del(`user_${user.id}`).catch(() => {}),
+    redis.delPattern('admin:dashboard:*').catch(() => {}),
+  ]);
 
   ApiResponse.ok(res, { user: { ...user, _id: user.id } }, 'User updated');
 });
@@ -686,7 +747,10 @@ export const deleteUser = catchAsync(async (req, res) => {
     data: { isActive: false, refreshTokens: [] },
   });
 
-  await redis.del(`user_${user.id}`);
+  await Promise.all([
+    redis.del(`user_${user.id}`).catch(() => {}),
+    redis.delPattern('admin:dashboard:*').catch(() => {}),
+  ]);
 
   ApiResponse.ok(res, null, 'User deactivated');
 });
@@ -924,10 +988,9 @@ export const adminGetTests = catchAsync(async (req, res) => {
 
 export const adminGetTestById = catchAsync(async (req, res) => {
   const test = await prisma.test.findFirst({
-    where: { OR: [{ id: req.params.id }, { slug: req.params.id }] },
+    where: { id: req.params.id },
     include: {
       category: { select: { id: true, name: true, slug: true, parentId: true } },
-      teacher: { select: { id: true, name: true, email: true } },
       _count: { select: { attempts: true } },
     },
   });
@@ -1108,6 +1171,10 @@ export const getRevenue = catchAsync(async (req, res) => {
     }),
     prisma.testSeries.findMany({
       where: { ...tenantFilter },
+      include: {
+        _count: { select: { enrollments: true } },
+      },
+      orderBy: { enrollments: { _count: 'desc' } },
       take: 6,
     }),
     prisma.coupon.findMany({
@@ -1224,46 +1291,76 @@ export const getRevenue = catchAsync(async (req, res) => {
   }));
 
   // Revenue by Product breakdown (strictly from database records)
-  const courseRevAgg = await prisma.enrollment.aggregate({
-    where: { ...tenantFilter, amount: { gt: 0 }, enrolledAt: { gte: periodStart } },
-    _sum: { amount: true },
+  const completedPaymentsInPeriod = await prisma.payment.findMany({
+    where: { ...tenantFilter, status: 'completed', createdAt: { gte: periodStart } },
+    select: { amount: true, notes: true },
   });
-  const courseRev = courseRevAgg._sum.amount || grossRevenue || 0;
-  const testSeriesRev = 0;
+
+  let courseRev = 0;
+  let testSeriesRev = 0;
+  let testSeriesOrdersCount = {};
+  let testSeriesRevCount = {};
+
+  completedPaymentsInPeriod.forEach((p) => {
+    const notes = p.notes || {};
+    const amt = Number(p.amount || 0);
+    if (notes.testId || notes.testSeriesId) {
+      testSeriesRev += amt;
+      const key = notes.testSeriesId || notes.testId;
+      testSeriesOrdersCount[key] = (testSeriesOrdersCount[key] || 0) + 1;
+      testSeriesRevCount[key] = (testSeriesRevCount[key] || 0) + amt;
+    } else {
+      courseRev += amt;
+    }
+  });
+
   const liveClassRev = 0;
   const libraryRev = 0;
-  const totalCalculated =
-    courseRev + testSeriesRev + liveClassRev + libraryRev || grossRevenue || 1;
+  const totalRevForPct = grossRevenue || courseRev + testSeriesRev || 1;
 
   const revenueByProduct = [
     {
       name: 'Courses',
       type: 'course',
       revenue: courseRev,
-      percentage:
-        grossRevenue > 0 ? Math.min(100, Math.round((courseRev / grossRevenue) * 100)) : 0,
+      percentage: Math.min(100, Math.round((courseRev / totalRevForPct) * 100)),
     },
     {
       name: 'Test Series',
       type: 'test-series',
       revenue: testSeriesRev,
-      percentage: grossRevenue > 0 ? Math.round((testSeriesRev / grossRevenue) * 100) : 0,
+      percentage: Math.min(100, Math.round((testSeriesRev / totalRevForPct) * 100)),
     },
     {
       name: 'Live Classes',
       type: 'live-class',
       revenue: liveClassRev,
-      percentage: grossRevenue > 0 ? Math.round((liveClassRev / grossRevenue) * 100) : 0,
+      percentage: Math.round((liveClassRev / totalRevForPct) * 100),
     },
     {
       name: 'Digital Library',
       type: 'library',
       revenue: libraryRev,
-      percentage: grossRevenue > 0 ? Math.round((libraryRev / grossRevenue) * 100) : 0,
+      percentage: Math.round((libraryRev / totalRevForPct) * 100),
     },
   ];
 
   // Top Performing Products (strictly from database records)
+  // Also include any test series that have revenue from payments but might not be in topTestSeriesRaw
+  const revenueSeriesIds = Object.keys(testSeriesRevCount);
+  const extraSeriesIds = revenueSeriesIds.filter(
+    (id) => !topTestSeriesRaw.find((ts) => ts.id === id)
+  );
+  const extraSeriesRaw =
+    extraSeriesIds.length > 0
+      ? await prisma.testSeries.findMany({
+          where: { id: { in: extraSeriesIds } },
+          include: { _count: { select: { enrollments: true } } },
+        })
+      : [];
+
+  const allSeriesForTop = [...topTestSeriesRaw, ...extraSeriesRaw];
+
   const topProducts = [
     ...topCoursesRaw.map((c) => ({
       id: c.id,
@@ -1275,17 +1372,24 @@ export const getRevenue = catchAsync(async (req, res) => {
       instructor: c.teacher?.name || 'Unassigned',
       link: `/courses/${c.id}`,
     })),
-    ...topTestSeriesRaw.map((ts) => ({
-      id: ts.id,
-      title: ts.title,
-      type: 'Test Series',
-      orders: 0,
-      students: 0,
-      revenue: 0,
-      instructor: 'Exam Faculty',
-      link: `/test-series/${ts.id}`,
-    })),
-  ].sort((a, b) => b.revenue - a.revenue);
+    ...allSeriesForTop.map((ts) => {
+      const orders = testSeriesOrdersCount[ts.id] || ts._count?.enrollments || 0;
+      const rev = testSeriesRevCount[ts.id] || orders * (ts.price || 0);
+      return {
+        id: ts.id,
+        title: ts.title,
+        type: 'Test Series',
+        orders,
+        students: orders,
+        revenue: rev,
+        instructor: 'Exam Faculty',
+        link: `/test-series/${ts.id}`,
+      };
+    }),
+  ]
+    .filter((p) => p.revenue > 0 || p.orders > 0)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
 
   // Coupon Performance (strictly from DB)
   const totalCouponsUsed = couponsList.reduce((acc, c) => acc + (c.usedCount || 0), 0);
@@ -1492,55 +1596,194 @@ export const adminGetEnrollments = catchAsync(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
+  const typeFilter = req.query.type || 'all'; // 'all' | 'course' | 'test_series'
 
-  const where = {};
-  if (req.query.status) where.status = req.query.status;
+  const courseWhere = {};
+  const testSeriesWhere = {};
+
+  if (req.query.status) {
+    courseWhere.status = req.query.status;
+    testSeriesWhere.status = req.query.status;
+  }
   if (req.query.startDate || req.query.endDate) {
-    where.enrolledAt = {};
-    if (req.query.startDate) where.enrolledAt.gte = new Date(req.query.startDate);
-    if (req.query.endDate) where.enrolledAt.lte = new Date(req.query.endDate);
+    const dateFilter = {};
+    if (req.query.startDate) dateFilter.gte = new Date(req.query.startDate);
+    if (req.query.endDate) dateFilter.lte = new Date(req.query.endDate);
+    courseWhere.enrolledAt = dateFilter;
+    testSeriesWhere.enrolledAt = dateFilter;
   }
 
   if (req.query.search) {
-    where.OR = [
-      { user: { name: { contains: req.query.search, mode: 'insensitive' } } },
-      { user: { email: { contains: req.query.search, mode: 'insensitive' } } },
-      { course: { title: { contains: req.query.search, mode: 'insensitive' } } },
+    const search = req.query.search;
+    courseWhere.OR = [
+      { user: { name: { contains: search, mode: 'insensitive' } } },
+      { user: { email: { contains: search, mode: 'insensitive' } } },
+      { course: { title: { contains: search, mode: 'insensitive' } } },
+    ];
+    testSeriesWhere.OR = [
+      { user: { name: { contains: search, mode: 'insensitive' } } },
+      { user: { email: { contains: search, mode: 'insensitive' } } },
+      { testSeries: { title: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
-  const [docs, total] = await Promise.all([
-    prisma.enrollment.findMany({
-      where,
-      skip,
-      take: limit,
-      include: {
-        user: { select: { name: true, email: true, avatar: true } },
-        course: { select: { title: true, thumbnail: true, price: true } },
-      },
-      orderBy: { enrolledAt: 'desc' },
-    }),
-    prisma.enrollment.count({ where }),
-  ]);
+  const [courseDocs, courseTotal, testSeriesDocs, testSeriesTotal, courseUserIds, tsUserIds] =
+    await Promise.all([
+      typeFilter !== 'test_series'
+        ? prisma.enrollment.findMany({
+            where: courseWhere,
+            include: {
+              user: { select: { name: true, email: true, avatar: true } },
+              course: {
+                select: { id: true, title: true, thumbnail: true, price: true, slug: true },
+              },
+            },
+            orderBy: { enrolledAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      typeFilter !== 'test_series'
+        ? prisma.enrollment.count({ where: courseWhere })
+        : Promise.resolve(0),
+      typeFilter !== 'course'
+        ? prisma.testSeriesEnrollment.findMany({
+            where: testSeriesWhere,
+            include: {
+              user: { select: { name: true, email: true, avatar: true } },
+              testSeries: { select: { id: true, title: true, price: true, tests: true } },
+            },
+            orderBy: { enrolledAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      typeFilter !== 'course'
+        ? prisma.testSeriesEnrollment.count({ where: testSeriesWhere })
+        : Promise.resolve(0),
+      prisma.enrollment.findMany({
+        where: courseWhere,
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
+      prisma.testSeriesEnrollment.findMany({
+        where: testSeriesWhere,
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
+    ]);
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [activeCount, completedCount, thisMonthCount] = await Promise.all([
-    prisma.enrollment.count({ where: { status: { not: 'completed' } } }),
-    prisma.enrollment.count({ where: { status: 'completed' } }),
-    prisma.enrollment.count({ where: { enrolledAt: { gte: startOfMonth } } }),
+  const uniqueStudentSet = new Set([
+    ...courseUserIds.map((c) => c.userId),
+    ...tsUserIds.map((t) => t.userId),
   ]);
+  const uniqueStudents = uniqueStudentSet.size;
+
+  const formattedCourses = courseDocs.map((e) => ({
+    id: e.id,
+    _id: e.id,
+    type: 'course',
+    productType: 'Course',
+    user: e.user,
+    userId: e.userId,
+    course: e.course,
+    product: {
+      id: e.course?.id,
+      title: e.course?.title,
+      price: e.course?.price,
+      thumbnail: e.course?.thumbnail,
+    },
+    title: e.course?.title,
+    progressPercentage: e.progressPercentage || 0,
+    status: e.status,
+    paymentStatus: e.paymentStatus,
+    amount: e.amount,
+    paymentId: e.paymentId || null, // raw payment record id string
+    orderId: e.orderId || null,
+    enrolledAt: e.enrolledAt,
+    completedAt: e.completedAt,
+  }));
+
+  // Resolve Razorpay transaction IDs for test series enrollments
+  const tsPaymentIds = testSeriesDocs.map((s) => s.paymentId).filter(Boolean);
+  const tsPayments =
+    tsPaymentIds.length > 0
+      ? await prisma.payment.findMany({
+          where: { id: { in: tsPaymentIds } },
+          select: {
+            id: true,
+            transactionId: true,
+            orderId: true,
+            amount: true,
+            currency: true,
+            notes: true,
+          },
+        })
+      : [];
+  const tsPaymentMap = new Map(tsPayments.map((p) => [p.id, p]));
+
+  const formattedSeries = testSeriesDocs.map((s) => {
+    const pay = s.paymentId ? tsPaymentMap.get(s.paymentId) : null;
+    const razorpayPayId =
+      pay?.transactionId ||
+      (pay?.notes && typeof pay.notes === 'object' ? pay.notes.paymentId : null) ||
+      null;
+
+    return {
+      id: s.id,
+      _id: s.id,
+      type: 'test_series',
+      productType: 'Test Series',
+      user: s.user,
+      userId: s.userId,
+      course: {
+        id: s.testSeries?.id,
+        title: s.testSeries?.title,
+        price: s.testSeries?.price,
+      },
+      testSeries: s.testSeries,
+      product: {
+        id: s.testSeries?.id,
+        title: s.testSeries?.title,
+        price: s.testSeries?.price,
+        testsCount: Array.isArray(s.testSeries?.tests) ? s.testSeries.tests.length : 0,
+      },
+      title: s.testSeries?.title,
+      progressPercentage: 100,
+      status: s.status,
+      paymentStatus: s.paymentStatus,
+      amount: s.amount,
+      orderId: s.orderId || pay?.orderId || null,
+      // Attach enriched payment object so modal can display Razorpay refs
+      paymentId: pay
+        ? {
+            id: pay.id,
+            paymentId: razorpayPayId,
+            orderId: s.orderId || pay.orderId,
+            amount: s.amount,
+            provider: razorpayPayId?.startsWith('pay_') ? 'razorpay' : 'online',
+          }
+        : null,
+      enrolledAt: s.enrolledAt,
+      completedAt: s.expiresAt,
+    };
+  });
+
+  const combinedDocs = [...formattedCourses, ...formattedSeries].sort(
+    (a, b) => new Date(b.enrolledAt).getTime() - new Date(a.enrolledAt).getTime()
+  );
+
+  const total = courseTotal + testSeriesTotal;
+  const paginatedDocs = combinedDocs.slice(skip, skip + limit);
+  const totalRevenue = combinedDocs.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
 
   ApiResponse.paginated(res, {
-    docs,
+    docs: paginatedDocs,
     page,
     limit,
     total,
     stats: {
       total,
-      active: activeCount,
-      completed: completedCount,
-      thisMonth: thisMonthCount,
+      uniqueStudents,
+      courses: courseTotal,
+      testSeries: testSeriesTotal,
+      totalRevenue,
     },
   });
 });
@@ -1548,30 +1791,37 @@ export const adminGetEnrollments = catchAsync(async (req, res) => {
 export const adminExportEnrollments = catchAsync(async (req, res) => {
   const where = {};
   if (req.query.status) where.status = req.query.status;
-  if (req.query.startDate || req.query.endDate) {
-    where.enrolledAt = {};
-    if (req.query.startDate) where.enrolledAt.gte = new Date(req.query.startDate);
-    if (req.query.endDate) where.enrolledAt.lte = new Date(req.query.endDate);
-  }
 
-  const enrollments = await prisma.enrollment.findMany({
-    where,
-    include: {
-      user: { select: { name: true, email: true } },
-      course: { select: { title: true, price: true } },
-    },
-    orderBy: { enrolledAt: 'desc' },
-  });
+  const [enrollments, testSeriesEnrollments] = await Promise.all([
+    prisma.enrollment.findMany({
+      where,
+      include: {
+        user: { select: { name: true, email: true } },
+        course: { select: { title: true, price: true } },
+      },
+      orderBy: { enrolledAt: 'desc' },
+    }),
+    prisma.testSeriesEnrollment.findMany({
+      where,
+      include: {
+        user: { select: { name: true, email: true } },
+        testSeries: { select: { title: true, price: true } },
+      },
+      orderBy: { enrolledAt: 'desc' },
+    }),
+  ]);
 
-  const headers = 'Student Name,Email,Course,Amount Paid,Status,Enrolled Date,Progress\n';
-  const rows = enrollments
-    .map(
-      (e) =>
-        `"${e.user?.name || 'N/A'}","${e.user?.email || 'N/A'}","${e.course?.title || 'N/A'}",${e.amount || 0},"${e.status}","${e.enrolledAt?.toISOString().split('T')[0] || ''}",${e.progressPercentage || 0}%`
-    )
-    .join('\n');
+  const headers = 'Student Name,Email,Product Type,Title,Amount Paid,Status,Enrolled Date\n';
+  const courseRows = enrollments.map(
+    (e) =>
+      `"${e.user?.name || 'N/A'}","${e.user?.email || 'N/A'}","Course","${e.course?.title || 'N/A'}",${e.amount || 0},"${e.status}","${e.enrolledAt?.toISOString().split('T')[0] || ''}"`
+  );
+  const seriesRows = testSeriesEnrollments.map(
+    (s) =>
+      `"${s.user?.name || 'N/A'}","${s.user?.email || 'N/A'}","Test Series","${s.testSeries?.title || 'N/A'}",${s.amount || 0},"${s.status}","${s.enrolledAt?.toISOString().split('T')[0] || ''}"`
+  );
 
-  const csv = headers + rows;
+  const csv = headers + [...courseRows, ...seriesRows].join('\n');
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename=enrollments-${Date.now()}.csv`);
   res.send(csv);

@@ -47,11 +47,11 @@ export default function TestSeriesCatalog() {
         ]);
 
         const catData =
-          catRes.data?.categories || catRes.data?.data?.categories || catRes.data?.data || [];
+          catRes.data?.data?.categories || catRes.data?.categories || catRes.data?.data || [];
         let cats = Array.isArray(catData) ? catData : [];
         const seen = new Set();
         cats = cats.filter((c) => {
-          const id = c._id || c.slug;
+          const id = c.id || c._id || c.slug;
           if (!id || seen.has(id)) return false;
           seen.add(id);
           return true;
@@ -81,8 +81,9 @@ export default function TestSeriesCatalog() {
     setSelectedExam(exam);
     try {
       setLoadingExamSeries(true);
+      const examKey = exam.id || exam._id || exam.slug;
       const res = await api.get('/test-series', {
-        params: { examCategory: exam._id || exam.slug, limit: 30 },
+        params: { examCategory: examKey, category: examKey, limit: 30 },
       });
       const list = res.data?.data?.testSeries || res.data?.testSeries || [];
       if (Array.isArray(list)) {
@@ -101,17 +102,28 @@ export default function TestSeriesCatalog() {
     setExamTestSeries([]);
   };
 
-  // Flatten the exams that live inside each category.
-  // A category with no exams contributes nothing — never show a category as an exam.
-  const allExamsList = categories.flatMap((cat) =>
-    (cat.subcategories || []).map((sub) => ({ ...sub, parentCategory: cat }))
-  );
+  // Recursively flatten all exams/sub-exams that live under each root category
+  const flattenExams = (cat, rootCat) => {
+    const directSubs = (cat.subcategories || []).map((sub) => ({
+      ...sub,
+      parentCategory: rootCat || cat,
+      directParent: cat,
+    }));
+    let deeperSubs = [];
+    (cat.subcategories || []).forEach((sub) => {
+      deeperSubs = deeperSubs.concat(flattenExams(sub, rootCat || cat));
+    });
+    return [...directSubs, ...deeperSubs];
+  };
+
+  const allExamsList = categories.flatMap((cat) => flattenExams(cat, cat));
 
   // Right column: exams belonging to the category selected on the left
   const displayedExams = allExamsList.filter((exam) => {
     if (activeCategoryFilter === 'all') return true;
+    const parentId = exam.parentCategory?.id || exam.parentCategory?._id;
     return (
-      String(exam.parentCategory?._id) === String(activeCategoryFilter) ||
+      String(parentId) === String(activeCategoryFilter) ||
       exam.parentCategory?.slug === activeCategoryFilter
     );
   });
@@ -127,10 +139,10 @@ export default function TestSeriesCatalog() {
   const freeList = testSeriesList.filter((s) => s.isFree || s.price === 0);
 
   /* ─── Test Series Card ─── */
-  const renderSeriesCard = (series) => (
+  const renderSeriesCard = (series, idx) => (
     <div
-      key={series._id || series.slug}
-      onClick={() => navigate(`/test-series/${series.slug || series._id}`)}
+      key={series.id || series._id || series.slug || `series-${idx}`}
+      onClick={() => navigate(`/test-series/${series.slug || series.id || series._id}`)}
       className="group relative bg-white dark:bg-dark-900 rounded-3xl border border-dark-100 dark:border-dark-800 hover:border-primary-400 dark:hover:border-primary-500 transition-all duration-300 cursor-pointer overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between"
     >
       <div
@@ -314,14 +326,15 @@ export default function TestSeriesCatalog() {
 
                 {/* 2. Dynamic Categories from DB (Rajasthan Specific, Political Science Special, etc.) */}
                 {categories.map((cat) => {
+                  const catKey = cat.id || cat._id;
                   const isSelected =
-                    activeCategoryFilter === cat._id || activeCategoryFilter === cat.slug;
-                  // Number of exams inside this category (0 when it has none)
-                  const count = cat.subcategories?.length || 0;
+                    activeCategoryFilter === catKey || activeCategoryFilter === cat.slug;
+                  // Number of total nested exams inside this category
+                  const count = flattenExams(cat, cat).length;
                   return (
                     <button
-                      key={cat.id || cat._id}
-                      onClick={() => setActiveCategoryFilter(cat._id)}
+                      key={catKey}
+                      onClick={() => setActiveCategoryFilter(catKey)}
                       className={`w-full text-left px-4 py-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-white dark:bg-dark-800 shadow-md text-primary-600 dark:text-primary-400 font-extrabold border-l-4 border-primary-500'
@@ -355,9 +368,9 @@ export default function TestSeriesCatalog() {
 
                 {displayedExams.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    {displayedExams.map((exam) => (
+                    {displayedExams.map((exam, exIdx) => (
                       <button
-                        key={exam._id || exam.slug}
+                        key={exam.id || exam._id || exam.slug || `exam-${exIdx}`}
                         onClick={() => handleSelectExam(exam)}
                         className="flex items-center justify-between p-4 bg-dark-50/70 dark:bg-dark-800/60 border border-dark-200/80 dark:border-dark-700/60 rounded-2xl hover:border-primary-500 hover:bg-white dark:hover:bg-dark-800 hover:shadow-md transition-all cursor-pointer group text-left"
                       >

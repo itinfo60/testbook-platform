@@ -474,7 +474,7 @@ export default function Dashboard() {
                 </div>
 
                 <Link
-                  to={`/tests/${attempt.test?._id || attempt.test || attempt._id}/result`}
+                  to={`/tests/${attempt.test?.id || attempt.test?._id || attempt.testId || attempt.test || attempt.id || attempt._id}/result`}
                   className="w-full bg-blue-50 hover:bg-blue-600 hover:text-white dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 font-bold py-2.5 px-4 rounded-xl transition-all text-xs text-center flex items-center justify-center gap-1"
                 >
                   View Solution & Scorecard →
@@ -559,7 +559,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <Link
-                  to={`/quiz/${quiz._id}`}
+                  to={`/quiz/${quiz.id || quiz._id}`}
                   className={`${index === 0 ? 'bg-white text-orange-600 hover:bg-amber-50' : 'bg-slate-100 dark:bg-dark-800 hover:bg-orange-500 hover:text-white'} font-black py-2.5 px-4 rounded-xl text-center text-xs shadow-md transition-all`}
                 >
                   Start Quiz →

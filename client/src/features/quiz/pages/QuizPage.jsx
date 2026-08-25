@@ -25,10 +25,15 @@ export default function QuizPage() {
 
   // Fetch quiz if id in URL and not loaded
   useEffect(() => {
-    if (id && (!currentQuiz || currentQuiz._id !== id)) {
-      dispatch(fetchQuizById(id));
+    if (id) {
+      if (!currentQuiz || (currentQuiz.id !== id && currentQuiz._id !== id)) {
+        dispatch(fetchQuizById(id));
+      }
     }
-  }, [dispatch, id, currentQuiz]);
+    return () => {
+      dispatch(clearQuizState());
+    };
+  }, [dispatch, id]);
 
   const questions = currentQuiz?.questions || [];
   const question = questions[currentIndex];
@@ -84,23 +89,24 @@ export default function QuizPage() {
 
   const executeSubmit = useCallback(async () => {
     setShowSubmitModal(false);
-    if (!currentQuiz?._id) return;
+    const targetQuizId = currentQuiz?.id || currentQuiz?._id || id;
+    if (!targetQuizId) return;
     try {
       // Format answers for server payload
       const formattedAnswers = Object.entries(answers).map(([qId, selectedOption]) => ({
         questionId: qId,
         selectedOption,
       }));
-      await dispatch(submitQuiz({ id: currentQuiz._id, answers: formattedAnswers })).unwrap();
+      await dispatch(submitQuiz({ id: targetQuizId, answers: formattedAnswers })).unwrap();
       // Clean up localStorage backup
       try {
-        localStorage.removeItem(`quiz_answers_${currentQuiz._id}`);
+        localStorage.removeItem(`quiz_answers_${targetQuizId}`);
       } catch {}
       toast.success('Quiz submitted successfully!');
     } catch (err) {
       toast.error(err || 'Failed to submit quiz');
     }
-  }, [dispatch, currentQuiz, answers]);
+  }, [dispatch, currentQuiz, answers, id]);
 
   const handleTimeUp = useCallback(() => {
     toast.error('Time is up! Submitting quiz automatically...');
@@ -137,7 +143,9 @@ export default function QuizPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [result, question, currentIndex, questions.length]);
 
-  if (loading && !currentQuiz) return <LoadingSpinner fullScreen text="Loading quiz..." />;
+  if (loading || (!currentQuiz && !error)) {
+    return <LoadingSpinner fullScreen text="Loading quiz..." />;
+  }
 
   if (result) {
     return (
@@ -166,8 +174,11 @@ export default function QuizPage() {
   }
 
   const qId = question?._id || question?.id || currentIndex;
-  const answeredCount = Object.keys(answers).filter((k) => answers[k] !== undefined).length;
-  const unansweredCount = questions.length - answeredCount;
+  const questionIds = new Set(questions.map((q, idx) => q._id || q.id || idx));
+  const answeredCount = Object.keys(answers).filter(
+    (k) => questionIds.has(k) && answers[k] !== undefined
+  ).length;
+  const unansweredCount = Math.max(0, questions.length - answeredCount);
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">

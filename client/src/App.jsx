@@ -196,14 +196,9 @@ export default function App() {
                 </GuestRoute>
               }
             />
-            <Route
-              path="/reset-password/:token"
-              element={
-                <GuestRoute>
-                  <ResetPasswordPage />
-                </GuestRoute>
-              }
-            />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
           </Route>

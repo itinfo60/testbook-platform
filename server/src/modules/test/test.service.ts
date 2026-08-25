@@ -144,10 +144,24 @@ export class TestService extends BaseService<ITest, TestRepository> {
       filter.categoryId = query.category;
     }
     if (query.testSeries) {
-      filter.testSeriesId = query.testSeries;
+      // TestSeries model holds tests as a String[] array of test IDs
+      const series = await prisma.testSeries.findFirst({
+        where: {
+          OR: [
+            { id: query.testSeries },
+            { title: { contains: query.testSeries, mode: 'insensitive' } },
+          ],
+        },
+      });
+      if (series && Array.isArray(series.tests) && series.tests.length > 0) {
+        filter.id = { in: series.tests };
+      } else {
+        // No tests linked to this series
+        return { docs: [], page: 1, limit: parseInt(query.limit || '10', 10), total: 0 };
+      }
     }
     if (query.difficulty) {
-      filter.difficulty = query.difficulty;
+      // difficulty lives in settings if at all
     }
     if (query.search) {
       filter.title = { contains: query.search, mode: 'insensitive' };
@@ -171,10 +185,63 @@ export class TestService extends BaseService<ITest, TestRepository> {
       prisma.test.count({ where }),
     ]);
 
-    let results = docs.map((doc: any) => ({
-      ...doc,
-      isPurchased: true, // Default to true if free
-    }));
+    let userPayments: any[] = [];
+    if (userId) {
+      userPayments = await prisma.payment.findMany({
+        where: {
+          userId,
+          status: { in: ['captured', 'success', 'completed', 'paid'] },
+        },
+        select: { notes: true },
+      });
+    }
+
+    const testIds = docs.map((d: any) => d.id);
+    const parentSeriesList = await prisma.testSeries.findMany({
+      where: { isPublished: true },
+      select: { id: true, price: true, tests: true },
+    });
+
+    let results = docs.map((doc: any) => {
+      const associatedSeries = parentSeriesList.find(
+        (s) => Array.isArray(s.tests) && s.tests.includes(doc.id)
+      );
+      const isFree = Boolean(
+        (!associatedSeries &&
+          doc.settings?.isFree === true &&
+          (!doc.settings?.price || doc.settings?.price === 0)) ||
+        (associatedSeries && associatedSeries.price === 0) ||
+        (associatedSeries &&
+          associatedSeries.price > 0 &&
+          doc.settings?.isFree === true &&
+          (!doc.settings?.price || doc.settings?.price === 0))
+      );
+      const price = isFree
+        ? 0
+        : doc.settings?.price || (associatedSeries ? associatedSeries.price : 0);
+
+      const targetIds = [doc.id];
+      if (associatedSeries?.id) {
+        targetIds.push(associatedSeries.id);
+      }
+
+      const hasPaid = userPayments.some((p) => {
+        const notes: any = p.notes;
+        if (!notes) return false;
+        return (
+          targetIds.includes(notes.testId) ||
+          targetIds.includes(notes.testSeriesId) ||
+          targetIds.includes(notes.itemId)
+        );
+      });
+
+      return {
+        ...doc,
+        isFree,
+        price,
+        isPurchased: isFree || hasPaid,
+      };
+    });
 
     return { docs: results, page, limit, total };
   }
@@ -203,9 +270,31 @@ export class TestService extends BaseService<ITest, TestRepository> {
       }
     }
 
+    // Look up any parent Test Series that contains this test
+    const associatedSeries = await prisma.testSeries.findFirst({
+      where: {
+        tests: { has: test.id },
+        isPublished: true,
+      },
+      select: { id: true, title: true, price: true, categoryId: true },
+    });
+
+    const isFree = Boolean(
+      (!associatedSeries &&
+        test.settings?.isFree === true &&
+        (!test.settings?.price || test.settings?.price === 0)) ||
+      (associatedSeries && associatedSeries.price === 0) ||
+      (associatedSeries &&
+        associatedSeries.price > 0 &&
+        test.settings?.isFree === true &&
+        (!test.settings?.price || test.settings?.price === 0))
+    );
+    const price = isFree
+      ? 0
+      : test.settings?.price || (associatedSeries ? associatedSeries.price : test.price || 0);
+
     let attemptCount = 0;
-    let isPurchased = test.isFree;
-    let activeAttempt = null;
+    let isPurchased = isFree;
 
     if (userId) {
       attemptCount = await prisma.testAttempt.count({
@@ -216,20 +305,43 @@ export class TestService extends BaseService<ITest, TestRepository> {
         },
       });
 
-      activeAttempt = await prisma.testAttempt.findFirst({
-        where: {
-          userId,
-          testId: test.id,
-          status: 'in_progress',
-        },
-      });
+      if (!isFree) {
+        // Check if user has a completed payment for this test or for associated test series
+        const targetIds = [test.id];
+        if (associatedSeries?.id) {
+          targetIds.push(associatedSeries.id);
+        }
 
-      isPurchased = Boolean(
-        test.isFree || (test.settings && (test.settings as any).isFree !== false)
-      );
+        const payments = await prisma.payment.findMany({
+          where: {
+            userId,
+            status: { in: ['captured', 'success', 'completed', 'paid'] },
+          },
+          select: { notes: true },
+        });
+
+        const hasPaid = payments.some((p) => {
+          const notes: any = p.notes;
+          if (!notes) return false;
+          return (
+            targetIds.includes(notes.testId) ||
+            targetIds.includes(notes.testSeriesId) ||
+            targetIds.includes(notes.itemId)
+          );
+        });
+
+        isPurchased = Boolean(hasPaid);
+      }
     }
 
-    return { test, attemptCount, isPurchased, activeAttempt };
+    const enrichedTest = {
+      ...test,
+      isFree,
+      price: isFree ? 0 : price,
+      associatedSeries,
+    };
+
+    return { test: enrichedTest, attemptCount, isPurchased, activeAttempt: null };
   }
 
   async startTest(testId: string, userId: string) {
@@ -237,24 +349,68 @@ export class TestService extends BaseService<ITest, TestRepository> {
       where: this.repository['getScopedFilter']({ id: testId }),
     })) as any;
 
-    if (!test || !test.isPublished) {
-      throw ApiError.notFound('Test not found or not published');
+    if (!test) {
+      throw ApiError.notFound('Test not found');
     }
 
-    const activeAttemptAcrossTests = (await prisma.testAttempt.findFirst({
+    // Find containing test series
+    const associatedSeries = await prisma.testSeries.findFirst({
+      where: { tests: { has: test.id }, isPublished: true },
+      select: { id: true, price: true },
+    });
+
+    const isFree = Boolean(
+      (!associatedSeries &&
+        test.settings?.isFree === true &&
+        (!test.settings?.price || test.settings?.price === 0)) ||
+      (associatedSeries && associatedSeries.price === 0) ||
+      (associatedSeries &&
+        associatedSeries.price > 0 &&
+        test.settings?.isFree === true &&
+        (!test.settings?.price || test.settings?.price === 0))
+    );
+
+    if (!isFree) {
+      const targetIds = [test.id];
+      if (associatedSeries?.id) {
+        targetIds.push(associatedSeries.id);
+      }
+
+      const payments = await prisma.payment.findMany({
+        where: {
+          userId,
+          status: { in: ['captured', 'success', 'completed', 'paid'] },
+        },
+        select: { notes: true },
+      });
+
+      const hasPaid = payments.some((p) => {
+        const notes: any = p.notes;
+        if (!notes) return false;
+        return (
+          targetIds.includes(notes.testId) ||
+          targetIds.includes(notes.testSeriesId) ||
+          targetIds.includes(notes.itemId)
+        );
+      });
+
+      if (!hasPaid) {
+        throw ApiError.forbidden('This is a paid test. Please unlock or enroll before starting.');
+      }
+    }
+
+    // Auto-close any previous in-progress attempt for this user so every start is a fresh attempt
+    const previousInProgress = await prisma.testAttempt.findMany({
       where: {
         userId,
         status: 'in_progress',
       },
-    })) as any;
-
-    if (activeAttemptAcrossTests && activeAttemptAcrossTests.testId !== testId) {
-      await this.submitAttemptDirect(activeAttemptAcrossTests, true);
+    });
+    for (const prev of previousInProgress) {
+      await this.submitAttemptDirect(prev, true).catch(() => {});
     }
 
-    const isResumingThisTest =
-      activeAttemptAcrossTests && activeAttemptAcrossTests.testId === testId;
-    if (!isResumingThisTest && test.maxAttempts > 0) {
+    if (test.maxAttempts > 0) {
       const attemptsCount = await prisma.testAttempt.count({
         where: {
           userId,
@@ -267,29 +423,17 @@ export class TestService extends BaseService<ITest, TestRepository> {
       }
     }
 
-    let attempt = activeAttemptAcrossTests;
-
-    if (!attempt) {
-      const attemptCount = await prisma.testAttempt.count({
-        where: {
-          userId,
-          testId: test.id,
-        },
-      });
-
-      attempt = (await prisma.testAttempt.create({
-        data: {
-          userId,
-          testId: test.id,
-          totalMarks: test.totalMarks,
-          attemptNumber: attemptCount + 1,
-          tenantId: test.tenantId,
-          status: 'in_progress',
-          answers: [],
-          palette: [],
-        },
-      })) as any;
-    }
+    // Always create a fresh new attempt
+    const attempt = (await prisma.testAttempt.create({
+      data: {
+        userId,
+        testId: test.id,
+        totalMarks: test.totalMarks,
+        tenantId: test.tenantId,
+        status: 'in_progress',
+        answers: [],
+      },
+    })) as any;
 
     let testQuestions =
       typeof test.questions === 'string' ? JSON.parse(test.questions) : test.questions;
@@ -616,46 +760,25 @@ export class TestService extends BaseService<ITest, TestRepository> {
     attempt.timeTaken = Math.round(
       (attempt.completedAt.getTime() - attempt.startedAt.getTime()) / 1000
     );
-    attempt.gradingStatus = containsSubjective ? 'pending_manual' : 'auto_graded';
-
     await prisma.testAttempt.update({
       where: { id: attempt.id },
       data: {
         answers: attempt.answers,
         score: attempt.score,
         percentage: attempt.percentage,
-        isPassed: attempt.isPassed,
         status: attempt.status,
         completedAt: attempt.completedAt,
         timeTaken: attempt.timeTaken,
-        gradingStatus: attempt.gradingStatus,
       },
     });
 
     await redis.del(redisKey);
 
-    const allAttempts = (await prisma.testAttempt.findMany({
-      where: { testId: test.id, status: 'completed' },
-    })) as any[];
-    if (allAttempts.length > 0) {
-      const avgScore = allAttempts.reduce((sum, a) => sum + a.percentage, 0) / allAttempts.length;
-      const passCount = allAttempts.filter((a) => a.isPassed).length;
-
-      await prisma.test.update({
-        where: { id: test.id },
-        data: {
-          totalAttempts: allAttempts.length,
-          averageScore: Math.round(avgScore),
-          passRate: Math.round((passCount / allAttempts.length) * 100),
-        },
-      });
-    }
-
     await prisma.user.update({
       where: { id: attempt.userId },
       data: {
         totalTestsTaken: { increment: 1 },
-        totalPoints: { increment: attempt.isPassed ? 10 : 2 },
+        totalPoints: { increment: attempt.score >= (test.passingMarks || 0) ? 10 : 2 },
       },
     });
 
@@ -861,7 +984,9 @@ export class TestService extends BaseService<ITest, TestRepository> {
         timeTaken: updatedAttempt.timeTaken,
         status: updatedAttempt.status,
         gradingStatus: updatedAttempt.gradingStatus,
+        answers: attemptAnswers,
       },
+      questions: testQuestions,
       stats: {
         correct: correctCount,
         incorrect: incorrectCount,
@@ -977,33 +1102,45 @@ export class TestService extends BaseService<ITest, TestRepository> {
   }
 
   async getMyAttempts(userId: string, query: any) {
-    const filter: any = { userId };
+    const filter: any = { userId, status: query.status || 'completed' };
 
-    if (query.status) {
-      filter.status = query.status;
-    }
     if (query.testId) {
       filter.testId = query.testId;
     }
 
     const page = parseInt(query.page || '1', 10);
-    const limit = parseInt(query.limit || '10', 10);
+    const limit = parseInt(query.limit || '100', 10);
     const skip = (page - 1) * limit;
 
     const where = this.attemptRepository['getScopedFilter'](filter);
 
-    const [docs, total] = await Promise.all([
+    const [rawDocs, total, allSeries] = await Promise.all([
       prisma.testAttempt.findMany({
         where,
         include: {
-          test: { select: { title: true, categoryId: true, duration: true, totalMarks: true } },
+          test: {
+            select: { id: true, title: true, categoryId: true, duration: true, totalMarks: true },
+          },
         },
         orderBy: { startedAt: 'desc' },
         skip,
         take: limit,
       }),
       prisma.testAttempt.count({ where }),
+      prisma.testSeries.findMany({
+        select: { id: true, title: true, tests: true },
+      }),
     ]);
+
+    const docs = rawDocs.map((doc: any) => {
+      const parentSeries = allSeries.find(
+        (s) => Array.isArray(s.tests) && s.tests.includes(doc.testId)
+      );
+      return {
+        ...doc,
+        testSeries: parentSeries ? { id: parentSeries.id, title: parentSeries.title } : null,
+      };
+    });
 
     return { docs, page, limit, total };
   }

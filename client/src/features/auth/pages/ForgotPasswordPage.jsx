@@ -1,37 +1,42 @@
 import { Input } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import { HiMail, HiArrowLeft } from 'react-icons/hi';
-import { forgotPassword, clearError, clearMessage } from '@/features/auth/authSlice';
+import supabase from '@/services/supabase';
 import toast from 'react-hot-toast';
 
 export default function ForgotPasswordPage() {
-  const dispatch = useDispatch();
-  const { loading, error, message } = useSelector((state) => state.auth);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearError());
-    }
-    if (message) {
-      toast.success(message);
-      dispatch(clearMessage());
-      setSent(true);
-    }
-  }, [error, message, dispatch]);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) {
-      toast.error('Please enter email');
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      toast.error('Please enter your email');
       return;
     }
-    dispatch(forgotPassword(email));
+
+    setLoading(true);
+    try {
+      // Supabase sends the password reset email with a link to /reset-password
+      const { error: sbError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (sbError) {
+        throw sbError;
+      }
+
+      setSent(true);
+      toast.success('Password reset link sent to your email!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to send reset link');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -22,6 +22,7 @@ import {
   HiDesktopComputer,
   HiEyeOff,
   HiUserGroup,
+  HiClock,
 } from 'react-icons/hi';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -276,6 +277,84 @@ function ClassroomInner({ liveClassId, liveClass, user, token, onLeave }) {
   );
 }
 
+function CountdownTimer({ targetDate, onArrived }) {
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isPast: false,
+  });
+
+  useEffect(() => {
+    const calculate = () => {
+      const diff = new Date(targetDate).getTime() - Date.now();
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true });
+        if (onArrived) onArrived();
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / 1000 / 60) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      setTimeLeft({ days, hours, minutes, seconds, isPast: false });
+    };
+
+    calculate();
+    const interval = setInterval(calculate, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate, onArrived]);
+
+  if (timeLeft.isPast) {
+    return (
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 font-semibold text-sm animate-pulse">
+        <HiClock className="h-5 w-5" />
+        Starting any moment now...
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-3 my-6">
+      {timeLeft.days > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 min-w-[70px] text-center shadow-lg">
+          <span className="text-2xl font-black text-white block">{timeLeft.days}</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
+            Days
+          </span>
+        </div>
+      )}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 min-w-[70px] text-center shadow-lg">
+        <span className="text-2xl font-black text-white block">
+          {String(timeLeft.hours).padStart(2, '0')}
+        </span>
+        <span className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
+          Hours
+        </span>
+      </div>
+      <span className="text-2xl font-bold text-slate-600">:</span>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 min-w-[70px] text-center shadow-lg">
+        <span className="text-2xl font-black text-white block">
+          {String(timeLeft.minutes).padStart(2, '0')}
+        </span>
+        <span className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
+          Mins
+        </span>
+      </div>
+      <span className="text-2xl font-bold text-slate-600">:</span>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 min-w-[70px] text-center shadow-lg">
+        <span className="text-2xl font-black text-primary-400 block">
+          {String(timeLeft.seconds).padStart(2, '0')}
+        </span>
+        <span className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
+          Secs
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Root component — fetches token then mounts LiveKitRoom ───────────────────
 export default function LiveClassRoom() {
   const { id } = useParams();
@@ -286,57 +365,269 @@ export default function LiveClassRoom() {
   const [livekitToken, setLivekitToken] = useState('');
   const [livekitUrl, setLivekitUrl] = useState('');
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+
+  const isTeacherOrAdmin =
+    user?.role === 'admin' ||
+    user?.role === 'super_admin' ||
+    (liveClass && (liveClass.teacherId === user?.id || liveClass.teacherId === user?._id));
 
   // Pre-configure the Room to avoid livekit-client picking up browser language
-  // (throws "language override unsupported: Hindi/etc" when locale ≠ en)
   const roomRef = useRef(null);
   if (!roomRef.current) {
     roomRef.current = new Room();
   }
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const [classRes, tokenRes] = await Promise.all([
-          api.get(`/live-classes/${id}`),
-          api.get(`/live-classes/${id}/token`),
-        ]);
-        if (!mounted) return;
-        setLiveClass(classRes.data.data?.liveClass);
-        setLivekitToken(tokenRes.data.data?.token);
-        setLivekitUrl(tokenRes.data.data?.livekitUrl);
-        await api.post(`/live-classes/${id}/join`);
-      } catch (err) {
-        if (!mounted) return;
-        toast.error(err.response?.data?.message || 'Failed to join class');
-        navigate(-1);
-      } finally {
-        if (mounted) setLoading(false);
+  const loadClassDetails = async () => {
+    try {
+      const classRes = await api.get(`/live-classes/${id}`);
+      const cls = classRes.data.data?.liveClass;
+      setLiveClass(cls);
+
+      if (cls?.status === 'live') {
+        // Fetch token now
+        try {
+          const tokenRes = await api.get(`/live-classes/${id}/token`);
+          setLivekitToken(tokenRes.data.data?.token);
+          setLivekitUrl(tokenRes.data.data?.livekitUrl);
+          await api.post(`/live-classes/${id}/join`).catch(() => {});
+        } catch (tokenErr) {
+          // Token unavailable (e.g. LiveKit not configured, will show meetingUrl fallback)
+        }
       }
-    })();
+      return cls;
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load class');
+      navigate('/live-classes', { replace: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!id || id === 'undefined') {
+      toast.error('Invalid class link');
+      navigate('/live-classes', { replace: true });
+      return;
+    }
+
+    loadClassDetails();
+
+    // Listen for real-time start/status change via Socket
+    const socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('connect', () => {
+      socket.emit('join_liveclass', { liveClassId: id });
+    });
+
+    socket.on('live_class_started', () => {
+      toast.success('Live class has started!');
+      loadClassDetails();
+    });
+
+    socket.on('live_class_status_changed', (data) => {
+      if (data.liveClassId === id) {
+        loadClassDetails();
+      }
+    });
+
+    // Fallback polling every 8s while scheduled
+    const pollTimer = setInterval(() => {
+      api
+        .get(`/live-classes/${id}`)
+        .then(({ data }) => {
+          const cls = data.data?.liveClass;
+          if (cls && cls.status !== liveClass?.status) {
+            loadClassDetails();
+          }
+        })
+        .catch(() => {});
+    }, 8000);
+
     return () => {
-      mounted = false;
+      clearInterval(pollTimer);
+      socket.disconnect();
     };
-  }, [id, navigate]);
+  }, [id]);
+
+  const handleStartClass = async () => {
+    setStarting(true);
+    try {
+      await api.post(`/live-classes/${id}/start`);
+      toast.success('Live class started!');
+      await loadClassDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to start class');
+    } finally {
+      setStarting(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="h-screen bg-slate-950 flex items-center justify-center">
-        <div className="h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+        <div className="h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 text-sm">Loading classroom...</p>
       </div>
     );
   }
 
-  if (!livekitToken || !livekitUrl) {
+  // 1. Cancelled State
+  if (liveClass?.status === 'cancelled') {
     return (
-      <div className="h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center text-white">
-          <p className="text-lg font-semibold mb-2">Live video not configured</p>
-          <p className="text-slate-400 text-sm">Contact your administrator to set up LiveKit.</p>
+      <div className="h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
+        <div className="text-center max-w-md bg-slate-900/80 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+          <div className="h-16 w-16 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center mx-auto mb-4">
+            <HiX className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-black mb-2">{liveClass.title}</h2>
+          <p className="text-slate-400 text-sm mb-6">
+            This live class has been cancelled by the host.
+          </p>
           <button
-            onClick={() => navigate(-1)}
-            className="mt-4 px-4 py-2 bg-slate-700 rounded-lg text-sm hover:bg-slate-600"
+            onClick={() => navigate('/live-classes')}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-sm transition-all"
+          >
+            ← Back to Live Classes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Ended State
+  if (liveClass?.status === 'ended') {
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
+        <div className="text-center max-w-md bg-slate-900/80 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+          <div className="h-16 w-16 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-4">
+            <HiVideoCamera className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-black mb-2">{liveClass.title}</h2>
+          <p className="text-slate-400 text-sm mb-6">This live class has already ended.</p>
+          <button
+            onClick={() => navigate('/live-classes')}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-sm transition-all"
+          >
+            ← Back to Live Classes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Scheduled State (Waiting Room)
+  if (liveClass?.status === 'scheduled') {
+    const scheduledDate = new Date(liveClass.scheduledAt).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'full',
+      timeStyle: 'short',
+    });
+    const teacherName = liveClass.teacherName || liveClass.teacher?.name;
+
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
+        <div className="max-w-lg w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden backdrop-blur-xl">
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl" />
+
+          <div className="h-14 w-14 rounded-2xl bg-primary-500/20 text-primary-400 flex items-center justify-center mx-auto mb-4 border border-primary-500/30">
+            <HiVideoCamera className="h-7 w-7" />
+          </div>
+
+          <span className="inline-block px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs font-bold uppercase tracking-wider mb-3">
+            Scheduled Live Session
+          </span>
+
+          <h1 className="text-2xl font-extrabold text-white mb-2 leading-tight">
+            {liveClass.title}
+          </h1>
+
+          {teacherName && (
+            <p className="text-slate-400 text-sm font-medium mb-1">
+              Instructor: <span className="text-white font-semibold">{teacherName}</span>
+            </p>
+          )}
+
+          <p className="text-xs text-slate-500 mb-4">
+            Scheduled for <span className="text-slate-300 font-medium">{scheduledDate}</span> (
+            {liveClass.duration || 60} mins)
+          </p>
+
+          {/* Live Countdown */}
+          <CountdownTimer targetDate={liveClass.scheduledAt} onArrived={loadClassDetails} />
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4 my-4 text-xs text-slate-400">
+            <p className="flex items-center justify-center gap-2 font-medium text-slate-300 mb-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+              You are in the waiting room
+            </p>
+            <p className="text-slate-500">
+              The session will connect automatically the moment the host begins.
+            </p>
+          </div>
+
+          {/* Host Controls */}
+          {isTeacherOrAdmin && (
+            <div className="mt-4 pt-4 border-t border-slate-800/80">
+              <p className="text-xs text-primary-400 font-medium mb-2">Host Options</p>
+              <button
+                onClick={handleStartClass}
+                disabled={starting}
+                className="w-full py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2"
+              >
+                <HiVideoCamera className="h-5 w-5" />
+                {starting ? 'Starting Session...' : 'Start Live Class Now'}
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => navigate('/live-classes')}
+            className="mt-5 text-slate-500 hover:text-slate-300 text-xs font-semibold block mx-auto transition-colors"
+          >
+            ← Back to Live Classes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Live State without LiveKit credentials (Fallback to Meeting Link)
+  if (!livekitToken || !livekitUrl) {
+    const meetingUrl = liveClass?.meetingUrl;
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center p-6">
+        <div className="text-center text-white max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+          <div className="h-16 w-16 rounded-2xl bg-rose-500/20 flex items-center justify-center mx-auto mb-4">
+            <HiVideoCamera className="h-8 w-8 text-rose-400" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">{liveClass?.title || 'Live Class'}</h2>
+          {meetingUrl ? (
+            <>
+              <p className="text-slate-400 text-sm mb-6">
+                This class uses an external meeting link. Click below to join.
+              </p>
+              <a
+                href={meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-6 py-3 bg-rose-500 hover:bg-rose-600 rounded-xl font-bold text-white transition-colors"
+              >
+                Join Meeting →
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-400 text-sm mb-2">Live video is not configured yet.</p>
+              <p className="text-slate-500 text-xs mb-6">Contact your administrator.</p>
+            </>
+          )}
+          <button
+            onClick={() => navigate('/live-classes')}
+            className="mt-6 block mx-auto px-4 py-2 bg-slate-800 rounded-lg text-sm hover:bg-slate-700"
           >
             Go Back
           </button>
@@ -345,6 +636,7 @@ export default function LiveClassRoom() {
     );
   }
 
+  // 5. Live Active LiveKit Room
   return (
     <LiveKitRoom
       room={roomRef.current}
@@ -353,7 +645,7 @@ export default function LiveClassRoom() {
       connect
       audio
       video
-      onDisconnected={() => navigate(-1)}
+      onDisconnected={() => navigate('/live-classes')}
       onError={(err) => toast.error(`Connection error: ${err.message}`)}
       style={{ height: '100vh' }}
     >
@@ -362,7 +654,7 @@ export default function LiveClassRoom() {
         liveClass={liveClass}
         user={user}
         token={token}
-        onLeave={() => navigate(-1)}
+        onLeave={() => navigate('/live-classes')}
       />
     </LiveKitRoom>
   );

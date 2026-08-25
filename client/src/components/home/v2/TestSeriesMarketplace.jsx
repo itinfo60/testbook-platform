@@ -115,7 +115,7 @@ export default function TestSeriesMarketplace() {
                       {s.price > 0 ? `₹${s.price}` : 'Free'}
                     </p>
                     <Link
-                      to={`/test-series/${s.slug || s._id}`}
+                      to={`/test-series/${s.slug || s.id || s._id}`}
                       className="text-sm font-semibold text-white bg-accent-600 hover:bg-accent-700 px-4 py-2 rounded transition-colors flex items-center gap-1"
                     >
                       Start Series <HiArrowRight className="h-4 w-4" />

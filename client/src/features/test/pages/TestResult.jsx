@@ -1,11 +1,11 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useState, useEffect } from 'react';
 import Tabs from '@/components/common/Tabs';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import TestResultSummary from '../components/TestResultSummary';
 import QuestionReview from '../components/QuestionReview';
-import { fetchLatestTestResult } from '../testSlice';
+import { fetchLatestTestResult, fetchAttemptResult } from '../testSlice';
 import {
   HiAcademicCap,
   HiClipboardList,
@@ -18,6 +18,8 @@ import {
 
 export default function TestResult() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const attemptId = searchParams.get('attemptId');
   const dispatch = useDispatch();
   const {
     result,
@@ -30,10 +32,15 @@ export default function TestResult() {
   const [reviewFilter, setReviewFilter] = useState('all'); // 'all' | 'incorrect' | 'skipped' | 'correct'
 
   useEffect(() => {
-    if (!result) {
+    if (attemptId) {
+      const currentAttemptId = result?.attempt?.id || result?.id;
+      if (currentAttemptId !== attemptId) {
+        dispatch(fetchAttemptResult(attemptId));
+      }
+    } else if (!result || (id && result?.attempt?.testId && result.attempt.testId !== id)) {
       dispatch(fetchLatestTestResult(id));
     }
-  }, [id, result, dispatch]);
+  }, [id, attemptId, result, dispatch]);
 
   const questions = storedQuestions.length
     ? storedQuestions

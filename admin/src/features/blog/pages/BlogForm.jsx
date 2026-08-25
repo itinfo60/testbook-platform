@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
-import { HiArrowLeft, HiSave, HiGlobe } from 'react-icons/hi';
+import { HiArrowLeft, HiSave, HiGlobe, HiDocumentText, HiCheck } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { blogsAPI, examCategoriesAPI } from '@/services/api';
+import api, { blogsAPI } from '@/services/api';
+import { getUnifiedCategories, getUnifiedExams } from '@/services/categories';
 import LoadingSpinner from '@/components/loadingSpinner';
+import FileUploadInput from '@/components/FileUploadInput';
 
 export default function BlogForm() {
   const { id } = useParams();
@@ -14,6 +16,12 @@ export default function BlogForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const [categories, setCategories] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [selectedParentCategory, setSelectedParentCategory] = useState('');
+
+  // Library resources for attachment
+  const [libraryResources, setLibraryResources] = useState([]);
+  const [selectedResourceIds, setSelectedResourceIds] = useState([]);
 
   const {
     register,
@@ -21,11 +29,13 @@ export default function BlogForm() {
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
       title: '',
       slug: '',
+      coverImageUrl: '',
       content: '',
       excerpt: '',
       status: 'draft',
@@ -42,14 +52,25 @@ export default function BlogForm() {
   });
 
   const selectedType = watch('type');
+  const currentExamCategory = watch('examCategory');
+
+  // Filter exams based on selected parent category
+  const filteredExams = (exams || []).filter(
+    (e) => !selectedParentCategory || e.parentId === selectedParentCategory
+  );
 
   useEffect(() => {
-    examCategoriesAPI
-      .getAll({ limit: 200 })
-      .then((res) => {
-        const cats =
-          res.data?.data?.allCategories || res.data?.data?.categories || res.data?.categories || [];
+    // Load categories, exams, and library resources
+    Promise.all([
+      getUnifiedCategories(),
+      getUnifiedExams(),
+      api.get('/library?limit=100').catch(() => ({ data: { data: { resources: [] } } })),
+    ])
+      .then(([cats, examList, libRes]) => {
         setCategories(Array.isArray(cats) ? cats : []);
+        setExams(Array.isArray(examList) ? examList : []);
+        const rawLib = libRes.data?.data?.resources || libRes.data?.resources || [];
+        setLibraryResources(Array.isArray(rawLib) ? rawLib : []);
       })
       .catch(console.error);
 
@@ -58,10 +79,28 @@ export default function BlogForm() {
         .getById(id)
         .then((res) => {
           const b = res.data.data.blog || res.data.blog;
+          const rawExamId = b.examCategory?._id || b.examCategory?.id || b.examCategory || '';
+
+          if (rawExamId) {
+            setValue('examCategory', rawExamId);
+          }
+
+          const existingResIds =
+            b.resourceIds ||
+            (Array.isArray(b.resources) ? b.resources.map((r) => r.id || r._id || r) : []);
+          setSelectedResourceIds(existingResIds);
+
+          const coverUrl =
+            b.coverImage?.url ||
+            (typeof b.coverImage === 'string' ? b.coverImage : '') ||
+            b.thumbnail?.url ||
+            '';
+
           reset({
             ...b,
+            coverImageUrl: coverUrl,
             tags: b.tags?.join(', ') || '',
-            examCategory: b.examCategory?._id || b.examCategory || '',
+            examCategory: rawExamId,
             'jobAlert.organization': b.jobAlert?.organization || '',
             'jobAlert.totalVacancies': b.jobAlert?.totalVacancies || '',
             'jobAlert.applicationStart': b.jobAlert?.applicationStart
@@ -79,19 +118,49 @@ export default function BlogForm() {
         .catch(() => toast.error('Failed to load blog'))
         .finally(() => setLoading(false));
     }
-  }, [id, isEdit, reset]);
+  }, [id, isEdit, reset, setValue]);
+
+  // Sync parent category dropdown when exams load or on edit
+  useEffect(() => {
+    if (currentExamCategory && exams.length > 0) {
+      const match = exams.find((e) => (e.id || e._id) === currentExamCategory);
+      if (match && match.parentId) {
+        setSelectedParentCategory(match.parentId);
+      }
+    }
+  }, [currentExamCategory, exams]);
+
+  const toggleResourceSelection = (resId) => {
+    setSelectedResourceIds((prev) =>
+      prev.includes(resId) ? prev.filter((id) => id !== resId) : [...prev, resId]
+    );
+  };
 
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
+      const { coverImageUrl, ...rest } = data;
+
+      // Clean out flattened jobAlert.* properties that react-hook-form produces alongside jobAlert object
+      const cleanedData = {};
+      Object.keys(rest).forEach((key) => {
+        if (!key.startsWith('jobAlert.')) {
+          cleanedData[key] = rest[key];
+        }
+      });
+
       const payload = {
-        ...data,
+        ...cleanedData,
+        coverImage: coverImageUrl ? { url: coverImageUrl } : undefined,
+        thumbnail: coverImageUrl ? { url: coverImageUrl } : undefined,
         tags: data.tags
           ? data.tags
               .split(',')
               .map((t) => t.trim())
               .filter(Boolean)
           : [],
+        resourceIds: selectedResourceIds,
+        examCategory: cleanedData.examCategory || undefined,
       };
 
       if (isEdit) {
@@ -169,6 +238,16 @@ export default function BlogForm() {
               />
             </div>
 
+            <FileUploadInput
+              label="Article Banner / Cover Image"
+              value={watch('coverImageUrl') || ''}
+              onChange={(url) => setValue('coverImageUrl', url)}
+              type="image"
+              folder="blog-covers"
+              placeholder="https://..."
+              hint="Upload cover image to Supabase or provide external image URL"
+            />
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Content * (Markdown / HTML)
@@ -210,7 +289,7 @@ export default function BlogForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Content Type
@@ -224,22 +303,107 @@ export default function BlogForm() {
                   <option value="current_affairs">Current Affairs</option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Related Exam (Optional)
+                  Exam Category
+                </label>
+                <select
+                  value={selectedParentCategory}
+                  onChange={(e) => {
+                    setSelectedParentCategory(e.target.value);
+                    setValue('examCategory', '');
+                  }}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">All Categories / General</option>
+                  {categories.map((c) => (
+                    <option key={c.id || c._id} value={c.id || c._id}>
+                      {c.icon ? `${c.icon} ` : ''}
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Target Exam (Optional)
                 </label>
                 <select
                   {...register('examCategory')}
                   className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">None / General</option>
-                  {categories.map((c) => (
-                    <option key={c.id || c._id} value={c.id || c._id}>
-                      {c.name}
+                  {filteredExams.map((ex) => (
+                    <option key={ex.id || ex._id} value={ex.id || ex._id}>
+                      {ex.icon ? `${ex.icon} ` : ''}
+                      {ex.name}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Attach Free Resources from Library */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <HiDocumentText className="text-primary-500 text-lg" />
+                    Attach Free Resources / Study Material
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Select study material and notes from the library to show for free under this
+                    article
+                  </p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-full">
+                  {selectedResourceIds.length} Selected
+                </span>
+              </div>
+
+              {libraryResources.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2">
+                  No resources found in Library. Add resources from the Digital Library page to
+                  attach them here.
+                </p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {libraryResources.map((res) => {
+                    const isChecked = selectedResourceIds.includes(res.id || res._id);
+                    return (
+                      <div
+                        key={res.id || res._id}
+                        onClick={() => toggleResourceSelection(res.id || res._id)}
+                        className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                          isChecked
+                            ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700 shadow-xs'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                              {res.title}
+                            </p>
+                            <span className="text-[10px] text-gray-500 uppercase font-semibold">
+                              {res.resourceType || res.type || 'Resource'} •{' '}
+                              {res.accessLevel || 'Free'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Job Alert Fields — shown only when type is 'job_alert' */}
@@ -301,15 +465,15 @@ export default function BlogForm() {
                       className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Official Notification URL
-                    </label>
-                    <input
-                      type="url"
-                      {...register('jobAlert.officialNotificationUrl')}
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500"
-                      placeholder="https://..."
+                  <div className="col-span-2">
+                    <FileUploadInput
+                      label="Official Notification Document / PDF"
+                      value={watch('jobAlert.officialNotificationUrl') || ''}
+                      onChange={(url) => setValue('jobAlert.officialNotificationUrl', url)}
+                      type="document"
+                      folder="job-notifications"
+                      placeholder="Upload official notification PDF or paste link"
+                      hint="Upload official notification PDF to Supabase or provide direct PDF link"
                     />
                   </div>
                 </div>

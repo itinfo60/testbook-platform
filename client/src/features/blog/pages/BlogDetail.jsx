@@ -15,6 +15,9 @@ import {
   HiExternalLink,
   HiBriefcase,
   HiBadgeCheck,
+  HiDocumentText,
+  HiDownload,
+  HiEye,
 } from 'react-icons/hi';
 import { format } from 'date-fns';
 
@@ -107,9 +110,10 @@ export default function BlogDetail() {
               >
                 {isJobAlert ? '📢 Job Alert Notification' : '📰 Article'}
               </span>
-              {currentBlog.examCategory?.name && (
+              {(currentBlog.categoryInfo?.name || currentBlog.examCategory?.name) && (
                 <span className="text-[10px] font-extrabold bg-white/20 text-white px-3 py-1 rounded-full border border-white/20">
-                  🎯 {currentBlog.examCategory.name}
+                  {currentBlog.categoryInfo?.icon || currentBlog.examCategory?.icon || '🎯'}{' '}
+                  {currentBlog.categoryInfo?.name || currentBlog.examCategory?.name}
                 </span>
               )}
             </div>
@@ -132,6 +136,10 @@ export default function BlogDetail() {
                     ? format(new Date(currentBlog.publishedAt), 'MMMM dd, yyyy')
                     : 'Recently'}
                 </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md">
+                <HiEye className="h-4 w-4 text-emerald-400" />
+                <span>{currentBlog.views || 1} Views</span>
               </div>
             </div>
           </div>
@@ -220,6 +228,72 @@ export default function BlogDetail() {
               prose-img:rounded-3xl prose-img:shadow-2xl leading-relaxed"
             dangerouslySetInnerHTML={{ __html: currentBlog.content }}
           />
+
+          {/* Free Attached Resources / Study Material */}
+          {Array.isArray(currentBlog.attachedResources) &&
+            currentBlog.attachedResources.length > 0 && (
+              <div className="mt-12 p-6 sm:p-8 bg-amber-500/5 dark:bg-dark-900 border border-amber-200 dark:border-amber-900/40 rounded-3xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="p-2 rounded-xl bg-amber-500 text-white font-bold text-lg">
+                    🎁
+                  </span>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-extrabold text-dark-900 dark:text-white">
+                      Free Study Material & Attached Resources
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      Download notes, PYQs, and syllabus guides related to this article
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                  {currentBlog.attachedResources.map((res) => {
+                    const downloadUrl =
+                      res.url ||
+                      res.fileUrl ||
+                      (res.fileData && (res.fileData.secure_url || res.fileData.url));
+                    return (
+                      <div
+                        key={res.id || res._id}
+                        className="bg-white dark:bg-dark-800 p-4 rounded-2xl border border-slate-200 dark:border-dark-700 shadow-sm flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 shrink-0">
+                            <HiDocumentText className="h-6 w-6" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-bold text-dark-900 dark:text-white truncate">
+                              {res.title}
+                            </h4>
+                            {res.description && (
+                              <p className="text-xs text-slate-500 truncate">{res.description}</p>
+                            )}
+                            <span className="inline-block mt-1 text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                              {res.type || 'Resource'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {downloadUrl ? (
+                          <a
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="px-3.5 py-2 bg-amber-800 hover:bg-amber-900 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shrink-0 shadow-sm transition-all"
+                          >
+                            <HiDownload className="h-4 w-4" /> Download
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">Available in Library</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
           {/* Tags & Share */}
           <div className="mt-12 pt-8 border-t border-slate-200 dark:border-dark-800 flex flex-wrap items-center justify-between gap-4">

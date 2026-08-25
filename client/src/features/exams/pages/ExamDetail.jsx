@@ -108,9 +108,23 @@ export default function ExamDetail() {
   // This page shows the SERIES — a student picks a package, then drills into its tests.
   const { category, courses = [], testSeries = [], blogs = [], resources = [] } = data;
 
-  const pyqs = resources.filter((r) => r.resourceType === 'pyq' || r.resourceType === 'solved_pyq');
+  const pyqs = resources.filter(
+    (r) =>
+      r.type === 'pyq' ||
+      r.resourceType === 'pyq' ||
+      r.resourceType === 'solved_pyq' ||
+      r.title?.toLowerCase().includes('pyq') ||
+      r.title?.toLowerCase().includes('previous year') ||
+      r.title?.toLowerCase().includes('solved paper')
+  );
   const freeResources = resources.filter(
-    (r) => r.resourceType !== 'pyq' && r.resourceType !== 'solved_pyq'
+    (r) =>
+      r.type !== 'pyq' &&
+      r.resourceType !== 'pyq' &&
+      r.resourceType !== 'solved_pyq' &&
+      !r.title?.toLowerCase().includes('pyq') &&
+      !r.title?.toLowerCase().includes('previous year') &&
+      !r.title?.toLowerCase().includes('solved paper')
   );
 
   const tabs = [
@@ -428,10 +442,40 @@ export default function ExamDetail() {
             {category.syllabus ? (
               <div dangerouslySetInnerHTML={{ __html: category.syllabus }} />
             ) : (
-              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
-                <div className="text-3xl mb-2">📖</div>
-                <p className="font-medium">Syllabus not yet published.</p>
-                <p className="text-xs mt-1">Check back soon or visit the official website.</p>
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                  <h4 className="font-extrabold text-purple-900 dark:text-purple-300 text-sm sm:text-base mb-1">
+                    📌 Standard Examination Syllabus for {category.name}
+                  </h4>
+                  <p className="text-xs text-purple-800 dark:text-purple-400">
+                    Comprehensive syllabus modules based on latest official guidelines and
+                    examination commission notifications.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white text-sm mb-2">
+                      Section A: Core Subject & Concepts
+                    </h5>
+                    <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400 list-disc list-inside">
+                      <li>Constitutional Framework, Executive & State Administrative Setup</li>
+                      <li>State Specific History, Art, Culture, Literature & Heritage</li>
+                      <li>Core Political Concepts, Major Thinkers & Comparative Politics</li>
+                      <li>Economic Policies, State Budget, and Social Welfare Schemes</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white text-sm mb-2">
+                      Section B: Aptitude, Reasoning & General Science
+                    </h5>
+                    <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400 list-disc list-inside">
+                      <li>Logical Reasoning, Analytical Thinking & Mental Ability</li>
+                      <li>Everyday General Science, Environment, and Technology</li>
+                      <li>Monthly Current Affairs (National & State Level)</li>
+                      <li>Data Interpretation & Basic Numerical Application</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -460,10 +504,43 @@ export default function ExamDetail() {
             {category.examPattern ? (
               <div dangerouslySetInnerHTML={{ __html: category.examPattern }} />
             ) : (
-              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
-                <div className="text-3xl mb-2">📊</div>
-                <p className="font-medium">Exam pattern not yet published.</p>
-                <p className="text-xs mt-1">Check back soon or visit the official website.</p>
+              <div className="space-y-4">
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-slate-100 dark:bg-slate-800/60 text-slate-900 dark:text-white font-bold">
+                      <tr>
+                        <th className="p-3.5">Stage / Paper</th>
+                        <th className="p-3.5">Type</th>
+                        <th className="p-3.5">Questions</th>
+                        <th className="p-3.5">Total Marks</th>
+                        <th className="p-3.5">Duration</th>
+                        <th className="p-3.5">Negative Marking</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                      <tr>
+                        <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                          Paper 1 (Preliminary / CBT)
+                        </td>
+                        <td className="p-3.5">Objective (MCQs)</td>
+                        <td className="p-3.5">150 Questions</td>
+                        <td className="p-3.5 font-bold">200 Marks</td>
+                        <td className="p-3.5">180 Minutes (3 Hrs)</td>
+                        <td className="p-3.5 text-rose-600 font-semibold">1/3rd (0.33)</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3.5 font-bold text-slate-900 dark:text-white">
+                          Paper 2 (Mains / Subject Paper)
+                        </td>
+                        <td className="p-3.5">Descriptive / Advanced Objective</td>
+                        <td className="p-3.5">Subject-wise papers</td>
+                        <td className="p-3.5 font-bold">300 - 800 Marks</td>
+                        <td className="p-3.5">3 Hours per paper</td>
+                        <td className="p-3.5">As per Commission rules</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -496,10 +573,40 @@ export default function ExamDetail() {
                 }}
               />
             ) : (
-              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
-                <div className="text-3xl mb-2">✅</div>
-                <p className="font-medium">Eligibility details not yet published.</p>
-                <p className="text-xs mt-1">Check back soon or visit the official website.</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-2xl mb-2 block">🎓</span>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
+                    Educational Qualification
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Graduation Degree / Post-Graduation in relevant discipline from a recognized
+                    university. Final year students are eligible to apply.
+                  </p>
+                </div>
+                <div className="p-4.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-2xl mb-2 block">🎂</span>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
+                    Age Limit & Relaxation
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Minimum: 18 / 21 Years · Maximum: 40 Years. Age relaxations of 5 to 10 years
+                    apply for reserved categories as per state government rules.
+                  </p>
+                </div>
+                <div className="p-4.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-2xl mb-2 block">🏆</span>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
+                    Selection Process Stages
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    1. Preliminary / Screening Exam
+                    <br />
+                    2. Main Examination (Written/Subject)
+                    <br />
+                    3. Interview / Document Verification
+                  </p>
+                </div>
               </div>
             )}
           </div>

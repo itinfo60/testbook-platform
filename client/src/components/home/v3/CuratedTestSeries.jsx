@@ -64,8 +64,8 @@ export default function CuratedTestSeries() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {testSeriesList.map((series, idx) => (
               <div
-                key={series._id || idx}
-                onClick={() => navigate(`/test-series/${series.slug || series._id}`)}
+                key={series.id || series._id || idx}
+                onClick={() => navigate(`/test-series/${series.slug || series.id || series._id}`)}
                 className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 border border-navy-100 transition-all flex flex-col justify-between group cursor-pointer"
               >
                 {/* Top Accent Gradient Bar */}

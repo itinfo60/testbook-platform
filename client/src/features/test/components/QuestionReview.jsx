@@ -44,9 +44,20 @@ export default function QuestionReview({ question, index, userAnswer }) {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
               Question {index + 1}
             </span>
-            {question.subjectTag && (
-              <span className="text-[11px] font-bold text-amber-800 dark:text-amber-400">
-                {question.subjectTag}
+            {(question.topic ||
+              question.topicName ||
+              question.subject ||
+              question.subjectName ||
+              question.sectionName ||
+              question.subjectTag) && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 mt-0.5 inline-block">
+                📍{' '}
+                {question.topic ||
+                  question.topicName ||
+                  question.subject ||
+                  question.subjectName ||
+                  question.sectionName ||
+                  question.subjectTag}
               </span>
             )}
           </div>

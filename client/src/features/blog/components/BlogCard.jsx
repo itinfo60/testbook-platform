@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { HiCalendar, HiUser, HiArrowNarrowRight } from 'react-icons/hi';
+import { HiCalendar, HiUser, HiArrowNarrowRight, HiEye } from 'react-icons/hi';
 import { format } from 'date-fns';
 
 export default function BlogCard({ blog }) {
-  const { title, slug, excerpt, coverImage, author, publishedAt, tags, readingTime } = blog;
+  const { title, slug, excerpt, coverImage, author, publishedAt, tags, views } = blog;
 
   return (
     <div className="group bg-white dark:bg-dark-900 rounded-[24px] overflow-hidden border border-dark-200/60 dark:border-dark-800 transition-all duration-300 shadow-sm hover:shadow-premium hover:-translate-y-1.5 flex flex-col h-full">
@@ -32,7 +32,7 @@ export default function BlogCard({ blog }) {
       {/* Content */}
       <div className="p-6 flex flex-col flex-1">
         <div className="flex-1">
-          <div className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-wider text-dark-400 dark:text-dark-500 mb-3">
+          <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-dark-400 dark:text-dark-500 mb-3">
             <div className="flex items-center gap-1.5">
               <HiCalendar className="h-3.5 w-3.5" />
               <span>
@@ -40,6 +40,13 @@ export default function BlogCard({ blog }) {
                   ? format(new Date(publishedAt), 'MMM dd, yyyy')
                   : 'Recently'}
               </span>
+            </div>
+            <div
+              className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-semibold"
+              title="Total Views"
+            >
+              <HiEye className="h-3.5 w-3.5 text-primary-500" />
+              <span>{views || 0}</span>
             </div>
           </div>
 

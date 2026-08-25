@@ -146,14 +146,24 @@ const courseSlice = createSlice({
       .addCase(fetchCourses.fulfilled, (state, action) => {
         state.loading = false;
         const payload = action.payload;
-        state.courses = payload.data || payload.courses || payload;
-        if (payload.pagination) state.pagination = payload.pagination;
-        if (payload.totalPages)
+        state.courses = payload.data || payload.courses || (Array.isArray(payload) ? payload : []);
+        if (payload.pagination) {
           state.pagination = {
-            page: payload.page,
-            totalPages: payload.totalPages,
-            total: payload.total,
+            page: payload.pagination.page || 1,
+            totalPages: payload.pagination.pages || payload.pagination.totalPages || 1,
+            total: payload.pagination.total || 0,
+            limit: payload.pagination.limit || 12,
+            hasNext: payload.pagination.hasNext,
+            hasPrev: payload.pagination.hasPrev,
           };
+        } else if (payload.totalPages || payload.pages) {
+          state.pagination = {
+            page: payload.page || 1,
+            totalPages: payload.pages || payload.totalPages || 1,
+            total: payload.total || 0,
+            limit: payload.limit || 12,
+          };
+        }
       })
       .addCase(fetchCourses.rejected, (state, action) => {
         state.loading = false;

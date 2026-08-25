@@ -34,7 +34,14 @@ export const exportEnrollments = createAsyncThunk(
 
 const enrollmentSlice = createSlice({
   name: 'enrollments',
-  initialState: { list: [], pagination: null, loading: false, exporting: false, error: null },
+  initialState: {
+    list: [],
+    stats: null,
+    pagination: null,
+    loading: false,
+    exporting: false,
+    error: null,
+  },
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -46,6 +53,7 @@ const enrollmentSlice = createSlice({
         const data = action.payload.data;
         state.list = Array.isArray(data) ? data : data?.enrollments || data?.docs || [];
         state.pagination = action.payload.pagination || null;
+        state.stats = action.payload.stats || action.payload.data?.stats || null;
       })
       .addCase(fetchEnrollments.rejected, (state, action) => {
         state.loading = false;

@@ -104,41 +104,45 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-40 bg-white/90 dark:bg-navy-950/90 backdrop-blur-xl border-b border-dark-200/40 dark:border-navy-800">
+      <nav className="sticky top-0 z-40 bg-white/95 dark:bg-navy-950/95 backdrop-blur-xl border-b border-dark-200/40 dark:border-navy-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-8">
+            {/* Logo & Desktop Nav Links */}
+            <div className="flex items-center gap-6 lg:gap-8">
               <Link to="/" className="inline-flex items-center gap-2.5">
-                <div className="h-10 w-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm">
-                  <HiAcademicCap className="h-6 w-6 text-white" />
+                <div className="h-9 w-9 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <HiAcademicCap className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-2xl font-bold font-display text-dark-900 dark:text-white">
+                <span className="text-xl font-bold font-display text-dark-900 dark:text-white">
                   Civics<span className="text-primary-600">Hub</span>
                 </span>
               </Link>
 
               {/* Desktop Nav Links */}
               <div className="hidden md:flex items-center gap-1">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`transition-all whitespace-nowrap ${
-                      location.pathname === link.path ||
-                      location.pathname.startsWith(link.path + '/')
-                        ? 'px-3 py-2 text-sm font-semibold text-accent-600 dark:text-accent-400 border-b-2 border-accent-500'
-                        : 'px-3 py-2 text-sm font-medium text-dark-600 hover:text-navy-900 dark:text-dark-300 dark:hover:text-white hover:bg-dark-50 dark:hover:bg-navy-800 rounded-md'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {navLinks.map((link) => {
+                  const isActive =
+                    location.pathname === link.path ||
+                    location.pathname.startsWith(link.path + '/');
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                        isActive
+                          ? 'text-primary-600 bg-primary-50 dark:text-primary-400 dark:bg-primary-950/80 font-bold'
+                          : 'text-dark-600 hover:text-dark-900 hover:bg-dark-50 dark:text-dark-400 dark:hover:text-white dark:hover:bg-dark-800'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
             {/* Search Bar - Desktop */}
-            <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-8">
+            <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xs mx-4">
               <div className="relative w-full">
                 <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
                 <input
@@ -146,13 +150,13 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search courses, tests..."
-                  className="w-full pl-9 pr-4 py-2 bg-dark-50/80 dark:bg-dark-800/80 border border-dark-100 dark:border-dark-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  className="w-full pl-9 pr-4 py-1.5 bg-dark-50 dark:bg-dark-800/90 border border-dark-200/80 dark:border-dark-700 rounded-full text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 />
               </div>
             </form>
 
             {/* Right Side */}
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <DarkModeToggle />
 
               {isAuthenticated ? (
@@ -162,7 +166,7 @@ export default function Navbar() {
                     <button
                       aria-label="View Notifications"
                       onClick={() => setNotifOpen(!notifOpen)}
-                      className="relative p-2 rounded-full text-dark-500 hover:text-dark-700 hover:bg-dark-100/60 dark:text-dark-400 dark:hover:text-white dark:hover:bg-dark-800/60 transition-all"
+                      className="relative p-2 rounded-xl text-dark-500 hover:text-dark-700 hover:bg-dark-100 dark:text-dark-400 dark:hover:text-white dark:hover:bg-dark-800 transition-all"
                     >
                       <HiBell className="h-5 w-5" />
                       {unreadCount > 0 && (
@@ -183,7 +187,7 @@ export default function Navbar() {
                     <button
                       aria-label="Open User Menu"
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className="flex items-center gap-2 p-1.5 rounded-full hover:bg-dark-100/60 dark:hover:bg-dark-800/60 transition-colors"
+                      className="flex items-center gap-2 p-1 rounded-full hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors"
                     >
                       <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm font-semibold">
                         {user?.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -230,18 +234,18 @@ export default function Navbar() {
                   </div>
                 </>
               ) : (
-                <div className="hidden sm:flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-2">
                   <Link
                     to="/login"
-                    className="text-sm font-medium text-dark-600 dark:text-dark-300 hover:text-navy-900 dark:hover:text-white transition-colors"
+                    className="text-sm font-semibold text-dark-700 dark:text-dark-300 hover:text-primary-600 dark:hover:text-white px-3.5 py-1.5 rounded-lg hover:bg-dark-50 dark:hover:bg-dark-800 transition-colors"
                   >
-                    Login
+                    Sign In
                   </Link>
                   <Link
                     to="/register"
-                    className="text-sm font-semibold bg-amber-900 text-white px-5 py-2.5 rounded hover:bg-amber-950 transition-all shadow-sm"
+                    className="text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white px-4 py-1.5 rounded-xl shadow-sm transition-all"
                   >
-                    Start Free
+                    Get Started
                   </Link>
                 </div>
               )}

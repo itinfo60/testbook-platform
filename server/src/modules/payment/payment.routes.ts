@@ -21,6 +21,7 @@ router.use(authenticate);
 
 router.post('/create-order', validate(createOrderSchema), controller.createOrder);
 router.post('/verify', validate(verifyPaymentSchema), controller.verifyPayment);
+router.post('/record-failure', controller.recordFailure);
 if (process.env.NODE_ENV !== 'production') {
   router.post('/dummy-checkout', controller.dummyCheckout);
 }

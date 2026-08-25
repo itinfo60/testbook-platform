@@ -64,7 +64,10 @@ async function fetchByType(type, forceRefresh = false) {
       // Public endpoint shape: { categories: [...], allCategories: [...] }
       const rawList = Array.isArray(raw) ? raw : raw?.allCategories || raw?.categories || [];
 
-      const list = rawList.map(normalizeCategory).filter(Boolean);
+      const list = rawList
+        .filter((c) => (type === 'resource' ? c.type === 'resource' : c.type !== 'resource'))
+        .map(normalizeCategory)
+        .filter(Boolean);
       cache[key] = list;
       return list;
     } catch (err) {

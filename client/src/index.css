@@ -27,10 +27,11 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    font-size: 87.5%; /* Scales base rem down from 16px to 14px uniformly across platform */
   }
 
   body {
-    @apply font-sans antialiased bg-white text-dark-900 dark:bg-dark-950 dark:text-dark-100;
+    @apply font-sans antialiased bg-white text-dark-900 dark:bg-dark-950 dark:text-dark-100 text-sm;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -59,19 +60,22 @@
     @apply bg-primary-100 text-primary-900 dark:bg-primary-900/40 dark:text-primary-200;
   }
 
-  /* Typography Optical Tracking (Premium Feel) */
+  /* Typography Optical Tracking (Sleek Compact Proportions) */
   h1, h2, h3, h4, h5, h6, .font-display {
     font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
   }
 
   h1 {
-    @apply text-[30px] sm:text-[40px] md:text-[48px] font-bold tracking-tight leading-tight;
+    @apply text-[24px] sm:text-[30px] md:text-[34px] font-bold tracking-tight leading-tight;
   }
   h2 {
-    @apply text-[24px] sm:text-[30px] md:text-[36px] font-bold tracking-tight leading-tight;
+    @apply text-[20px] sm:text-[24px] md:text-[26px] font-bold tracking-tight leading-tight;
   }
   h3 {
-    @apply text-[20px] sm:text-[22px] md:text-[26px] font-semibold tracking-tight leading-snug;
+    @apply text-[16px] sm:text-[18px] md:text-[20px] font-semibold tracking-tight leading-snug;
+  }
+  h4 {
+    @apply text-[14px] sm:text-[16px] md:text-[17px] font-semibold tracking-tight leading-snug;
   }
 
   /* Smooth Interactive Defaults */
@@ -269,7 +273,7 @@
   .marquee-scroll-track {
     display: flex !important;
     width: max-content !important;
-    animation: marqueeContinuous 45s linear infinite !important;
+    animation: marqueeContinuous 160s linear infinite !important;
     will-change: transform;
   }
 

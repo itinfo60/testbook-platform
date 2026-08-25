@@ -91,20 +91,23 @@ export const getCourseQuizzes = catchAsync(async (req, res) => {
 });
 
 export const submitQuiz = catchAsync(async (req, res) => {
-  const { quizId, answers } = req.body;
+  const quizId = req.body.quizId || req.params?.id || req.body.id;
+  const answers = req.body.answers || [];
 
   const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
   if (!quiz || !quiz.isPublished) throw ApiError.notFound('Quiz not found');
 
-  // Verify enrollment
-  const enrollment = await prisma.enrollment.findFirst({
-    where: {
-      userId: req.userId,
-      courseId: quiz.courseId,
-      status: { in: ['active', 'completed'] },
-    },
-  });
-  if (!enrollment) throw ApiError.forbidden('Enrollment required');
+  // Verify enrollment only if this quiz belongs to a paid course
+  if (quiz.courseId) {
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId: req.userId,
+        courseId: quiz.courseId,
+        status: { in: ['active', 'completed'] },
+      },
+    });
+    if (!enrollment) throw ApiError.forbidden('Enrollment required for course quizzes');
+  }
 
   // Grade
   const gradedAnswers = [];
@@ -140,33 +143,16 @@ export const submitQuiz = catchAsync(async (req, res) => {
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
   const isPassed = percentage >= (quiz.passingScore || 60);
 
-  const attempt = await prisma.quizAttempt.create({
-    data: {
-      userId: req.userId,
-      quizId: quiz.id,
-      // courseId: quiz.courseId, // Uncomment if schema supports courseId in quizAttempt
-      answers: gradedAnswers,
-      score: correctCount,
-      // percentage, // Uncomment if added to schema
-      // totalQuestions,
-      // isPassed
-    },
-  });
-
-  // Update quiz stats
-  const allAttempts = await prisma.quizAttempt.count({ where: { quizId: quiz.id } });
-  const avgScoreRaw = await prisma.quizAttempt.aggregate({
-    where: { quizId: quiz.id },
-    _avg: { score: true }, // assuming we average the correctCount or score
-  });
-
-  await prisma.quiz.update({
-    where: { id: quiz.id },
-    data: {
-      totalAttempts: allAttempts,
-      averageScore: Math.round(avgScoreRaw._avg.score || 0),
-    },
-  });
+  if (req.userId) {
+    await prisma.quizAttempt.create({
+      data: {
+        userId: req.userId,
+        quizId: quiz.id,
+        answers: gradedAnswers,
+        score: correctCount,
+      },
+    });
+  }
 
   ApiResponse.ok(
     res,

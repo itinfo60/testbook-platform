@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -50,6 +50,29 @@ function ResourceItem({ resource }) {
   );
 }
 
+function getCompletedLessonIds(currentProgress) {
+  const ids = new Set();
+  const strList =
+    currentProgress?.completedLessons || currentProgress?.enrollment?.completedLessons || [];
+  if (Array.isArray(strList)) {
+    strList.forEach((id) => {
+      if (id) ids.add(String(id).trim());
+    });
+  }
+
+  const objList = currentProgress?.progress || currentProgress?.enrollment?.progress || [];
+  if (Array.isArray(objList)) {
+    objList.forEach((p) => {
+      if (p && p.completed) {
+        const lid = p.lessonId || p.lesson || p.id;
+        if (lid) ids.add(String(lid).trim());
+      }
+    });
+  }
+
+  return Array.from(ids);
+}
+
 export default function CourseLearning() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -64,9 +87,8 @@ export default function CourseLearning() {
   const { notes } = useSelector((state) => state.notes);
   const { discussions } = useSelector((state) => state.discussions);
 
-  // Use the real MongoDB ObjectId for enrollment/progress APIs once course loads
-  // The URL `id` may be a slug; APIs that touch enrollments require the ObjectId
-  const courseId = course?._id?.toString() || id;
+  const courseId = course?.id || course?._id?.toString() || id;
+  const completedLessonIds = getCompletedLessonIds(currentProgress);
 
   const [currentLesson, setCurrentLesson] = useState(null);
   const [currentSection, setCurrentSection] = useState(null);
@@ -86,16 +108,14 @@ export default function CourseLearning() {
     dispatch(fetchCourseById(id));
   }, [dispatch, id]);
 
-  // Once course loads with real _id, fetch enrollment-dependent data
+  // Once course loads, fetch enrollment-dependent data
   useEffect(() => {
-    if (!course?._id) return;
-    const resolvedId = course._id.toString();
-    // Progress only exists for an active enrollment — skip it for previewers
-    // so we don't fire a request that is guaranteed to 404.
-    if (isEnrolled) dispatch(fetchProgress(resolvedId));
-    dispatch(fetchNotes(resolvedId));
-    dispatch(fetchDiscussions({ courseId: resolvedId }));
-  }, [dispatch, course?._id, isEnrolled]);
+    const courseLookupId = course?.id || course?._id?.toString() || id;
+    if (!courseLookupId) return;
+    if (isEnrolled) dispatch(fetchProgress(courseLookupId));
+    dispatch(fetchNotes(courseLookupId));
+    dispatch(fetchDiscussions({ courseId: courseLookupId }));
+  }, [dispatch, course?.id, course?._id, isEnrolled, id]);
 
   // Auto-select the opening lesson once the course loads.
   // For a visitor who has not purchased, land on the first demo (free) lesson
@@ -114,7 +134,8 @@ export default function CourseLearning() {
 
     const target =
       // A ?lesson=<id> deep link wins (used by the curriculum's demo links)
-      (requestedLessonId && pick((l) => String(l._id) === String(requestedLessonId))) ||
+      (requestedLessonId &&
+        pick((l) => String(l.id || l._id || '') === String(requestedLessonId))) ||
       (isEnrolled ? pick(() => true) : pick((l) => l.isFree) || pick(() => true));
 
     if (target) {
@@ -143,15 +164,16 @@ export default function CourseLearning() {
 
       // Heartbeat every 30 seconds of active watching
       if (sessionWatchTime.current - lastHeartbeatTime.current >= 30) {
+        const activeLessonId = currentLesson?._id || currentLesson?.id;
         const progressRecord = currentProgress?.progress?.find(
-          (p) => String(p.lessonId || p.lesson) === String(currentLesson?._id)
+          (p) => String(p.lessonId || p.lesson) === String(activeLessonId)
         );
         const initialWatchTime = progressRecord?.watchTime || 0;
 
         enrollmentAPI
           .updateProgress(courseId, {
-            sectionId: currentSection?._id,
-            lessonId: currentLesson?._id,
+            sectionId: currentSection?._id || currentSection?.id,
+            lessonId: activeLessonId,
             watchTime: initialWatchTime + sessionWatchTime.current,
             lastPosition: Math.floor(state.playedSeconds),
             completed: false,
@@ -167,18 +189,20 @@ export default function CourseLearning() {
   const handleLessonComplete = useCallback(
     async (targetCompletedState = true) => {
       if (!currentLesson || completing) return;
+      const targetLessonId = String(currentLesson.id || currentLesson._id || '').trim();
+      const courseLookupId = course?.id || course?._id?.toString() || id;
       setCompleting(true);
       try {
         await dispatch(
           completeLesson({
-            courseId: courseId,
-            lessonId: currentLesson._id,
-            sectionId: currentSection?._id,
+            courseId: courseLookupId,
+            lessonId: targetLessonId,
+            sectionId: currentSection?.id || currentSection?._id,
             completed: targetCompletedState,
           })
         ).unwrap();
         // Optimistically mark done in local progress
-        dispatch(markLessonDone({ lessonId: currentLesson._id, completed: targetCompletedState }));
+        dispatch(markLessonDone({ lessonId: targetLessonId, completed: targetCompletedState }));
         toast.success(targetCompletedState ? 'Lesson marked as complete!' : 'Lesson unmarked');
       } catch (err) {
         toast.error(err || 'Failed to update progress');
@@ -186,27 +210,30 @@ export default function CourseLearning() {
         setCompleting(false);
       }
     },
-    [dispatch, courseId, currentLesson, currentSection, completing]
+    [dispatch, course?.id, course?._id, id, currentLesson, currentSection, completing]
   );
 
   const handleVideoComplete = useCallback(async () => {
+    const activeLessonId = String(currentLesson?.id || currentLesson?._id || '').trim();
+    if (!currentLesson || !activeLessonId) return;
     const isCompleted =
-      currentLesson &&
+      completedLessonIds.includes(activeLessonId) ||
       (currentProgress?.progress || [])
         .filter((p) => p.completed)
         .map((p) => String(p.lessonId || p.lesson))
-        .includes(String(currentLesson._id));
-    if (!currentLesson || isCompleted) return;
-    await handleLessonComplete();
-  }, [currentLesson, currentProgress, handleLessonComplete]);
+        .includes(activeLessonId);
+    if (isCompleted) return;
+    await handleLessonComplete(true);
+  }, [currentLesson, completedLessonIds, currentProgress, handleLessonComplete]);
 
   const handleAddNote = async (e) => {
     e.preventDefault();
     if (!noteText.trim()) return;
+    const activeLessonId = currentLesson?._id || currentLesson?.id;
     const noteData = {
       course: courseId,
       content: noteText,
-      lessonId: currentLesson?._id,
+      lessonId: activeLessonId,
     };
     if (currentLesson?.type === 'video' && attachTimestamp) {
       noteData.timestamp = Math.floor(videoTime);
@@ -275,25 +302,25 @@ export default function CourseLearning() {
   const allLessons = sections.flatMap((s) => (s.lessons || []).filter((l) => l.type !== 'quiz'));
   const totalLessons = allLessons.length;
 
-  const validLessonIds = new Set(allLessons.map((l) => String(l._id)));
-
-  // Completed lesson IDs from progress (normalize to strings for comparison)
-  const completedLessonIds = (currentProgress?.progress || [])
-    .filter((p) => p.completed && validLessonIds.has(String(p.lessonId || p.lesson)))
-    .map((p) => String(p.lessonId || p.lesson));
+  const currentLessonKey = currentLesson
+    ? String(currentLesson.id || currentLesson._id).trim()
+    : '';
   const totalCompleted = completedLessonIds.length;
-
-  const isCurrentCompleted =
-    currentLesson && completedLessonIds.includes(String(currentLesson._id));
+  const isCurrentCompleted = Boolean(
+    currentLessonKey && completedLessonIds.includes(currentLessonKey)
+  );
 
   // Navigate to next lesson
   const goToNext = () => {
     if (!currentLesson) return;
+    const currId = String(currentLesson.id || currentLesson._id || '').trim();
     const flatLessons = sections.flatMap((s) =>
       s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
     );
-    const idx = flatLessons.findIndex(({ lesson }) => lesson._id === currentLesson._id);
-    if (idx < flatLessons.length - 1) {
+    const idx = flatLessons.findIndex(
+      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
+    );
+    if (idx >= 0 && idx < flatLessons.length - 1) {
       const next = flatLessons[idx + 1];
       handleLessonSelect(next.lesson, next.section);
     }
@@ -301,11 +328,14 @@ export default function CourseLearning() {
 
   const hasNext = () => {
     if (!currentLesson) return false;
+    const currId = String(currentLesson.id || currentLesson._id || '').trim();
     const flatLessons = sections.flatMap((s) =>
       s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
     );
-    const idx = flatLessons.findIndex(({ lesson }) => lesson._id === currentLesson._id);
-    return idx < flatLessons.length - 1;
+    const idx = flatLessons.findIndex(
+      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
+    );
+    return idx >= 0 && idx < flatLessons.length - 1;
   };
 
   // Mirrors the lock rule in LessonContent: free lessons are the open demos.
@@ -477,7 +507,7 @@ export default function CourseLearning() {
             <div className="flex-1 overflow-y-auto">
               <LessonSidebar
                 sections={sections}
-                currentLessonId={currentLesson?._id}
+                currentLessonId={currentLesson?._id || currentLesson?.id}
                 completedLessonIds={completedLessonIds}
                 onSelectLesson={handleLessonSelect}
                 totalCompleted={totalCompleted}
@@ -493,7 +523,7 @@ export default function CourseLearning() {
         {/* Main content */}
         <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0">
           <LessonContent
-            key={currentLesson?._id}
+            key={currentLesson?._id || currentLesson?.id}
             lesson={currentLesson}
             sectionTitle={currentSection?.title}
             onComplete={handleLessonComplete}
@@ -694,7 +724,7 @@ export default function CourseLearning() {
         <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0 p-4 lg:p-6 lg:pl-0">
           <LessonSidebar
             sections={sections}
-            currentLessonId={currentLesson?._id}
+            currentLessonId={currentLesson?._id || currentLesson?.id}
             completedLessonIds={completedLessonIds}
             onSelectLesson={handleLessonSelect}
             totalCompleted={totalCompleted}

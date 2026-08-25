@@ -45,7 +45,7 @@ export class ReviewService {
       prisma.review.count({ where }),
       prisma.review.findMany({
         where,
-        include: { user: { select: { name: true, avatar: true } } },
+        include: { user: { select: { id: true, name: true, avatar: true } } },
         orderBy: query.sort === 'helpful' ? { rating: 'desc' } : { createdAt: 'desc' },
         skip: pagination.skip,
         take: pagination.limit,
@@ -87,7 +87,33 @@ export class ReviewService {
 
     const existing = await this.reviewRepository.findOne({ userId, courseId });
     if (existing) {
-      throw ApiError.conflict('You have already reviewed this course');
+      // Update existing review gracefully instead of hard 409 error
+      const updated = await prisma.review.update({
+        where: { id: existing.id },
+        data: {
+          rating,
+          comment,
+          isApproved: true,
+        },
+        include: { user: { select: { name: true, avatar: true } } },
+      });
+
+      // Recalculate Course rating
+      const avg = await prisma.review.aggregate({
+        where: { courseId, isApproved: true },
+        _avg: { rating: true },
+      });
+      if (avg._avg.rating !== null) {
+        await prisma.course.update({
+          where: { id: courseId },
+          data: { rating: Math.round(avg._avg.rating * 10) / 10 },
+        });
+      }
+
+      const tenantId = getTenantId();
+      await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');
+
+      return updated;
     }
 
     const review = await prisma.review.create({
@@ -96,9 +122,22 @@ export class ReviewService {
         courseId,
         rating,
         comment,
+        isApproved: true,
       },
       include: { user: { select: { name: true, avatar: true } } },
     });
+
+    // Recalculate Course rating
+    const avg = await prisma.review.aggregate({
+      where: { courseId, isApproved: true },
+      _avg: { rating: true },
+    });
+    if (avg._avg.rating !== null) {
+      await prisma.course.update({
+        where: { id: courseId },
+        data: { rating: Math.round(avg._avg.rating * 10) / 10 },
+      });
+    }
 
     const tenantId = getTenantId();
     await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');
@@ -107,7 +146,7 @@ export class ReviewService {
   }
 
   async updateReview(id: string, userId: string, body: IUpdateReviewInput): Promise<any> {
-    const review = await this.reviewRepository.findOne({ id, userId });
+    const review = await prisma.review.findFirst({ where: { id, userId } });
     if (!review) {
       throw ApiError.notFound('Review not found');
     }
@@ -115,12 +154,25 @@ export class ReviewService {
     const updateData: any = {};
     if (body.rating !== undefined) updateData.rating = body.rating;
     if (body.comment !== undefined) updateData.comment = body.comment;
+    updateData.isApproved = true;
 
     const updatedReview = await prisma.review.update({
       where: { id },
       data: updateData,
-      include: { user: { select: { name: true, avatar: true } } },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
     });
+
+    // Recalculate Course rating
+    const avg = await prisma.review.aggregate({
+      where: { courseId: review.courseId, isApproved: true },
+      _avg: { rating: true },
+    });
+    if (avg._avg.rating !== null) {
+      await prisma.course.update({
+        where: { id: review.courseId },
+        data: { rating: Math.round(avg._avg.rating * 10) / 10 },
+      });
+    }
 
     const tenantId = getTenantId();
     await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');
@@ -129,12 +181,22 @@ export class ReviewService {
   }
 
   async deleteReview(id: string, userId: string): Promise<void> {
-    const review = await this.reviewRepository.findOne({ id, userId });
+    const review = await prisma.review.findFirst({ where: { id, userId } });
     if (!review) {
       throw ApiError.notFound('Review not found');
     }
 
-    await this.reviewRepository.deleteById(id);
+    await prisma.review.delete({ where: { id } });
+
+    // Recalculate Course rating
+    const avg = await prisma.review.aggregate({
+      where: { courseId: review.courseId, isApproved: true },
+      _avg: { rating: true },
+    });
+    await prisma.course.update({
+      where: { id: review.courseId },
+      data: { rating: avg._avg.rating !== null ? Math.round(avg._avg.rating * 10) / 10 : 0 },
+    });
 
     const tenantId = getTenantId();
     await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');

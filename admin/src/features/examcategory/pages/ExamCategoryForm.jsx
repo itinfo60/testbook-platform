@@ -10,6 +10,7 @@ import {
   clearSelected,
 } from '@/features/examcategory/examCategorySlice';
 import { fetchCategories } from '@/features/category/categorySlice';
+import { examCategoriesAPI } from '@/services/api';
 
 const INITIAL_FORM = {
   name: '',
@@ -39,10 +40,20 @@ export default function ExamCategoryForm() {
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [activeTab, setActiveTab] = useState('basic');
+  const [allParentsList, setAllParentsList] = useState([]);
 
   useEffect(() => {
-    // Load categories to populate the "Exam Category" parent dropdown
+    // Load ALL categories and exams to populate parent options
     dispatch(fetchCategories({ page: 1, limit: 200 }));
+    examCategoriesAPI
+      .getAll({ limit: 200 })
+      .then((res) => {
+        const data =
+          res.data?.data?.docs || res.data?.data?.categories || res.data?.data || res.data || [];
+        setAllParentsList(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+
     if (isEdit) dispatch(fetchExamCategoryById(id));
     return () => dispatch(clearSelected());
   }, [dispatch, id, isEdit]);
@@ -97,11 +108,16 @@ export default function ExamCategoryForm() {
     setForm({ ...form, importantDates: updated });
   };
 
-  // Parent options are categories — an exam lives inside a category (exclude self)
-  const parentOptions = (allCategories || []).filter((c) => {
-    const cId = c.id || c._id;
-    return cId !== id;
-  });
+  // Combine categories and existing exams, excluding current item being edited
+  const combinedParents = (allParentsList.length > 0 ? allParentsList : allCategories || []).filter(
+    (c) => {
+      const cId = c.id || c._id;
+      return cId !== id;
+    }
+  );
+
+  const mainCategories = combinedParents.filter((c) => c.type === 'category' || !c.parentId);
+  const examParents = combinedParents.filter((c) => c.type === 'exam' && c.parentId);
 
   if (isEdit && loading && !selected)
     return (
@@ -156,25 +172,43 @@ export default function ExamCategoryForm() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <GitBranch className="inline w-4 h-4 mr-1" />
-                Exam Category{' '}
-                <span className="text-gray-400 font-normal">(leave blank for top-level exam)</span>
+                Parent Category / Exam{' '}
+                <span className="text-gray-400 font-normal">
+                  (choose parent category or parent exam)
+                </span>
               </label>
               <select
                 value={form.parent}
                 onChange={(e) => setForm({ ...form, parent: e.target.value })}
                 className="input-field"
               >
-                <option value="">— None (Top-level Exam) —</option>
-                {parentOptions.map((c) => (
-                  <option key={c.id || c._id} value={c.id || c._id}>
-                    {c.icon ? `${c.icon} ` : ''}
-                    {c.name}
-                  </option>
-                ))}
+                <option value="">— None (Top-level Category/Exam) —</option>
+
+                {mainCategories.length > 0 && (
+                  <optgroup label="📂 Main Categories">
+                    {mainCategories.map((c) => (
+                      <option key={c.id || c._id} value={c.id || c._id}>
+                        {c.icon ? `${c.icon} ` : ''}
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+
+                {examParents.length > 0 && (
+                  <optgroup label="📝 Parent Exams / Sub-categories">
+                    {examParents.map((e) => (
+                      <option key={e.id || e._id} value={e.id || e._id}>
+                        {e.icon ? `${e.icon} ` : '📝 '}
+                        {e.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               {form.parent && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  This exam will appear under the selected exam category.
+                <p className="text-xs text-primary-600 dark:text-primary-400 mt-1">
+                  This item will nest directly under the selected parent category or exam.
                 </p>
               )}
             </div>

@@ -106,9 +106,17 @@ export default function CourseDetail() {
   };
 
   // True when the current user already has a review visible in the loaded list.
-  // Use String() comparison — user._id may be an ObjectId or string depending
-  // on whether populate ran.
-  const myExistingReview = reviews.find((r) => String(r.user?._id || r.user) === String(user?._id));
+  const currentUserId = user?.id || user?._id;
+  const myExistingReview = reviews.find(
+    (r) => String(r.user?.id || r.user?._id || r.user || r.userId) === String(currentUserId)
+  );
+
+  useEffect(() => {
+    if (myExistingReview && !reviewSubmitted) {
+      setReviewRating(myExistingReview.rating || 0);
+      setReviewText(myExistingReview.comment || '');
+    }
+  }, [myExistingReview, reviewSubmitted]);
   useEffect(() => {
     window.scrollTo(0, 0);
     enrollmentCheckedRef.current = ''; // reset on new course page
@@ -228,6 +236,15 @@ export default function CourseDetail() {
 
   const lessons = (course.sections || []).flatMap((s) => s.lessons || []);
 
+  // Compute live rating and count from reviews list
+  const totalReviewsCount = reviews?.length || course.totalReviews || 0;
+  const computedAvgRating =
+    reviews?.length > 0
+      ? Math.round(
+          (reviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / reviews.length) * 10
+        ) / 10
+      : Number(course.averageRating || course.rating || 0);
+
   // Lesson durations are authored in MINUTES (see the course builder form) and
   // course.totalDuration is their sum, so treat the input as minutes.
   const formatDuration = (mins) => {
@@ -316,19 +333,22 @@ export default function CourseDetail() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-8 bg-black/20 p-4 rounded-xl w-fit border border-white/5 backdrop-blur-sm">
                 <div className="flex items-center gap-1.5">
                   <RatingStars
-                    rating={course.averageRating || 0}
-                    count={course.totalReviews}
+                    rating={computedAvgRating || 5.0}
+                    count={totalReviewsCount}
                     size="md"
                     showValue={false}
                   />
                   <span className="text-white font-bold text-[14px] ml-1">
-                    {Number(course.averageRating || 0).toFixed(1)}
+                    {Number(computedAvgRating || 5.0).toFixed(1)}
                   </span>
                 </div>
                 <div className="w-px h-5 bg-white/10 hidden sm:block"></div>
                 <span className="text-blue-100 flex items-center gap-2 text-[14px] font-semibold">
                   <HiUsers className="h-4 w-4 text-emerald-400" />
-                  {course.enrollmentCount || 0} Aspirants
+                  {course.enrollmentCount ||
+                    course._count?.enrollments ||
+                    (course.enrollments ? course.enrollments.length : isEnrolled ? 1 : 0)}{' '}
+                  Aspirants
                 </span>
                 <div className="w-px h-5 bg-white/10 hidden sm:block"></div>
                 <span className="text-blue-100 flex items-center gap-2 text-[14px] font-semibold">
@@ -660,8 +680,8 @@ export default function CourseDetail() {
 
           {activeTab === 'reviews' && (
             <div className="space-y-5">
-              {/* ── Write / already-reviewed form (enrolled users only) ── */}
-              {isAuthenticated && isEnrolled && !myExistingReview && !reviewSubmitted && (
+              {/* ── Write Review Form (Only if enrolled and has NOT reviewed yet) ── */}
+              {isAuthenticated && isEnrolled && !myExistingReview && (
                 <div className="bg-white dark:bg-dark-900 rounded-[24px] p-6 sm:p-8 shadow-sm border border-dark-200/80 dark:border-dark-800/80">
                   <h3 className="text-lg font-bold text-dark-900 dark:text-white mb-5">
                     Write a Review
@@ -718,7 +738,7 @@ export default function CourseDetail() {
                     <button
                       type="submit"
                       disabled={submittingReview || !reviewRating}
-                      className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl transition-all text-sm flex items-center gap-2 active:scale-95"
+                      className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl transition-all text-sm flex items-center gap-2 active:scale-95 shadow-sm"
                     >
                       {submittingReview ? 'Submitting…' : 'Submit Review'}
                     </button>
@@ -731,7 +751,7 @@ export default function CourseDetail() {
                 <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-[24px] p-5 border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-3">
                   <span className="text-2xl">🎉</span>
                   <p className="font-semibold text-emerald-800 dark:text-emerald-300 text-sm">
-                    Thanks for your review! It will appear here after moderation.
+                    Thanks for your review! Your rating and feedback have been saved.
                   </p>
                 </div>
               )}
@@ -790,7 +810,7 @@ export default function CourseDetail() {
                     <ReviewCard
                       key={review.id || review._id}
                       review={review}
-                      currentUserId={user?._id}
+                      currentUserId={user?.id || user?._id}
                       onEdit={handleEditReview}
                     />
                   ))}

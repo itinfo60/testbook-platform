@@ -16,7 +16,8 @@ import {
   BookOpen,
   Plus,
   Eye,
-  EyeOff,
+  ToggleLeft,
+  ToggleRight,
   Star,
   StarOff,
   Edit,
@@ -224,14 +225,16 @@ export default function CourseList() {
               </button>
               <button
                 onClick={() => dispatch(togglePublish(rowId))}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title={isPub ? 'Unpublish Course (Set to Draft)' : 'Publish Course Live'}
+                className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                  isPub ? 'text-emerald-600' : 'text-gray-400'
+                }`}
+                title={
+                  isPub
+                    ? 'Unpublish Course (Set to Draft / Inactive)'
+                    : 'Publish Course Live (Active)'
+                }
               >
-                {isPub ? (
-                  <EyeOff className="w-4 h-4 text-gray-500" />
-                ) : (
-                  <Eye className="w-4 h-4 text-emerald-600" />
-                )}
+                {isPub ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => dispatch(toggleFeatured(rowId))}

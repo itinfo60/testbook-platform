@@ -16,6 +16,7 @@ import dripWorker from './workers/drip.worker.js';
 import { reminderWorker } from './workers/reminder.worker.js';
 import dunningWorker from './workers/dunning.worker.js';
 import { drainFailedJobs } from './queues/index.js';
+import { startLiveClassCron, liveClassWorker } from './workers/liveclass.cron.js';
 
 const server = http.createServer(app);
 
@@ -68,6 +69,9 @@ const startServer = async () => {
     // Start BullMQ workers (log startup, workers are self-managing)
     logger.info(`BullMQ workers started: email, notification, certificate, drip, reminder`);
 
+    // Start live class auto-transition cron (scheduled→live→ended)
+    startLiveClassCron();
+
     // Drain stale zombie jobs from Redis on startup (dev only)
     await drainFailedJobs();
 
@@ -116,6 +120,7 @@ const gracefulShutdown = async (signal) => {
         dripWorker.close(),
         reminderWorker.close(),
         dunningWorker.close(),
+        liveClassWorker.close(),
       ]);
       logger.info('BullMQ workers closed');
 

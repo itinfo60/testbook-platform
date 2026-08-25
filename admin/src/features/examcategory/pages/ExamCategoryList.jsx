@@ -12,8 +12,14 @@ import {
   BookOpen,
   FileText,
   CheckCircle2,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
-import { fetchExamCategories, deleteExamCategory } from '@/features/examcategory/examCategorySlice';
+import {
+  fetchExamCategories,
+  deleteExamCategory,
+  toggleExamCategoryStatus,
+} from '@/features/examcategory/examCategorySlice';
 import DataTable from '@/components/DataTable';
 import StatsCard from '@/components/StatsCard';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -150,8 +156,24 @@ export default function ExamCategoryList() {
         emptyIcon={FolderOpen}
         actions={(row) => {
           const rowId = row.id || row._id;
+          const isActive = row.isActive !== false;
           return (
             <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() =>
+                  dispatch(toggleExamCategoryStatus({ id: rowId, isActive: !isActive }))
+                }
+                className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                  isActive ? 'text-emerald-600' : 'text-gray-400'
+                }`}
+                title={isActive ? 'Deactivate Exam' : 'Activate Exam'}
+              >
+                {isActive ? (
+                  <ToggleRight className="w-5 h-5" />
+                ) : (
+                  <ToggleLeft className="w-5 h-5" />
+                )}
+              </button>
               <button
                 onClick={() => navigate(`/exam-categories/${rowId}`)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600"

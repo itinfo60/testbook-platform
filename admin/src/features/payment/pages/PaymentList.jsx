@@ -128,16 +128,39 @@ export default function PaymentList() {
       key: 'product',
       label: 'Product',
       render: (_, row) => {
+        const notes = row.notes || {};
         const title =
-          row.notes?.productTitle ||
+          notes.itemTitle ||
+          notes.productTitle ||
           row.courseTitle ||
           row.receipt ||
-          (row.orderId ? `Order #${row.orderId}` : '—');
+          (row.orderId ? `Order #${row.orderId}` : 'Educational Content');
+
+        const isSeries = Boolean(notes.testSeriesId || (notes.testId && !notes.courseId));
+        const isCourse = Boolean(notes.courseId);
+        const link = notes.courseId ? `/courses/${notes.courseId}` : notes.testId ? `/tests` : null;
+
         return (
-          <div>
-            <span className="text-xs font-semibold text-gray-900 dark:text-white block truncate max-w-[160px]">
+          <div className="max-w-[200px]">
+            <span
+              className="text-xs font-semibold text-gray-900 dark:text-white block truncate"
+              title={title}
+            >
               {title}
             </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                  isSeries
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                    : isCourse
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                }`}
+              >
+                {isSeries ? 'Test Series' : isCourse ? 'Course' : 'Product'}
+              </span>
+            </div>
           </div>
         );
       },

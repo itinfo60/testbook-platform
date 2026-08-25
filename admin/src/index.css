@@ -6,8 +6,11 @@
   * {
     @apply border-gray-200 dark:border-gray-700;
   }
+  html {
+    font-size: 87.5%; /* 14px base rem scaling */
+  }
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 text-sm;
   }
   ::-webkit-scrollbar {
     @apply w-1.5;

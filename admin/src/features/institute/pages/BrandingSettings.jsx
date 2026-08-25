@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Palette, Save, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
+import FileUploadInput from '@/components/FileUploadInput';
 
 const DEFAULTS = {
   primaryColor: '#3b82f6',
@@ -182,57 +183,46 @@ export default function BrandingSettings() {
           </div>
         </section>
 
-        {/* Logo & Favicon (URL-based) */}
+        {/* Logo & Favicon (Upload to Supabase / URL) */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">Logo & Favicon</h3>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+            Logo, Favicon & Banner
+          </h3>
           <p className="text-xs text-gray-400">
-            Paste publicly accessible URLs (e.g. from Cloudinary, S3, or your CDN).
+            Upload images directly to Supabase Storage or paste external CDN links.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Logo URL
-              </label>
-              <input
-                type="url"
-                className="input-field w-full"
-                placeholder="https://cdn.example.com/logo.png"
-                value={form.logoUrl}
-                onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))}
-              />
-              {form.logoUrl && (
-                <img
-                  src={form.logoUrl}
-                  alt="Logo preview"
-                  className="mt-2 h-12 object-contain rounded border border-gray-200 dark:border-gray-700 p-1.5 bg-gray-50 dark:bg-gray-900"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Favicon URL
-              </label>
-              <input
-                type="url"
-                className="input-field w-full"
-                placeholder="https://cdn.example.com/favicon.ico"
-                value={form.faviconUrl}
-                onChange={(e) => setForm((f) => ({ ...f, faviconUrl: e.target.value }))}
-              />
-              {form.faviconUrl && (
-                <img
-                  src={form.faviconUrl}
-                  alt="Favicon preview"
-                  className="mt-2 h-8 w-8 object-contain rounded border border-gray-200 dark:border-gray-700 p-1 bg-gray-50 dark:bg-gray-900"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-              )}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FileUploadInput
+              label="Institute Logo"
+              value={form.logoUrl}
+              onChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))}
+              type="image"
+              folder="branding-logos"
+              placeholder="https://... (PNG/SVG/WebP)"
+              hint="Recommended size: 250x60px (transparent background)"
+            />
+
+            <FileUploadInput
+              label="Website Favicon"
+              value={form.faviconUrl}
+              onChange={(url) => setForm((f) => ({ ...f, faviconUrl: url }))}
+              type="image"
+              folder="branding-favicons"
+              placeholder="https://... (ICO/PNG)"
+              hint="Recommended size: 32x32px or 64x64px"
+            />
+          </div>
+
+          <div className="pt-2">
+            <FileUploadInput
+              label="Student Portal Hero Banner (Optional)"
+              value={form.bannerUrl}
+              onChange={(url) => setForm((f) => ({ ...f, bannerUrl: url }))}
+              type="image"
+              folder="branding-banners"
+              placeholder="https://..."
+              hint="Wide banner shown on landing pages. Recommended: 1920x600px"
+            />
           </div>
         </section>
 

@@ -9,7 +9,8 @@ import {
   Star,
   StarOff,
   Eye,
-  EyeOff,
+  ToggleLeft,
+  ToggleRight,
   CheckCircle,
   Video,
   FileText,
@@ -158,11 +159,11 @@ export default function CourseDetail() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex items-start sm:items-center gap-4 min-w-0">
           <button
             onClick={() => navigate('/courses')}
-            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors shrink-0 mt-0.5 sm:mt-0"
             title="Back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -171,26 +172,30 @@ export default function CourseDetail() {
             <img
               src={course.thumbnail.url}
               alt={course.title}
-              className="w-16 h-12 rounded-xl object-cover shadow-sm border border-gray-200 dark:border-gray-700"
+              className="w-16 h-12 rounded-xl object-cover shadow-sm border border-gray-200 dark:border-gray-700 shrink-0"
             />
           ) : (
-            <div className="w-16 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center font-bold">
+            <div className="w-16 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center font-bold shrink-0">
               <BookOpen className="w-6 h-6" />
             </div>
           )}
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{course.title}</h1>
-              <span className={`badge ${course.isPublished ? 'badge-success' : 'badge-warning'}`}>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                {course.title}
+              </h1>
+              <span
+                className={`badge shrink-0 ${course.isPublished ? 'badge-success' : 'badge-warning'}`}
+              >
                 {course.isPublished ? 'Published' : 'Draft'}
               </span>
               {course.isFeatured && (
-                <span className="badge badge-info flex items-center gap-1">
+                <span className="badge badge-info flex items-center gap-1 shrink-0">
                   <Star className="w-3 h-3 fill-current" /> Featured
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-4">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
               <span>
                 Teacher:{' '}
                 {course.teacherId || course.teacher?.id ? (
@@ -231,46 +236,61 @@ export default function CourseDetail() {
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        {/* Action Controls - Strictly Right-Aligned */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-end lg:self-center ml-auto">
           <button
             onClick={handleTogglePublish}
-            className="btn-secondary gap-2"
-            title="Toggle Publish Status"
+            className={`btn-secondary gap-2 text-xs sm:text-sm font-semibold px-3.5 py-2 ${
+              course.isPublished
+                ? 'text-emerald-600 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20'
+                : ''
+            }`}
+            title={
+              course.isPublished
+                ? 'Unpublish Course (Set to Draft)'
+                : 'Publish Course Live (Active)'
+            }
           >
             {course.isPublished ? (
-              <EyeOff className="w-4 h-4 text-gray-500" />
+              <ToggleRight className="w-5 h-5 text-emerald-600" />
             ) : (
-              <Eye className="w-4 h-4 text-emerald-600" />
+              <ToggleLeft className="w-5 h-5 text-gray-400" />
             )}
-            {course.isPublished ? 'Unpublish' : 'Publish'}
+            <span>{course.isPublished ? 'Published' : 'Draft'}</span>
           </button>
           <button
             onClick={handleToggleFeatured}
-            className="btn-secondary gap-2"
+            className={`btn-secondary gap-2 text-xs sm:text-sm font-semibold px-3.5 py-2 ${
+              course.isFeatured
+                ? 'text-amber-600 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20'
+                : ''
+            }`}
             title="Toggle Featured"
           >
             {course.isFeatured ? (
-              <StarOff className="w-4 h-4 text-gray-500" />
+              <StarOff className="w-4 h-4 text-amber-500" />
             ) : (
               <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
             )}
-            {course.isFeatured ? 'Unfeature' : 'Feature'}
+            <span>{course.isFeatured ? 'Featured' : 'Feature'}</span>
           </button>
           <button
             onClick={() => navigate(`/courses/${course.id || course._id}/edit`)}
-            className="btn-primary gap-2"
+            className="btn-primary gap-2 text-xs sm:text-sm font-semibold px-4 py-2"
           >
-            <Edit className="w-4 h-4" /> Edit Course
+            <Edit className="w-4 h-4" /> <span>Edit Course</span>
           </button>
-          <button onClick={() => setDeleteTarget(true)} className="btn-danger gap-2">
-            <Trash2 className="w-4 h-4" /> Delete
+          <button
+            onClick={() => setDeleteTarget(true)}
+            className="btn-danger gap-2 text-xs sm:text-sm font-semibold px-3.5 py-2"
+          >
+            <Trash2 className="w-4 h-4" /> <span>Delete</span>
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           icon={Users}
           title="Enrolled Students"
@@ -289,19 +309,19 @@ export default function CourseDetail() {
         />
         <StatsCard
           icon={Layers}
-          title="Curriculum Sections"
-          value={`${sections.length} Sections (${totalLessons} Lessons)`}
+          title="Curriculum"
+          value={`${sections.length} ${sections.length === 1 ? 'Section' : 'Sections'}`}
           color="amber"
           onClick={() => setActiveTab('curriculum')}
-          subtitle="Course syllabus breakdown"
+          subtitle={`${totalLessons} Total Lessons`}
         />
         <StatsCard
           icon={Star}
           title="Average Rating"
-          value={`${(course.rating || 0).toFixed(1)} / 5.0 (${reviews.length} reviews)`}
+          value={`${(course.rating || 0).toFixed(1)} / 5.0`}
           color="blue"
           onClick={() => setActiveTab('reviews')}
-          subtitle="Student satisfaction"
+          subtitle={reviews.length > 0 ? `${reviews.length} Verified Reviews` : '0 Reviews yet'}
         />
       </div>
 

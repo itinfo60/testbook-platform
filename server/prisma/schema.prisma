@@ -44,6 +44,7 @@ model User {
   tenantId                  String?
 
   enrollments               Enrollment[]
+  testSeriesEnrollments     TestSeriesEnrollment[]
   courses                   Course[]     @relation("TeacherCourses")
   reviews                   Review[]
   payments                  Payment[]
@@ -225,8 +226,34 @@ model TestSeries {
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id])
 
+  enrollments TestSeriesEnrollment[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TEST SERIES ENROLLMENT
+// ─────────────────────────────────────────────────────────────────
+model TestSeriesEnrollment {
+  id            String      @id @default(uuid())
+  status        String      @default("active")
+  paymentStatus String      @default("paid")
+  paymentId     String?
+  orderId       String?
+  amount        Float       @default(0)
+  tenantId      String?
+
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+
+  testSeriesId  String
+  testSeries    TestSeries  @relation(fields: [testSeriesId], references: [id])
+
+  enrolledAt    DateTime    @default(now())
+  expiresAt     DateTime?
+
+  @@unique([userId, testSeriesId])
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -314,19 +341,25 @@ model Review {
 // BLOG
 // ─────────────────────────────────────────────────────────────────
 model Blog {
-  id          String   @id @default(uuid())
-  title       String
-  slug        String   @unique
-  content     String
-  excerpt     String?
-  status      String   @default("draft")
-  type        String   @default("article")
-  tags        String[]
-  thumbnail   Json?
-  tenantId    String?
+  id           String   @id @default(uuid())
+  title        String
+  slug         String   @unique
+  content      String
+  excerpt      String?
+  status       String   @default("draft")
+  type         String   @default("article")
+  tags         String[]
+  thumbnail    Json?
+  coverImage   Json?
+  examCategory String?
+  jobAlert     Json?
+  resourceIds  String[]
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  tenantId     String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -371,35 +404,44 @@ model Notification {
 // LIBRARY
 // ─────────────────────────────────────────────────────────────────
 model Library {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  type        String
-  url         String?
-  fileData    Json?
-  accessLevel String   @default("free")
-  tenantId    String?
+  id             String   @id @default(uuid())
+  title          String
+  description    String?
+  type           String
+  url            String?
+  fileData       Json?
+  accessLevel    String   @default("free")
+  downloadsCount Int      @default(0)
+  tenantId       String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────
 // LIVE CLASS
 // ─────────────────────────────────────────────────────────────────
 model LiveClass {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  teacherId   String
-  scheduledAt DateTime
-  duration    Int      @default(60)
-  status      String   @default("scheduled")
-  roomId      String?
-  tenantId    String?
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  teacherId       String
+  teacherName     String?
+  password        String?
+  scheduledAt     DateTime
+  duration        Int      @default(60)
+  status          String   @default("scheduled")
+  roomId          String?
+  tenantId        String?
+  course          String?
+  meetingUrl      String?
+  maxParticipants Int      @default(200)
+  isRecorded      Boolean  @default(false)
+  chatEnabled     Boolean  @default(true)
+  attendance      Json     @default("[]")
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────

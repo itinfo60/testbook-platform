@@ -8,7 +8,7 @@ const router = Router();
 router.get('/', optionalAuth, quizController.getAllQuizzes);
 router.get('/course/:courseId', optionalAuth, quizController.getCourseQuizzes);
 router.get('/:id', optionalAuth, quizController.getQuizById);
-router.post('/submit', authenticate, quizController.submitQuiz);
+router.post('/submit', optionalAuth, quizController.submitQuiz);
 
 // Teacher
 router.get(

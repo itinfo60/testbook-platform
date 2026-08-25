@@ -24,7 +24,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       : null;
   }
 
-  async createCheckoutOrder(userId: string, data: ICreateOrderDto) {
+  async createCheckoutOrder(userId: string, tenantId: string | null, data: ICreateOrderDto) {
     const { courseId, testId, couponCode } = data;
 
     let item: any = null;
@@ -42,12 +42,11 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       });
       if (existing) throw ApiError.conflict('Already enrolled in course');
     } else if (testId) {
-      item = await prisma.test.findFirst({ where: { OR: [{ id: testId }, { slug: testId }] } });
-      if (!item)
-        item = await prisma.testSeries.findFirst({
-          where: { OR: [{ id: testId }, { slug: testId }] },
-        });
-      if (!item || !item.isPublished) throw ApiError.notFound('Test not found');
+      item = await prisma.test.findFirst({ where: { id: testId } });
+      if (!item) {
+        item = await prisma.testSeries.findFirst({ where: { id: testId } });
+      }
+      if (!item || !item.isPublished) throw ApiError.notFound('Test or Test Series not found');
       amount = item.price || 0;
     }
 
@@ -61,12 +60,8 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
         const coupon = await prisma.coupon.findFirst({
           where: { code: couponCode.toUpperCase(), isActive: true },
         });
-        if (!coupon) throw new Error('Coupon not found');
-        discount = Math.min(
-          amount,
-          coupon.discountAmount ||
-            (coupon.discountPercent ? (amount * coupon.discountPercent) / 100 : 0)
-        );
+        if (!coupon) throw new Error('Invalid coupon');
+        discount = coupon.discount || 0;
         amount = Math.max(0, amount - discount);
         couponNotes = { couponCode, discount };
       } catch (e: any) {
@@ -77,7 +72,13 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     // Free enrollment
     if (amount === 0 && courseId) {
       const enrollment = await prisma.enrollment.create({
-        data: { userId, courseId: item.id, status: 'active', paymentStatus: 'free', amount: 0 },
+        data: {
+          userId,
+          courseId: item.id,
+          status: 'active',
+          paymentStatus: 'free',
+          amount: 0,
+        },
       });
       await redis.delPattern('courses:*');
       return { enrollment, isFree: true };
@@ -110,6 +111,8 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       }
     }
 
+    const targetTenantId = tenantId || item.tenantId || undefined;
+
     const payment = await prisma.payment.create({
       data: {
         userId,
@@ -117,8 +120,14 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
         amount,
         currency: orderCurrency,
         status: 'pending',
-        notes: { razorpayOrderId: orderId, itemTitle: item.title, ...couponNotes },
-        tenantId: undefined,
+        notes: {
+          razorpayOrderId: orderId,
+          itemTitle: item.title,
+          courseId: courseId || (item.sections ? item.id : null),
+          testId: testId || (!item.sections ? item.id : null),
+          ...couponNotes,
+        },
+        tenantId: targetTenantId,
       },
     });
 
@@ -150,47 +159,69 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       }
     }
 
-    const payment = await prisma.payment.findOneAndUpdate(
-      this.repository['getScopedFilter']({
+    const existingPayment = await prisma.payment.findFirst({
+      where: {
         orderId: razorpay_order_id,
-        user: userId,
-      }),
-      {
-        $set: {
-          paymentId: razorpay_payment_id,
-          signature: razorpay_signature,
-          status: 'completed',
-        },
+        userId,
       },
-      { new: true }
-    );
+    });
 
-    if (!payment) {
+    if (!existingPayment) {
       throw ApiError.badRequest('Payment record not found');
     }
 
+    const payment = await prisma.payment.update({
+      where: { id: existingPayment.id },
+      data: {
+        transactionId: razorpay_payment_id,
+        status: 'completed',
+        notes: {
+          ...(typeof existingPayment.notes === 'object' && existingPayment.notes !== null
+            ? (existingPayment.notes as object)
+            : {}),
+          paymentId: razorpay_payment_id,
+          signature: razorpay_signature,
+        },
+      },
+    });
+
     // Process Purchase Activation
-    if (payment.course || payment.test) {
-      const enrollmentData: any = {
-        user: payment.user,
-        amountPaid: payment.amount,
-        paymentId: payment.id,
-        couponUsed: payment.coupon,
-      };
+    const paymentNotes = (payment.notes || {}) as Record<string, any>;
+    const targetCourseId = paymentNotes.courseId;
+    const targetTestId = paymentNotes.testId;
 
-      if (payment.course) enrollmentData.course = payment.course;
-      if (payment.test) enrollmentData.test = payment.test;
+    if (targetCourseId) {
+      const enrollment = await prisma.enrollment.upsert({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: targetCourseId,
+          },
+        },
+        create: {
+          userId,
+          courseId: targetCourseId,
+          amount: payment.amount,
+          paymentStatus: 'paid',
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          status: 'active',
+        },
+        update: {
+          status: 'active',
+          paymentStatus: 'paid',
+          amount: payment.amount,
+          paymentId: payment.id,
+        },
+      });
 
-      const enrollment = await Enrollment.create(enrollmentData);
+      await redis.delPattern('courses:*');
+      await redis.delPattern('admin:dashboard:*').catch(() => {});
 
-      if (payment.course) {
-        await Course.findByIdAndUpdate(payment.course, { $inc: { enrollmentCount: 1 } });
-        await User.findByIdAndUpdate(userId, { $inc: { enrolledCourses: 1 } });
-        await redis.delPattern('courses:*');
+      const course = await prisma.course.findUnique({ where: { id: targetCourseId } });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
 
-        const course = await Course.findById(payment.course);
-        const user = await User.findById(userId);
-
+      try {
         await transactionalEmailQueue.add('send', {
           type: 'enrollment_confirmation',
           data: { user, course },
@@ -204,41 +235,106 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           message: `You are now enrolled in "${course?.title}"`,
           data: { courseId: course?.id, paymentId: payment.id },
         });
+      } catch (queueErr) {
+        logger.warn('[Notification] Queue push skipped in dev:', queueErr);
       }
 
       return { enrollment, payment };
-    } else if (payment.subscriptionPlan) {
-      // Tenant Plan Upgrade
-      const plan = await SubscriptionPlan.findById(payment.subscriptionPlan);
-      if (!plan) throw ApiError.notFound('Subscription plan not found');
+    }
 
-      if (!tenantId) {
-        throw ApiError.badRequest('Tenant context required to apply subscription upgrade');
+    const resolvedSeriesId = paymentNotes.testSeriesId || targetTestId;
+    if (resolvedSeriesId) {
+      // Find whether this is a TestSeries directly or via test association
+      let series = await prisma.testSeries.findUnique({ where: { id: resolvedSeriesId } });
+      if (!series) {
+        series = await prisma.testSeries.findFirst({
+          where: { tests: { has: resolvedSeriesId } },
+        });
       }
 
-      const institute = await Institute.findById(tenantId);
-      if (!institute) throw ApiError.notFound('Institute tenant not found');
+      if (series) {
+        const testSeriesEnrollment = await (prisma as any).testSeriesEnrollment.upsert({
+          where: {
+            userId_testSeriesId: {
+              userId,
+              testSeriesId: series.id,
+            },
+          },
+          create: {
+            userId,
+            testSeriesId: series.id,
+            amount: payment.amount,
+            paymentStatus: 'paid',
+            paymentId: payment.id,
+            orderId: payment.orderId,
+            status: 'active',
+            tenantId,
+          },
+          update: {
+            status: 'active',
+            paymentStatus: 'paid',
+            amount: payment.amount,
+            paymentId: payment.id,
+          },
+        });
 
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + (plan.billingCycle === 'yearly' ? 12 : 1));
+        await redis.delPattern('admin:dashboard:*').catch(() => {});
 
-      institute.subscription.plan = plan.id;
-      institute.subscription.status = 'active';
-      institute.subscription.expiresAt = expiresAt;
-      institute.limits.studentLimit = plan.studentLimit;
-      institute.limits.teacherLimit = plan.teacherLimit;
-      institute.limits.storageLimit = plan.storageLimit;
-      await prisma.payment.update({ where: { id: institute.id }, data: institute });
+        try {
+          await notificationQueue.add('send', {
+            type: 'test_series_enrollment',
+            userId,
+            tenantId,
+            title: 'Payment Successful',
+            message: `You are now enrolled in "${series.title}"`,
+            data: { testSeriesId: series.id, paymentId: payment.id },
+          });
+        } catch (queueErr) {
+          logger.warn('[Notification] Queue push skipped in dev:', queueErr);
+        }
 
-      await transactionalEmailQueue.add('send', {
-        type: 'subscription_activated',
-        data: { institute, plan, expiresAt },
-      });
-
-      return { institute, plan, payment };
+        return { testSeriesEnrollment, payment };
+      }
     }
 
     return { payment };
+  }
+
+  async recordPaymentFailure(userId: string, orderId: string, errorMetadata: any = {}) {
+    const existing = await prisma.payment.findFirst({
+      where: {
+        orderId,
+        userId,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (existing.status === 'completed') {
+      return existing; // Don't overwrite completed payments
+    }
+
+    const updated = await prisma.payment.update({
+      where: { id: existing.id },
+      data: {
+        status: 'failed',
+        notes: {
+          ...(typeof existing.notes === 'object' && existing.notes !== null
+            ? (existing.notes as object)
+            : {}),
+          failedAt: new Date(),
+          failureReason:
+            errorMetadata.reason ||
+            errorMetadata.description ||
+            'Payment cancelled or failed at gateway',
+          errorDetails: errorMetadata,
+        },
+      },
+    });
+
+    return updated;
   }
 
   async processWebhook(headers: Record<string, any>, rawBody: string) {
@@ -272,41 +368,51 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     const rPayment = payload?.payment?.entity;
 
     if (event === 'payment.captured' && rPayment) {
-      await prisma.payment.findOneAndUpdate(
-        { orderId: rPayment.order_id, status: 'pending' },
-        {
-          $set: {
-            paymentId: rPayment.id,
+      const existing = await prisma.payment.findFirst({
+        where: { orderId: rPayment.order_id },
+      });
+      if (existing) {
+        await prisma.payment.update({
+          where: { id: existing.id },
+          data: {
+            transactionId: rPayment.id,
             status: 'completed',
           },
-        }
-      );
-      // Wait: In a real system, if the student didn't call /verify, we would also trigger enrollment here.
+        });
+      }
     } else if (event === 'payment.failed' && rPayment) {
-      await prisma.payment.findOneAndUpdate(
-        { orderId: rPayment.order_id },
-        { $set: { status: 'failed', paymentId: rPayment.id } }
-      );
+      const existing = await prisma.payment.findFirst({
+        where: { orderId: rPayment.order_id },
+      });
+      if (existing) {
+        await prisma.payment.update({
+          where: { id: existing.id },
+          data: {
+            transactionId: rPayment.id,
+            status: 'failed',
+          },
+        });
+      }
     } else if (event === 'refund.created' && payload?.refund?.entity) {
       const refund = payload.refund.entity;
-      const payment = await prisma.payment.findOneAndUpdate(
-        { paymentId: refund.payment_id, status: { $ne: 'refunded' } },
-        {
-          $set: {
+      const existing = await prisma.payment.findFirst({
+        where: { transactionId: refund.payment_id },
+      });
+      if (existing) {
+        await prisma.payment.update({
+          where: { id: existing.id },
+          data: {
             status: 'refunded',
-            refundId: refund.id,
-            refundAmount: refund.amount / 100,
-            refundedAt: new Date(),
+            notes: {
+              ...(typeof existing.notes === 'object' && existing.notes !== null
+                ? (existing.notes as object)
+                : {}),
+              refundId: refund.id,
+              refundAmount: refund.amount / 100,
+              refundedAt: new Date(),
+            },
           },
-        },
-        { new: true }
-      );
-
-      if (payment && payment.course) {
-        await Enrollment.findOneAndUpdate(
-          { user: payment.user, course: payment.course },
-          { $set: { status: 'refunded' } }
-        );
+        });
       }
     }
 
@@ -314,16 +420,17 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
   }
 
   async initiateRefund(paymentId: string, userId: string, data: IRefundDto) {
-    const payment = await prisma.payment.findFirst(
-      this.repository['getScopedFilter']({
-        _id: paymentId,
-        user: userId,
-      })
-    );
+    const payment = await prisma.payment.findFirst({
+      where: {
+        id: paymentId,
+        userId,
+      },
+    });
     if (!payment) throw ApiError.notFound('Payment record not found');
     if (payment.status !== 'completed')
       throw ApiError.badRequest('Only completed payments can be refunded');
-    if (!payment.paymentId) throw ApiError.badRequest('Payment ID missing on transaction record');
+    if (!payment.transactionId)
+      throw ApiError.badRequest('Payment ID missing on transaction record');
 
     const refundAmount = data.amount
       ? Math.min(data.amount * 100, payment.amount * 100)
@@ -333,25 +440,28 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       throw ApiError.serviceUnavailable('Payment gateway not configured');
     }
 
-    const refund = await this.razorpay.payments.refund(payment.paymentId, {
+    const refund = await this.razorpay.payments.refund(payment.transactionId, {
       amount: refundAmount,
       notes: { reason: data.reason || 'Customer refund request' },
     });
 
-    payment.status = 'refunded';
-    payment.refundId = refund.id;
-    payment.refundAmount = refund.amount / 100;
-    payment.refundedAt = new Date();
-    await prisma.payment.update({ where: { id: payment.id }, data: payment });
+    const refundAmountNum = refund.amount / 100;
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'refunded',
+        notes: {
+          ...(typeof payment.notes === 'object' && payment.notes !== null
+            ? (payment.notes as object)
+            : {}),
+          refundId: refund.id,
+          refundAmount: refundAmountNum,
+          refundedAt: new Date(),
+        },
+      },
+    });
 
-    if (payment.course) {
-      await Enrollment.findOneAndUpdate(
-        { user: payment.user, course: payment.course },
-        { $set: { status: 'refunded' } }
-      );
-    }
-
-    return { refundId: refund.id, refundAmount: payment.refundAmount };
+    return { refundId: refund.id, refundAmount: refundAmountNum };
   }
 
   async retryFailedOrder(paymentId: string, userId: string) {

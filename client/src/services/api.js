@@ -142,9 +142,43 @@ api.interceptors.response.use(
       }
     }
 
+    if (error.response?.data) {
+      const data = error.response.data;
+      if (
+        Array.isArray(data.errors) &&
+        data.errors.length > 0 &&
+        (!data.message ||
+          data.message === 'Validation failed' ||
+          data.message === 'Validation Error')
+      ) {
+        const details = data.errors
+          .map((e) => (e.field ? `${e.field}: ${e.message}` : e.message))
+          .join(', ');
+        data.message = `Validation error: ${details}`;
+      }
+    }
+
     return Promise.reject(error);
   }
 );
+
+export function getErrorMessage(err, fallback = 'Something went wrong') {
+  if (!err) return fallback;
+  if (typeof err === 'string') return err;
+  const data = err.response?.data;
+  if (data?.message) {
+    if (Array.isArray(data.errors) && data.errors.length > 0 && !data.message.includes(':')) {
+      const details = data.errors
+        .map((e) => (e.field ? `${e.field}: ${e.message}` : e.message))
+        .join(', ');
+      return `${data.message} (${details})`;
+    }
+    return data.message;
+  }
+  if (data?.error) return data.error;
+  if (err.message) return err.message;
+  return fallback;
+}
 
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
@@ -155,6 +189,7 @@ export const authAPI = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, data) => api.post('/auth/reset-password', { token, ...data }),
   verifyEmail: (token) => api.get(`/auth/verify-email/${token}`),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email }),
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data) => api.put('/auth/profile', data),
   setupMfa: () => api.post('/auth/mfa/setup'),
@@ -243,6 +278,7 @@ export const quizAPI = {
 export const paymentAPI = {
   createOrder: (data) => api.post('/payments/create-order', data),
   verify: (data) => api.post('/payments/verify', data),
+  recordFailure: (data) => api.post('/payments/record-failure', data),
   dummyCheckout: (data) => api.post('/payments/dummy-checkout', data),
   getMyOrders: () => api.get('/payments/my-orders'),
   myOrders: () => api.get('/payments/my-orders'),

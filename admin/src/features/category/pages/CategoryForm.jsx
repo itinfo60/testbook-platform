@@ -13,7 +13,7 @@ export default function CategoryForm() {
   const isEdit = Boolean(id && id !== 'undefined');
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({ name: '', description: '', icon: '' });
+  const [form, setForm] = useState({ name: '', description: '', icon: '', isActive: true });
 
   useEffect(() => {
     if (isEdit) {
@@ -26,6 +26,7 @@ export default function CategoryForm() {
             name: cat.name || '',
             description: cat.description || '',
             icon: cat.icon || '',
+            isActive: cat.isActive !== false,
           });
         })
         .finally(() => setLoading(false));
@@ -84,17 +85,32 @@ export default function CategoryForm() {
             rows={3}
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Icon (emoji or icon name)
-          </label>
-          <input
-            type="text"
-            value={form.icon}
-            onChange={(e) => setForm({ ...form, icon: e.target.value })}
-            className="input-field"
-            placeholder="📚"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Icon (emoji or icon name)
+            </label>
+            <input
+              type="text"
+              value={form.icon}
+              onChange={(e) => setForm({ ...form, icon: e.target.value })}
+              className="input-field"
+              placeholder="📚"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Status
+            </label>
+            <select
+              value={form.isActive}
+              onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
+              className="input-field"
+            >
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
         </div>
         <div className="flex gap-3 pt-2">
           <button type="submit" className="btn-primary gap-2">

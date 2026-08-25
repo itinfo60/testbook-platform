@@ -88,12 +88,27 @@ export default function LibraryPage() {
 
   const handleDownload = async (resource) => {
     try {
-      const { data } = await api.get(`/library/${resource.id || resource._id}/download`);
-      const url = data.data?.fileUrl || data.fileUrl || resource.fileUrl;
-      window.open(url, '_blank');
+      const directUrl =
+        resource?.url ||
+        resource?.fileUrl ||
+        resource?.fileData?.fileUrl ||
+        resource?.fileData?.url;
+
+      if (directUrl) {
+        window.open(directUrl, '_blank');
+        toast.success('Starting download...');
+        return;
+      }
+
+      const resId = resource?.id || resource?._id;
+      if (resId) {
+        window.open(`/api/v1/library/${resId}/download`, '_blank');
+        toast.success('Starting download...');
+      } else {
+        toast.error('File link currently unavailable');
+      }
     } catch {
-      // Fallback — open directly
-      window.open(resource.fileUrl, '_blank');
+      toast.error('Could not initiate download');
     }
   };
 
