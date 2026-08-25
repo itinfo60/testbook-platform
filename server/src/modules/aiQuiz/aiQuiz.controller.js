@@ -1,5 +1,4 @@
-import mongoose from 'mongoose';
-import GeneratedQuiz from './generatedQuiz.model.js';
+import prisma from '../../config/prisma.js';
 import { generateQuiz as generateQuizFromLLM } from '../ai/llm.service.js';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
@@ -37,12 +36,14 @@ export const saveQuiz = catchAsync(async (req, res) => {
   if (!title || !course || !Array.isArray(questions)) {
     throw ApiError.badRequest('title, course and questions are required');
   }
-  const quiz = await GeneratedQuiz.create({
-    title,
-    course,
-    teacher: req.userId,
-    questions,
-    status: 'saved',
+  const quiz = await prisma.generatedQuiz.create({
+    data: {
+      title,
+      course,
+      teacher: req.userId,
+      questions,
+      status: 'saved',
+    },
   });
   ApiResponse.created(res, { quiz }, 'Quiz saved');
 });

@@ -66,7 +66,9 @@ export const fetchLatestTestResult = createAsyncThunk(
       }
 
       const latestAttempt = completedAttempts[0];
-      const { data: resultData } = await testAPI.getAttemptResult(latestAttempt._id);
+      const { data: resultData } = await testAPI.getAttemptResult(
+        latestAttempt.id || latestAttempt._id
+      );
       return resultData.data || resultData;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch test result');

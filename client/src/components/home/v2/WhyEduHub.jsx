@@ -7,7 +7,7 @@ import {
   HiOutlineUserGroup,
 } from 'react-icons/hi';
 
-export default function WhyCivicsEdu() {
+export default function WhyCivicsHub() {
   const features = [
     {
       title: 'Exam-Specific Preparation',

@@ -3,12 +3,11 @@ import { dashboardAPI } from '@/services/api';
 
 export const fetchDashboardStats = createAsyncThunk(
   'dashboard/fetchStats',
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const res = await dashboardAPI.getStats();
+      const res = await dashboardAPI.getStats(params);
       return res.data.data || res.data || {};
     } catch (err) {
-      // Don't show error for missing dashboard endpoint
       console.warn('Dashboard stats error:', err.message);
       return rejectWithValue({ message: 'Dashboard data unavailable' });
     }

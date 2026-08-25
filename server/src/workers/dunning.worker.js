@@ -1,6 +1,5 @@
 import { Worker } from 'bullmq';
-import Institute from '../modules/institute/institute.model.js';
-import User from '../modules/user/user.model.js';
+import prisma from '../config/prisma.js';
 import { transactionalEmailQueue } from '../queues/index.js';
 import { queueConnection } from '../queues/index.js';
 import { runWithTenant } from '../utils/TenantContext.js';
@@ -28,15 +27,17 @@ const dunningWorker = new Worker(
         const windowEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000 + 60 * 60 * 1000);
 
         const expiring = await runWithTenant(null, true, () =>
-          Institute.find({
-            'subscription.status': 'active',
-            'subscription.expiresAt': { $gte: windowStart, $lte: windowEnd },
+          prisma.institute.findMany({
+            where: {
+              subscriptionStatus: 'active',
+              subscriptionExpiresAt: { gte: windowStart, lte: windowEnd },
+            },
           })
         );
 
         for (const institute of expiring) {
           const admin = await runWithTenant(null, true, () =>
-            User.findOne({ tenantId: institute._id, role: 'admin' })
+            prisma.user.findFirst({ where: { tenantId: institute.id, role: 'admin' } })
           );
           if (!admin) continue;
 
@@ -46,7 +47,7 @@ const dunningWorker = new Worker(
               user: admin,
               institute,
               daysLeft: days,
-              expiresAt: institute.subscription.expiresAt,
+              expiresAt: institute.subscriptionExpiresAt,
             },
           });
 
@@ -57,19 +58,24 @@ const dunningWorker = new Worker(
       const gracePeriodEnd = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
       const expired = await runWithTenant(null, true, () =>
-        Institute.find({
-          'subscription.status': 'active',
-          'subscription.expiresAt': { $lt: gracePeriodEnd },
+        prisma.institute.findMany({
+          where: {
+            subscriptionStatus: 'active',
+            subscriptionExpiresAt: { lt: gracePeriodEnd },
+          },
         })
       );
 
       for (const institute of expired) {
         await runWithTenant(null, true, () =>
-          Institute.findByIdAndUpdate(institute._id, { 'subscription.status': 'expired' })
+          prisma.institute.update({
+            where: { id: institute.id },
+            data: { subscriptionStatus: 'expired' },
+          })
         );
 
         const admin = await runWithTenant(null, true, () =>
-          User.findOne({ tenantId: institute._id, role: 'admin' })
+          prisma.user.findFirst({ where: { tenantId: institute.id, role: 'admin' } })
         );
         if (admin) {
           await transactionalEmailQueue.add('send', {

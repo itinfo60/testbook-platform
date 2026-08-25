@@ -1,5 +1,6 @@
-import AuditLog from '../modules/audit/audit.model.js';
+import { prisma } from '../config/prisma.js';
 import { getTenantId } from '../utils/TenantContext.js';
+import logger from '../utils/logger.js';
 
 const AUDITED_ACTIONS = {
   POST: 'create',
@@ -36,14 +37,14 @@ export function auditLog(req, res, next) {
     setImmediate(async () => {
       try {
         const tenantId = getTenantId();
-        await AuditLog.create({
-          tenantId: tenantId || undefined,
-          actor: req.userId || undefined,
-          actorEmail: req.user?.email,
-          actorRole: req.user?.role,
+        const auditEntry = {
+          tenantId: tenantId || null,
+          actorId: req.userId || null,
+          actorEmail: req.user?.email || null,
+          actorRole: req.user?.role || null,
           action: AUDITED_ACTIONS[req.method],
           resource: resolveResource(req.path),
-          resourceId: req.params?.id || undefined,
+          resourceId: req.params?.id || null,
           metadata: {
             ip: req.ip,
             userAgent: req.headers['user-agent'],
@@ -52,9 +53,16 @@ export function auditLog(req, res, next) {
           },
           status: res.statusCode < 400 ? 'success' : 'failure',
           errorMessage: res.statusCode >= 400 ? body?.message : undefined,
-        });
-      } catch {
+        };
+
+        if (prisma.auditLog) {
+          await prisma.auditLog.create({ data: auditEntry });
+        } else {
+          logger.info('[AUDIT]', auditEntry);
+        }
+      } catch (err) {
         // Silently ignore audit failures — never disrupt main flow
+        logger.debug('Audit logging error:', err?.message);
       }
     });
     return originalJson(body);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import api from '@/services/api';
-import { getUnifiedExamCategories } from '@/services/categories';
+import { getUnifiedExams } from '@/services/categories';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import {
@@ -55,9 +55,11 @@ export default function TeacherBlogManagement() {
       setLoading(true);
       const [blogRes, catList] = await Promise.all([
         api.get('/blogs', { params: { limit: 100 } }),
-        getUnifiedExamCategories(),
+        getUnifiedExams(),
       ]);
-      const list = blogRes.data?.data?.blogs || blogRes.data?.blogs || [];
+      // API returns ApiResponse.paginated → { data: [...], pagination }
+      const raw = blogRes.data?.data;
+      const list = Array.isArray(raw) ? raw : raw?.blogs || raw?.docs || [];
       setBlogs(Array.isArray(list) ? list : []);
       setCategories(catList);
     } catch (err) {
@@ -295,7 +297,7 @@ export default function TeacherBlogManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredBlogs.map((b) => (
             <div
-              key={b._id}
+              key={b.id || b._id}
               className="bg-white dark:bg-dark-900 rounded-2xl p-5 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div>
@@ -474,7 +476,7 @@ export default function TeacherBlogManagement() {
                   >
                     <option value="">-- General / All Exams --</option>
                     {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c.id || c._id} value={c._id}>
                         {c.name}
                       </option>
                     ))}

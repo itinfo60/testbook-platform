@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { createTest, updateTest, fetchTestById, clearCurrentTest } from '@/features/test/testSlice';
-import { examCategoryAPI, testAPI } from '@/services/api';
+import { examCategoryAPI, testAPI, testSeriesAPI } from '@/services/api';
+import { getUnifiedExams } from '@/services/categories';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Link } from 'react-router-dom';
@@ -60,7 +61,7 @@ export default function TeacherTestForm() {
     sectionTag: 'Chapter Tests (GS)',
     subjectTag: 'Polity of India',
     difficulty: 'medium',
-    isFree: true,
+    isFree: false, // default to paid — teacher explicitly marks free ones
     totalMarks: 20,
     questions: [blankQuestion()],
   });
@@ -74,7 +75,7 @@ export default function TeacherTestForm() {
     if (isEdit) dispatch(fetchTestById(id));
 
     Promise.all([
-      getUnifiedExamCategories(),
+      getUnifiedExams(),
       testSeriesAPI.getAll({ limit: 100 }).catch(() => ({ data: { data: { testSeries: [] } } })),
     ]).then(([cList, seriesRes]) => {
       setCategories(cList);
@@ -157,18 +158,30 @@ export default function TeacherTestForm() {
       testSeries: formData.testSeries || undefined,
       sectionTag: formData.sectionTag,
       subjectTag: formData.subjectTag,
-      difficulty: formData.difficulty,
+      // Root difficulty uses the test-level enum ('beginner'|'intermediate'|'advanced').
+      // The form stores a question-level value ('easy'|'medium'|'hard'); map it.
+      difficulty:
+        formData.difficulty === 'easy'
+          ? 'beginner'
+          : formData.difficulty === 'hard'
+            ? 'advanced'
+            : 'intermediate',
       isFree: formData.isFree,
       totalMarks: Number(formData.totalMarks) || formData.questions.length * 2,
+      // passingMarks defaults to 40% of totalMarks if not specified
+      passingMarks: Math.ceil((Number(formData.totalMarks) || formData.questions.length * 2) * 0.4),
       questions: formData.questions.map((q) => ({
         question: q.question.trim(),
+        // Schema requires a `type` field
+        type: 'mcq',
         options: q.options.map((opt, idx) => ({
           text: opt.trim(),
           isCorrect: idx === q.correctAnswer,
         })),
         explanation: q.explanation?.trim() || '',
         marks: Number(q.marks) || 2,
-        negativeMark: Number(q.negativeMark) || 0.66,
+        // API field is `negativeMarks`, not `negativeMark`
+        negativeMarks: Number(q.negativeMark) || 0.66,
       })),
     };
 
@@ -246,7 +259,7 @@ export default function TeacherTestForm() {
               >
                 <option value="">-- Select Exam Category --</option>
                 {categories.map((c) => (
-                  <option key={c._id} value={c._id}>
+                  <option key={c.id || c._id} value={c.id || c._id}>
                     {c.name}
                   </option>
                 ))}
@@ -264,7 +277,7 @@ export default function TeacherTestForm() {
               >
                 <option value="">-- Standalone Test (No Package) --</option>
                 {testSeriesList.map((s) => (
-                  <option key={s._id} value={s._id}>
+                  <option key={s.id || s._id} value={s.id || s._id}>
                     {s.title}
                   </option>
                 ))}

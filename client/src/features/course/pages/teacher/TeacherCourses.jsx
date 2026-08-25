@@ -66,7 +66,7 @@ export default function TeacherCourses() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teacherCourses.map((course, idx) => (
             <div
-              key={course._id}
+              key={course.id || course._id}
               className="group flex flex-col rounded-2xl bg-white dark:bg-dark-800 border border-slate-100 dark:border-dark-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
               style={{ animationDelay: `${idx * 50}ms` }}
             >
@@ -98,7 +98,7 @@ export default function TeacherCourses() {
                 {/* Quick actions overlay */}
                 <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
                   <Link
-                    to={`/courses/${course._id}`}
+                    to={`/courses/${course.slug || course._id}`}
                     className="h-10 w-10 rounded-full bg-white text-slate-800 hover:bg-primary-500 hover:text-white flex items-center justify-center transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"
                     title="View Course Page"
                   >

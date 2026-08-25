@@ -1,7 +1,7 @@
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Button } from '@/components/ui';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   HiAcademicCap,
@@ -9,12 +9,18 @@ import {
   HiCheckCircle,
   HiClipboardList,
   HiExternalLink,
+  HiEye,
+  HiEyeOff,
   HiPencil,
   HiPlus,
   HiTrash,
   HiX,
 } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 import { fetchTeacherTests } from '@/features/test/testSlice';
+import { testSeriesAPI, testAPI } from '@/services/api';
+import { getUnifiedExams } from '@/services/categories';
+import { imageUrl } from '@/utils/media';
 
 export default function TeacherTests() {
   const [activeTab, setActiveTab] = useState('series'); // 'series' or 'tests'
@@ -53,9 +59,10 @@ export default function TeacherTests() {
     try {
       setLoading(true);
       const [seriesRes, testsRes, catList] = await Promise.all([
-        testSeriesAPI.getAll({ limit: 100 }).catch(() => ({ data: { data: { testSeries: [] } } })),
+        // Teacher-specific endpoint returns ALL their series including drafts.
+        testSeriesAPI.getMySeriesList().catch(() => ({ data: { data: { testSeries: [] } } })),
         testAPI.getTeacherTests().catch(() => ({ data: { data: [] } })),
-        getUnifiedExamCategories(),
+        getUnifiedExams(),
       ]);
 
       const sList =
@@ -104,7 +111,7 @@ export default function TeacherTests() {
       questionsCount: s.questionsCount || 300,
       totalMarks: s.totalMarks || 400,
       duration: s.duration || 180,
-      thumbnailUrl: s.thumbnail?.url || s.thumbnail || '',
+      thumbnailUrl: imageUrl(s.thumbnail),
       isPublished: s.isPublished !== false,
     });
     setSeriesModalOpen(true);
@@ -129,6 +136,37 @@ export default function TeacherTests() {
       setTestsList((prev) => prev.filter((t) => t._id !== id));
     } catch (err) {
       toast.error('Failed to delete test');
+    }
+  };
+
+  const handleToggleTestPublish = async (test) => {
+    const newStatus = test.isPublished ? 'draft' : 'published';
+    try {
+      await testAPI.update(test._id, { status: newStatus });
+      setTestsList((prev) =>
+        prev.map((t) =>
+          t._id === test._id ? { ...t, isPublished: !test.isPublished, status: newStatus } : t
+        )
+      );
+      toast.success(newStatus === 'published' ? 'Test published' : 'Test moved to draft');
+    } catch (err) {
+      toast.error('Failed to update test status');
+    }
+  };
+
+  const handleToggleSeriesPublish = async (series) => {
+    try {
+      await testSeriesAPI.update(series._id, { isPublished: !series.isPublished });
+      setTestSeriesList((prev) =>
+        prev.map((s) => (s._id === series._id ? { ...s, isPublished: !series.isPublished } : s))
+      );
+      toast.success(
+        !series.isPublished
+          ? 'Series published — now visible to students'
+          : 'Series hidden from students'
+      );
+    } catch (err) {
+      toast.error('Failed to update series status');
     }
   };
 
@@ -276,7 +314,7 @@ export default function TeacherTests() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {testSeriesList.map((series) => (
               <div
-                key={series._id}
+                key={series.id || series._id}
                 className="bg-white dark:bg-dark-900 rounded-2xl p-5 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
@@ -284,11 +322,22 @@ export default function TeacherTests() {
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:text-primary-300 border border-primary-100">
                       {series.examCategory?.name || 'Exam Pack'}
                     </span>
-                    <span className="text-xs font-bold text-dark-900 dark:text-white">
-                      {series.isFree || (series.discountPrice === 0 && series.price === 0)
-                        ? 'FREE'
-                        : `₹${series.discountPrice || series.price}`}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                          series.isPublished
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
+                        {series.isPublished ? 'Live' : 'Draft'}
+                      </span>
+                      <span className="text-xs font-bold text-dark-900 dark:text-white">
+                        {series.isFree || (series.discountPrice === 0 && series.price === 0)
+                          ? 'FREE'
+                          : `₹${series.discountPrice || series.price}`}
+                      </span>
+                    </div>
                   </div>
 
                   <h3 className="text-sm sm:text-base font-bold text-dark-900 dark:text-white line-clamp-2 mb-2 leading-snug">
@@ -319,6 +368,25 @@ export default function TeacherTests() {
                   </Link>
 
                   <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleToggleSeriesPublish(series)}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        series.isPublished
+                          ? 'bg-emerald-50 hover:bg-amber-50 text-emerald-600 hover:text-amber-600 dark:bg-dark-800'
+                          : 'bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 dark:bg-dark-800'
+                      }`}
+                      title={
+                        series.isPublished
+                          ? 'Unpublish (hide from students)'
+                          : 'Publish (make visible to students)'
+                      }
+                    >
+                      {series.isPublished ? (
+                        <HiEyeOff className="h-4 w-4" />
+                      ) : (
+                        <HiEye className="h-4 w-4" />
+                      )}
+                    </button>
                     <button
                       onClick={() => handleOpenEditSeries(series)}
                       className="p-1.5 rounded-lg bg-slate-50 hover:bg-primary-50 text-slate-600 hover:text-primary-600 dark:bg-dark-800 transition-colors"
@@ -361,7 +429,7 @@ export default function TeacherTests() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {testsList.map((test) => (
             <div
-              key={test._id}
+              key={test.id || test._id}
               className="bg-white dark:bg-dark-900 rounded-2xl p-5 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div>
@@ -369,9 +437,20 @@ export default function TeacherTests() {
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-100">
                     {test.category?.name || 'Mock Drill'}
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-600">
-                    {test.difficulty || 'Medium'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                        test.isPublished
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {test.isPublished ? 'Live' : 'Draft'}
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-600">
+                      {test.difficulty || 'Medium'}
+                    </span>
+                  </div>
                 </div>
 
                 <h3 className="text-sm sm:text-base font-bold text-dark-900 dark:text-white line-clamp-2 mb-3 leading-snug">
@@ -416,6 +495,25 @@ export default function TeacherTests() {
                 </Link>
 
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleToggleTestPublish(test)}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      test.isPublished
+                        ? 'bg-emerald-50 hover:bg-amber-50 text-emerald-600 hover:text-amber-600 dark:bg-dark-800'
+                        : 'bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 dark:bg-dark-800'
+                    }`}
+                    title={
+                      test.isPublished
+                        ? 'Unpublish (hide from students)'
+                        : 'Publish (make visible to students)'
+                    }
+                  >
+                    {test.isPublished ? (
+                      <HiEyeOff className="h-4 w-4" />
+                    ) : (
+                      <HiEye className="h-4 w-4" />
+                    )}
+                  </button>
                   <Link
                     to={`/teacher/tests/${test._id}/analytics`}
                     className="p-1.5 rounded-lg bg-slate-50 hover:bg-primary-50 text-slate-600 hover:text-primary-600 dark:bg-dark-800 transition-colors"
@@ -503,7 +601,7 @@ export default function TeacherTests() {
                   >
                     <option value="">-- Select Exam Category --</option>
                     {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c.id || c._id} value={c.id || c._id}>
                         {c.name}
                       </option>
                     ))}
@@ -620,15 +718,34 @@ export default function TeacherTests() {
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-dark-800">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={seriesForm.isFree}
-                    onChange={(e) => setSeriesForm({ ...seriesForm, isFree: e.target.checked })}
-                    className="rounded text-primary-600"
-                  />
-                  100% Free Series Pack
-                </label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={seriesForm.isFree}
+                      onChange={(e) => setSeriesForm({ ...seriesForm, isFree: e.target.checked })}
+                      className="rounded text-primary-600"
+                    />
+                    100% Free Series Pack
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={seriesForm.isPublished}
+                      onChange={(e) =>
+                        setSeriesForm({ ...seriesForm, isPublished: e.target.checked })
+                      }
+                      className="rounded text-emerald-600"
+                    />
+                    <span
+                      className={seriesForm.isPublished ? 'text-emerald-600' : 'text-amber-600'}
+                    >
+                      {seriesForm.isPublished
+                        ? '🟢 Published (visible to students)'
+                        : '🟡 Draft (hidden from students)'}
+                    </span>
+                  </label>
+                </div>
 
                 <div className="flex items-center gap-2">
                   <button

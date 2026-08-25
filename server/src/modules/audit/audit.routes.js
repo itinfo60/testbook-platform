@@ -1,6 +1,6 @@
+import prisma from '../../config/prisma.js';
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/auth.js';
-import AuditLog from './audit.model.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import { buildPaginationQuery } from '../../utils/pagination.js';

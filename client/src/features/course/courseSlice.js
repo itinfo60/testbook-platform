@@ -107,6 +107,8 @@ const courseSlice = createSlice({
     featured: [],
     teacherCourses: [],
     currentCourse: null,
+    currentCourseIsEnrolled: false,
+    currentCourseReviews: [],
     pagination: { page: 1, totalPages: 1, total: 0 },
     loading: false,
     error: null,
@@ -128,6 +130,8 @@ const courseSlice = createSlice({
     },
     clearCurrentCourse: (state) => {
       state.currentCourse = null;
+      state.currentCourseIsEnrolled = false;
+      state.currentCourseReviews = [];
     },
     clearError: (state) => {
       state.error = null;
@@ -158,11 +162,16 @@ const courseSlice = createSlice({
       .addCase(fetchCourseById.pending, (state) => {
         state.loading = true;
         state.currentCourse = null;
+        state.currentCourseIsEnrolled = false;
         state.error = null;
       })
       .addCase(fetchCourseById.fulfilled, (state, action) => {
         state.loading = false;
         state.currentCourse = action.payload.course || action.payload;
+        // The server tells us whether the viewer has access. Keep it — the UI
+        // must not infer the lock from missing videoUrl/content.
+        state.currentCourseIsEnrolled = action.payload.isEnrolled === true;
+        state.currentCourseReviews = action.payload.reviews || [];
       })
       .addCase(fetchCourseById.rejected, (state, action) => {
         state.loading = false;

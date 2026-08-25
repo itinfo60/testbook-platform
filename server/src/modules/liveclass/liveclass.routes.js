@@ -10,6 +10,8 @@ import {
   getLiveClassById,
   getLiveKitToken,
   adminGetAllClasses,
+  cancelLiveClass,
+  deleteLiveClass,
 } from './liveclass.controller.js';
 import { authenticate, teacherOnly, authorize } from '../../middleware/auth.js';
 import validate from '../../middleware/validate-zod.js';
@@ -22,12 +24,24 @@ router.use(authenticate);
 // Admin routes
 router.get('/admin/all', authorize('admin', 'super_admin'), adminGetAllClasses);
 
-// Teacher routes
-router.post('/', teacherOnly, validate(createLiveClassSchema), createLiveClass);
-router.get('/my', teacherOnly, getMyLiveClasses);
-router.put('/:id', teacherOnly, validate(updateLiveClassSchema), updateLiveClass);
-router.post('/:id/start', teacherOnly, startLiveClass);
-router.post('/:id/end', teacherOnly, endLiveClass);
+// Teacher & Admin management routes
+router.post(
+  '/',
+  authorize('teacher', 'admin', 'super_admin'),
+  validate(createLiveClassSchema),
+  createLiveClass
+);
+router.get('/my', authorize('teacher', 'admin', 'super_admin'), getMyLiveClasses);
+router.put(
+  '/:id',
+  authorize('teacher', 'admin', 'super_admin'),
+  validate(updateLiveClassSchema),
+  updateLiveClass
+);
+router.patch('/:id/cancel', authorize('teacher', 'admin', 'super_admin'), cancelLiveClass);
+router.delete('/:id', authorize('admin', 'super_admin'), deleteLiveClass);
+router.post('/:id/start', authorize('teacher', 'admin', 'super_admin'), startLiveClass);
+router.post('/:id/end', authorize('teacher', 'admin', 'super_admin'), endLiveClass);
 
 // Student routes
 router.get('/upcoming', getUpcomingClasses);

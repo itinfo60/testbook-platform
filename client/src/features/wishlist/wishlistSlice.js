@@ -1,32 +1,41 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { wishlistAPI } from '@/services/api';
 
-export const fetchWishlist = createAsyncThunk('wishlist/fetchAll', async (_, { rejectWithValue }) => {
-  try {
-    const { data } = await wishlistAPI.getAll();
-    return data.data || data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Failed to fetch wishlist');
+export const fetchWishlist = createAsyncThunk(
+  'wishlist/fetchAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await wishlistAPI.getAll();
+      return data.data || data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to fetch wishlist');
+    }
   }
-});
+);
 
-export const toggleWishlist = createAsyncThunk('wishlist/toggle', async (courseId, { rejectWithValue }) => {
-  try {
-    const { data } = await wishlistAPI.toggle(courseId);
-    return { courseId, ...(data.data || data) };
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Failed');
+export const toggleWishlist = createAsyncThunk(
+  'wishlist/toggle',
+  async (courseId, { rejectWithValue }) => {
+    try {
+      const { data } = await wishlistAPI.toggle(courseId);
+      return { courseId, ...(data.data || data) };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed');
+    }
   }
-});
+);
 
-export const checkWishlist = createAsyncThunk('wishlist/check', async (courseId, { rejectWithValue }) => {
-  try {
-    const { data } = await wishlistAPI.check(courseId);
-    return { courseId, isWishlisted: data.data?.isWishlisted ?? data.isWishlisted ?? false };
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Failed');
+export const checkWishlist = createAsyncThunk(
+  'wishlist/check',
+  async (courseId, { rejectWithValue }) => {
+    try {
+      const { data } = await wishlistAPI.check(courseId);
+      return { courseId, isWishlisted: data.data?.isWishlisted ?? data.isWishlisted ?? false };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed');
+    }
   }
-});
+);
 
 const wishlistSlice = createSlice({
   name: 'wishlist',
@@ -37,25 +46,34 @@ const wishlistSlice = createSlice({
     error: null,
   },
   reducers: {},
-  extraReducers: builder => {
+  extraReducers: (builder) => {
     builder
-      .addCase(fetchWishlist.pending, state => { state.loading = true; })
+      .addCase(fetchWishlist.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(fetchWishlist.fulfilled, (state, action) => {
         state.loading = false;
-        const items = Array.isArray(action.payload) ? action.payload : action.payload.wishlist || [];
+        const items = Array.isArray(action.payload)
+          ? action.payload
+          : action.payload.wishlist || action.payload.docs || [];
         state.items = items;
         state.wishlistMap = {};
-        items.forEach(item => {
-          const id = item.course?._id || item.course || item._id;
+        items.forEach((item) => {
+          const id = item.course?.id || item.course?._id || item.course || item.id || item._id;
           if (id) state.wishlistMap[id] = true;
         });
       })
-      .addCase(fetchWishlist.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+      .addCase(fetchWishlist.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
       .addCase(toggleWishlist.fulfilled, (state, action) => {
         const { courseId } = action.payload;
         if (state.wishlistMap[courseId]) {
           delete state.wishlistMap[courseId];
-          state.items = state.items.filter(i => (i.course?._id || i.course || i._id) !== courseId);
+          state.items = state.items.filter(
+            (i) => (i.course?.id || i.course?._id || i.course || i.id || i._id) !== courseId
+          );
         } else {
           state.wishlistMap[courseId] = true;
         }

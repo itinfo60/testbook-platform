@@ -21,10 +21,15 @@ export default function CouponList() {
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  useEffect(() => { dispatch(fetchCoupons({ page, limit: 10 })); }, [dispatch, page]);
+  useEffect(() => {
+    dispatch(fetchCoupons({ page, limit: 10 }));
+  }, [dispatch, page]);
 
   const handleDelete = async () => {
-    if (deleteTarget) { await dispatch(deleteCoupon(deleteTarget)); setDeleteTarget(null); }
+    if (deleteTarget) {
+      await dispatch(deleteCoupon(deleteTarget));
+      setDeleteTarget(null);
+    }
   };
 
   const copyCode = (code) => {
@@ -38,8 +43,13 @@ export default function CouponList() {
       label: 'Code',
       render: (val) => (
         <div className="flex items-center gap-2">
-          <code className="text-sm font-mono bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded">{val}</code>
-          <button onClick={() => copyCode(val)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+          <code className="text-sm font-mono bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded">
+            {val}
+          </code>
+          <button
+            onClick={() => copyCode(val)}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          >
             <Copy className="w-3.5 h-3.5 text-gray-400" />
           </button>
         </div>
@@ -48,9 +58,14 @@ export default function CouponList() {
     {
       key: 'discountType',
       label: 'Discount',
-      render: (val, row) => val === 'percentage' ? `${row.discountValue}%` : formatCurrency(row.discountValue),
+      render: (val, row) =>
+        val === 'percentage' ? `${row.discountValue}%` : formatCurrency(row.discountValue),
     },
-    { key: 'usageCount', label: 'Used', render: (val, row) => `${val || 0} / ${row.maxUsage || '∞'}` },
+    {
+      key: 'usageCount',
+      label: 'Used',
+      render: (val, row) => `${val || 0} / ${row.maxUsage || '∞'}`,
+    },
     {
       key: 'expiresAt',
       label: 'Expires',
@@ -63,7 +78,11 @@ export default function CouponList() {
     {
       key: 'isActive',
       label: 'Status',
-      render: (val) => <span className={val !== false ? 'badge-success' : 'badge-gray'}>{val !== false ? 'Active' : 'Inactive'}</span>,
+      render: (val) => (
+        <span className={val !== false ? 'badge-success' : 'badge-gray'}>
+          {val !== false ? 'Active' : 'Inactive'}
+        </span>
+      ),
     },
   ];
 
@@ -87,15 +106,35 @@ export default function CouponList() {
         onPageChange={setPage}
         emptyMessage="No coupons found"
         emptyIcon={Tag}
-        actions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            <button onClick={() => navigate(`/coupons/${row._id}/edit`)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Edit className="w-4 h-4 text-blue-600" /></button>
-            <button onClick={() => setDeleteTarget(row._id)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="w-4 h-4 text-red-600" /></button>
-          </div>
-        )}
+        actions={(row) => {
+          const rowId = row.id || row._id;
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => navigate(`/coupons/${rowId}/edit`)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Edit className="w-4 h-4 text-blue-600" />
+              </button>
+              <button
+                onClick={() => setDeleteTarget(rowId)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
+          );
+        }}
       />
 
-      <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} title="Delete Coupon" message="Are you sure?" confirmText="Delete" />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Coupon"
+        message="Are you sure?"
+        confirmText="Delete"
+      />
     </div>
   );
 }

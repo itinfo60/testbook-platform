@@ -62,7 +62,7 @@ export default function SearchResultsPage() {
         {loading && (
           <div className="py-20 text-center">
             <LoadingSpinner size="lg" />
-            <p className="text-slate-500 mt-4">Searching across CivicsEdu...</p>
+            <p className="text-slate-500 mt-4">Searching across CivicsHub...</p>
           </div>
         )}
 
@@ -101,7 +101,7 @@ export default function SearchResultsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {results.exams.map((exam) => (
                     <Link
-                      key={exam._id}
+                      key={exam.id || exam._id}
                       to={`/exams/${exam.slug}`}
                       className="group bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary-500 shadow-sm transition-all flex items-start gap-4"
                     >
@@ -136,7 +136,7 @@ export default function SearchResultsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {results.courses.map((course) => (
-                    <CourseCard key={course._id} course={course} />
+                    <CourseCard key={course.id || course._id} course={course} />
                   ))}
                 </div>
               </section>
@@ -151,7 +151,7 @@ export default function SearchResultsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {results.tests.map((test) => (
-                    <TestCard key={test._id} test={test} />
+                    <TestCard key={test.id || test._id} test={test} />
                   ))}
                 </div>
               </section>
@@ -167,7 +167,7 @@ export default function SearchResultsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {results.resources.map((res) => (
                     <a
-                      key={res._id}
+                      key={res.id || res._id}
                       href={res.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -202,7 +202,7 @@ export default function SearchResultsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {results.blogs.map((blog) => (
                     <Link
-                      key={blog._id}
+                      key={blog.id || blog._id}
                       to={`/blog/${blog.slug}`}
                       className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 transition-all block"
                     >

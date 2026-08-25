@@ -11,6 +11,7 @@ import {
 export default function TestSeriesCard({ series }) {
   const {
     _id,
+    id,
     title,
     slug,
     description,
@@ -111,7 +112,7 @@ export default function TestSeriesCard({ series }) {
         </div>
 
         <Link
-          to={`/test-series/${slug || _id}`}
+          to={`/test-series/${slug || id || _id}`}
           className="bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 hover:bg-primary-600 hover:text-white dark:hover:bg-primary-500 dark:hover:text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all inline-flex items-center gap-1.5"
         >
           <span>View Series</span>

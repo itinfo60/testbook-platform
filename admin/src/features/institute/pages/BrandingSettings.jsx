@@ -107,7 +107,7 @@ export default function BrandingSettings() {
               <input
                 type="text"
                 className="input-field w-full"
-                placeholder="e.g. Testbook Academy"
+                placeholder="e.g. CivicsHub Academy"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
@@ -119,7 +119,7 @@ export default function BrandingSettings() {
               <input
                 type="text"
                 className="input-field w-full"
-                placeholder="e.g. Testbook Academy — Learn & Grow"
+                placeholder="e.g. CivicsHub Academy — Learn & Grow"
                 value={form.websiteTitle}
                 onChange={(e) => setForm((f) => ({ ...f, websiteTitle: e.target.value }))}
               />

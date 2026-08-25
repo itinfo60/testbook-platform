@@ -1,5 +1,5 @@
+import prisma from '../../config/prisma.js';
 import crypto from 'crypto';
-import ApiKey from './apikey.model.js';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
@@ -18,21 +18,23 @@ export const createApiKey = catchAsync(async (req, res) => {
     ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
     : undefined;
 
-  const apiKey = await ApiKey.create({
-    name,
-    keyHash,
-    keyPrefix,
-    institute: req.tenantId,
-    createdBy: req.userId,
-    permissions: permissions || ['courses:read'],
-    expiresAt,
+  const apiKey = await prisma.apiKey.create({
+    data: {
+      name,
+      keyHash,
+      keyPrefix,
+      institute: req.tenantId,
+      createdBy: req.userId,
+      permissions: permissions || ['courses:read'],
+      expiresAt,
+    },
   });
 
   // Return raw key once — never stored again
   ApiResponse.created(
     res,
     {
-      id: apiKey._id,
+      id: apiKey.id,
       name: apiKey.name,
       key: rawKey, // Only time this is shown
       keyPrefix,
@@ -46,20 +48,25 @@ export const createApiKey = catchAsync(async (req, res) => {
 
 export const listApiKeys = catchAsync(async (req, res) => {
   if (!req.tenantId) throw ApiError.badRequest('Tenant context required');
-  const keys = await ApiKey.find({ institute: req.tenantId, isActive: true })
-    .select('-keyHash')
-    .sort({ createdAt: -1 });
-  ApiResponse.ok(res, { keys });
+  const keys = await prisma.apiKey.findMany({
+    where: { institute: req.tenantId, isActive: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  // Exclude keyHash manually if necessary, or let the response handle it
+  const safeKeys = keys.map((k) => {
+    const { keyHash, ...rest } = k;
+    return rest;
+  });
+  ApiResponse.ok(res, { keys: safeKeys });
 });
 
 export const revokeApiKey = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const key = await ApiKey.findOneAndUpdate(
-    { _id: id, institute: req.tenantId },
-    { isActive: false },
-    { new: true }
-  );
-  if (!key) throw ApiError.notFound('API key not found');
+  const key = await prisma.apiKey.updateMany({
+    where: { id, institute: req.tenantId },
+    data: { isActive: false },
+  });
+  if (key.count === 0) throw ApiError.notFound('API key not found');
   ApiResponse.ok(res, null, 'API key revoked');
 });
 
@@ -69,7 +76,7 @@ export const authenticateApiKey = catchAsync(async (req, _res, next) => {
   if (!rawKey) return next();
 
   const keyHash = hashApiKey(rawKey);
-  const apiKey = await ApiKey.findOne({ keyHash, isActive: true }).select('+keyHash');
+  const apiKey = await prisma.apiKey.findFirst({ where: { keyHash, isActive: true } });
 
   if (!apiKey) throw ApiError.unauthorized('Invalid API key');
   if (apiKey.expiresAt && apiKey.expiresAt < new Date())
@@ -77,7 +84,12 @@ export const authenticateApiKey = catchAsync(async (req, _res, next) => {
 
   // Update last used
   setImmediate(() =>
-    ApiKey.findByIdAndUpdate(apiKey._id, { lastUsedAt: new Date() }).catch(() => {})
+    prisma.apiKey
+      .update({
+        where: { id: apiKey.id },
+        data: { lastUsedAt: new Date() },
+      })
+      .catch(() => {})
   );
 
   req.apiKey = apiKey;

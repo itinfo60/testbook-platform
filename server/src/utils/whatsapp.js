@@ -47,7 +47,7 @@ export const sendLiveClassReminder = async (phone, className, startsAt) => {
 };
 
 export const sendEnrollmentWhatsApp = async (phone, courseName) => {
-  const message = `🎉 *Enrollment Confirmed!*\n\nYou've been enrolled in *"${courseName}"*.\n\nStart learning now on TestBook! 🚀`;
+  const message = `🎉 *Enrollment Confirmed!*\n\nYou've been enrolled in *"${courseName}"*.\n\nStart learning now on CivicsHub! 🚀`;
   return sendWhatsAppMessage(phone, message);
 };
 

@@ -40,7 +40,9 @@ export default function TestSeriesCatalog() {
       try {
         setLoading(true);
         const [catRes, seriesRes] = await Promise.all([
-          api.get('/categories'),
+          // Left column = exam categories. Their `subcategories` are the exams
+          // shown in the right column.
+          api.get('/categories', { params: { type: 'category' } }),
           api.get('/test-series', { params: { limit: 100 } }),
         ]);
 
@@ -99,22 +101,18 @@ export default function TestSeriesCatalog() {
     setExamTestSeries([]);
   };
 
-  // Flatten all exams under categories
-  const allExamsList = categories.flatMap((cat) => {
-    if (cat.subcategories && cat.subcategories.length > 0) {
-      return cat.subcategories.map((sub) => ({ ...sub, parentCategory: cat }));
-    }
-    return [{ ...cat, parentCategory: cat }];
-  });
+  // Flatten the exams that live inside each category.
+  // A category with no exams contributes nothing — never show a category as an exam.
+  const allExamsList = categories.flatMap((cat) =>
+    (cat.subcategories || []).map((sub) => ({ ...sub, parentCategory: cat }))
+  );
 
-  // Filter exams based on left selection
+  // Right column: exams belonging to the category selected on the left
   const displayedExams = allExamsList.filter((exam) => {
     if (activeCategoryFilter === 'all') return true;
     return (
-      exam.parentCategory?._id === activeCategoryFilter ||
-      exam.parentCategory?.slug === activeCategoryFilter ||
-      exam._id === activeCategoryFilter ||
-      exam.slug === activeCategoryFilter
+      String(exam.parentCategory?._id) === String(activeCategoryFilter) ||
+      exam.parentCategory?.slug === activeCategoryFilter
     );
   });
 
@@ -318,10 +316,11 @@ export default function TestSeriesCatalog() {
                 {categories.map((cat) => {
                   const isSelected =
                     activeCategoryFilter === cat._id || activeCategoryFilter === cat.slug;
-                  const count = cat.subcategories?.length || 1;
+                  // Number of exams inside this category (0 when it has none)
+                  const count = cat.subcategories?.length || 0;
                   return (
                     <button
-                      key={cat._id}
+                      key={cat.id || cat._id}
                       onClick={() => setActiveCategoryFilter(cat._id)}
                       className={`w-full text-left px-4 py-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
                         isSelected

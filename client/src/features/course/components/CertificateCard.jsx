@@ -8,9 +8,18 @@ export default function CertificateCard({ certificate }) {
           <HiAcademicCap className="h-6 w-6 text-primary-600 dark:text-primary-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-dark-900 dark:text-white">{certificate?.courseName || 'Course Certificate'}</h3>
-          <p className="text-sm text-dark-500 mt-1">Completed on {certificate?.completedAt ? new Date(certificate.completedAt).toLocaleDateString() : 'N/A'}</p>
-          <p className="text-xs text-dark-400 mt-1">Certificate ID: {certificate?._id || certificate?.certificateId || 'N/A'}</p>
+          <h3 className="font-semibold text-dark-900 dark:text-white">
+            {certificate?.courseName || 'Course Certificate'}
+          </h3>
+          <p className="text-sm text-dark-500 mt-1">
+            Completed on{' '}
+            {certificate?.completedAt
+              ? new Date(certificate.completedAt).toLocaleDateString()
+              : 'N/A'}
+          </p>
+          <p className="text-xs text-dark-400 mt-1">
+            Certificate ID: {certificate?.id || _id || certificate?.certificateId || 'N/A'}
+          </p>
         </div>
         <button className="btn-outline text-sm flex items-center gap-1">
           <HiDownload className="h-4 w-4" />

@@ -27,12 +27,20 @@ export class CourseController extends BaseController {
     if (!slug) {
       throw ApiError.badRequest('Slug parameter is required');
     }
-    const result = await this.courseService.getCourseBySlug(slug, req.userId || null);
+    const result = await this.courseService.getCourseBySlug(
+      slug,
+      req.userId || null,
+      req.user?.role || null
+    );
     return this.ok(res, result);
   });
 
   getCourseById = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const result = await this.courseService.getCourseById(req.params.id, req.userId || null);
+    const result = await this.courseService.getCourseById(
+      req.params.id,
+      req.userId || null,
+      req.user?.role || null
+    );
     return this.ok(res, result);
   });
 
@@ -48,7 +56,13 @@ export class CourseController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized();
     }
-    const course = await this.courseService.updateCourse(req.params.id, req.userId, req.body);
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    const course = await this.courseService.updateCourse(
+      req.params.id,
+      req.userId,
+      req.body,
+      isAdmin
+    );
     return this.ok(res, { course }, 'Course updated successfully');
   });
 
@@ -56,7 +70,8 @@ export class CourseController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized();
     }
-    await this.courseService.deleteCourse(req.params.id, req.userId);
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    await this.courseService.deleteCourse(req.params.id, req.userId, isAdmin);
     return this.ok(res, null, 'Course deleted successfully');
   });
 
@@ -77,8 +92,9 @@ export class CourseController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized();
     }
-    const course = await this.courseService.publishCourse(req.params.id, req.userId);
-    return this.ok(res, { course }, 'Course published successfully');
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    const course = await this.courseService.publishCourse(req.params.id, req.userId, isAdmin);
+    return this.ok(res, { course }, 'Course publish status updated successfully');
   });
 
   getFeaturedCourses = this.catchAsync(async (req: CustomRequest, res: Response) => {

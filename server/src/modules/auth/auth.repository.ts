@@ -1,44 +1,53 @@
-import { Model } from 'mongoose';
 import { TenantRepository } from '../../core/tenant.repository.js';
 import { IUser } from './auth.dto.ts';
-import User from '../user/user.model.js';
+import prisma from '../../config/prisma.js';
 
 export class AuthRepository extends TenantRepository<IUser> {
-  constructor(userModel: Model<IUser> = User as Model<IUser>) {
-    super(userModel);
+  constructor(userModel = prisma.user) {
+    super(userModel as any);
   }
 
   async findByEmail(email: string, selectPassword = false): Promise<IUser | null> {
     const filter = this.getScopedFilter({ email });
+    const args: any = { where: filter };
     if (selectPassword) {
-      return this.model.findOne(filter).select('+password').exec();
+      args.select = {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        password: true,
+        isActive: true,
+        tenantId: true,
+      };
     }
-    return this.model.findOne(filter).exec();
+    return this.model.findFirst(args);
   }
 
   async findByEmailWithMfa(email: string): Promise<IUser | null> {
     const filter = this.getScopedFilter({ email });
-    return this.model.findOne(filter).select('+password +mfaSecret +mfaBackupCodes').exec();
+    // Prisma returns all fields by default, so we don't need to select sensitive fields explicitly
+    return this.model.findFirst({ where: filter });
   }
 
   async findByIdWithMfa(id: string): Promise<IUser | null> {
-    const filter = this.getScopedFilter({ _id: id });
-    return this.model.findOne(filter).select('+mfaSecret +mfaBackupCodes').exec();
+    const filter = this.getScopedFilter({ id });
+    return this.model.findFirst({ where: filter });
   }
 
   async findByResetToken(tokenHash: string): Promise<IUser | null> {
     const filter = this.getScopedFilter({
       resetPasswordToken: tokenHash,
-      resetPasswordExpire: { $gt: new Date() },
+      resetPasswordExpire: { gt: new Date() },
     });
-    return this.model.findOne(filter).exec();
+    return this.model.findFirst({ where: filter });
   }
 
   async findByVerificationToken(tokenHash: string): Promise<IUser | null> {
     const filter = this.getScopedFilter({
       emailVerificationToken: tokenHash,
-      emailVerificationExpire: { $gt: new Date() },
+      emailVerificationExpire: { gt: new Date() },
     });
-    return this.model.findOne(filter).exec();
+    return this.model.findFirst({ where: filter });
   }
 }

@@ -1,7 +1,5 @@
 import { CouponRepository } from './coupon.repository.js';
-import { ICoupon, IValidateCouponInput } from './coupon.dto.js';
 import { ApiError } from '../../core/api-error.js';
-import mongoose from 'mongoose';
 
 export class CouponService {
   private readonly couponRepository: CouponRepository;
@@ -10,19 +8,7 @@ export class CouponService {
     this.couponRepository = couponRepository;
   }
 
-  async validateCoupon(
-    userId: string,
-    input: IValidateCouponInput
-  ): Promise<{
-    coupon: {
-      code: string;
-      discountType: 'percentage' | 'fixed';
-      discountValue: number;
-      maxDiscount: number;
-    };
-    discount: number;
-    finalAmount: number;
-  }> {
+  async validateCoupon(userId: string, input: any): Promise<any> {
     const { code, courseId, amount = 0 } = input;
 
     const coupon = await this.couponRepository.findOne({ code: code.toUpperCase() });
@@ -30,32 +16,42 @@ export class CouponService {
       throw ApiError.notFound('Coupon not found');
     }
 
-    const validity = coupon.isValid();
-    if (!validity.valid) {
-      throw ApiError.badRequest(validity.message || 'Coupon is invalid');
+    if (!coupon.isActive) {
+      throw ApiError.badRequest('Coupon is inactive');
     }
 
-    // Check per-user limit
-    const userUsageCount = coupon.usedBy.filter((u) => u.user.toString() === userId).length;
-    if (userUsageCount >= coupon.perUserLimit) {
-      throw ApiError.badRequest('You have already used this coupon');
+    if (coupon.validFrom && new Date() < new Date(coupon.validFrom)) {
+      throw ApiError.badRequest('Coupon is not valid yet');
     }
 
-    // Check applicable courses
-    if (courseId && coupon.applicableCourses.length > 0) {
-      const isApplicable = coupon.applicableCourses.some((id) => id.toString() === courseId);
-      if (!isApplicable) {
-        throw ApiError.badRequest('Coupon not applicable for this course');
+    if (coupon.validUntil && new Date() > new Date(coupon.validUntil)) {
+      throw ApiError.badRequest('Coupon has expired');
+    }
+
+    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+      throw ApiError.badRequest('Coupon usage limit reached');
+    }
+
+    if (amount < (coupon.minOrderAmount || 0)) {
+      throw ApiError.badRequest(`Minimum order amount is ${coupon.minOrderAmount}`);
+    }
+
+    let discount = 0;
+    if (coupon.discountType === 'percentage') {
+      discount = (amount * (coupon.discountPercent || 0)) / 100;
+      if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+        discount = coupon.maxDiscount;
       }
+    } else {
+      discount = coupon.discountAmount || 0;
     }
-
-    const discount = coupon.calculateDiscount(amount);
 
     return {
       coupon: {
         code: coupon.code,
         discountType: coupon.discountType,
-        discountValue: coupon.discountValue,
+        discountValue:
+          coupon.discountType === 'percentage' ? coupon.discountPercent : coupon.discountAmount,
         maxDiscount: coupon.maxDiscount,
       },
       discount,
@@ -63,10 +59,10 @@ export class CouponService {
     };
   }
 
-  async getCoupons(query: any): Promise<{ docs: ICoupon[]; total: number; pagination: any }> {
+  async getCoupons(query: any): Promise<any> {
     const filter: any = {};
     if (query.search) {
-      filter.code = { $regex: query.search, $options: 'i' };
+      filter.code = { contains: query.search, mode: 'insensitive' };
     }
     if (query.isActive !== undefined) {
       filter.isActive = query.isActive === 'true';
@@ -75,13 +71,25 @@ export class CouponService {
     const options = {
       page: parseInt(query.page) || 1,
       limit: parseInt(query.limit) || 10,
-      sort: query.sort || '-createdAt',
+      orderBy: query.sort
+        ? { [query.sort.replace('-', '')]: query.sort.startsWith('-') ? 'desc' : 'asc' }
+        : { createdAt: 'desc' },
     };
 
-    return this.couponRepository.paginateCoupons(filter, options);
+    const [total, docs] = await Promise.all([
+      this.couponRepository.count({ where: filter }),
+      this.couponRepository.findMany({
+        where: filter,
+        orderBy: options.orderBy,
+        skip: (options.page - 1) * options.limit,
+        take: options.limit,
+      }),
+    ]);
+
+    return { docs, total, pagination: { total, page: options.page, limit: options.limit } };
   }
 
-  async createCoupon(body: any): Promise<ICoupon> {
+  async createCoupon(body: any): Promise<any> {
     const code = body.code.toUpperCase();
     const existing = await this.couponRepository.findOne({ code });
     if (existing) {
@@ -91,7 +99,7 @@ export class CouponService {
     return this.couponRepository.create({ ...body, code });
   }
 
-  async updateCoupon(id: string, body: any): Promise<ICoupon> {
+  async updateCoupon(id: string, body: any): Promise<any> {
     if (body.code) {
       body.code = body.code.toUpperCase();
     }
@@ -110,18 +118,13 @@ export class CouponService {
     }
   }
 
-  // Method to record coupon usage upon successful purchase
   async recordUsage(code: string, userId: string): Promise<void> {
     const coupon = await this.couponRepository.findOne({ code: code.toUpperCase() });
     if (!coupon) return;
 
-    coupon.usedCount += 1;
-    coupon.usedBy.push({
-      user: new mongoose.Types.ObjectId(userId) as any,
-      usedAt: new Date(),
+    await this.couponRepository.updateById(coupon.id, {
+      usedCount: coupon.usedCount + 1,
     });
-
-    await coupon.save();
   }
 }
 

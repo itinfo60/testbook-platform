@@ -3,11 +3,12 @@ import { BaseController } from '../../core/base.controller.js';
 import { AuthService } from './auth.service.js';
 import { ApiError } from '../../core/api-error.js';
 import config from '../../config/index.js';
-import { IUser } from './auth.dto.ts';
-import User from '../user/user.model.js';
+import { IUser } from './auth.dto.js';
 import { runWithTenant } from '../../core/tenant.context.js';
+import prisma from '../../config/prisma.js';
+import { generateAccessToken, generateRefreshToken } from '../user/user.utils.js';
 
-interface CustomRequest extends Request {
+export interface CustomRequest extends Request {
   tenantId?: string | null;
   tenant?: any;
   userId?: string;
@@ -216,11 +217,20 @@ export class AuthController extends BaseController {
     const { token } = req.body;
     if (!token) throw ApiError.badRequest('FCM token required');
 
-    await runWithTenant(null, true, () =>
-      User.findByIdAndUpdate(req.userId, {
-        $addToSet: { fcmTokens: token },
-      })
+    const u = await runWithTenant(null, true, () =>
+      prisma.user.findUnique({ where: { id: req.userId } })
     );
+    if (u) {
+      const tokens = (u.fcmTokens || []) as string[];
+      if (!tokens.includes(token)) {
+        await runWithTenant(null, true, () =>
+          prisma.user.update({
+            where: { id: req.userId },
+            data: { fcmTokens: [...tokens, token] },
+          })
+        );
+      }
+    }
 
     return this.ok(res, null, 'FCM token registered');
   });
@@ -232,31 +242,41 @@ export class AuthController extends BaseController {
     const { token } = req.body;
     if (!token) throw ApiError.badRequest('FCM token required');
 
-    await runWithTenant(null, true, () =>
-      User.findByIdAndUpdate(req.userId, {
-        $pull: { fcmTokens: token },
-      })
+    const u = await runWithTenant(null, true, () =>
+      prisma.user.findUnique({ where: { id: req.userId } })
     );
+    if (u) {
+      const tokens = (u.fcmTokens || []) as string[];
+      await runWithTenant(null, true, () =>
+        prisma.user.update({
+          where: { id: req.userId },
+          data: { fcmTokens: tokens.filter((t) => t !== token) },
+        })
+      );
+    }
 
     return this.ok(res, null, 'FCM token removed');
   });
 
   googleCallback = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const user = req.user as IUser;
+    const user = req.user as any;
     if (!user) throw ApiError.unauthorized('Google authentication failed');
 
-    const accessToken = user.generateAccessToken();
-    const rawRefreshTokenStr = user.generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshTokenStr = generateRefreshToken(user);
 
     const hashedToken = crypto.createHash('sha256').update(rawRefreshTokenStr).digest('hex');
-    user.refreshTokens.push({
+    const newTokens = (user.refreshTokens || []).concat({
       token: hashedToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       device: req.headers['user-agent'] || 'unknown',
     });
 
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      prisma.user.update({
+        where: { id: user.id },
+        data: { refreshTokens: newTokens },
+      })
     );
 
     res.cookie('refreshToken', rawRefreshTokenStr, getCookieOptions(true));

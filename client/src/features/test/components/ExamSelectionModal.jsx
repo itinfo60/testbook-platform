@@ -162,7 +162,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredExams.map((exam) => (
                     <div
-                      key={exam._id}
+                      key={exam.id || exam._id}
                       onClick={() => handleSelectExam(exam)}
                       className="bg-white dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-750 hover:border-amber-500 dark:hover:border-amber-500 shadow-sm hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between group"
                     >
@@ -222,7 +222,7 @@ export default function ExamSelectionModal({ isOpen, onClose, categories = [] })
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {examPackages.map((series) => (
                   <div
-                    key={series._id}
+                    key={series.id || series._id}
                     className="bg-white dark:bg-slate-800/80 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between group"
                   >
                     <div>

@@ -1,11 +1,9 @@
-import { Types, Document } from 'mongoose';
-
-export interface IPayment extends Document {
-  _id: Types.ObjectId;
-  user: Types.ObjectId;
-  course?: Types.ObjectId;
-  test?: Types.ObjectId;
-  subscriptionPlan?: Types.ObjectId;
+export interface IPayment {
+  _id: string;
+  user: string;
+  course?: string;
+  test?: string;
+  subscriptionPlan?: string;
   orderId: string;
   paymentId?: string;
   signature?: string;
@@ -13,7 +11,7 @@ export interface IPayment extends Document {
   currency: string;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   provider: 'razorpay' | 'stripe' | 'free' | 'demo';
-  coupon?: Types.ObjectId;
+  coupon?: string;
   discount: number;
   tax: number;
   netAmount: number;
@@ -21,13 +19,13 @@ export interface IPayment extends Document {
   refundAmount: number;
   refundedAt?: Date;
   metadata: Record<string, any>;
-  tenantId: Types.ObjectId;
+  tenantId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ISubscriptionPlan extends Document {
-  _id: Types.ObjectId;
+export interface ISubscriptionPlan {
+  _id: string;
   name: 'starter' | 'growth' | 'premium';
   price: number;
   billingCycle: 'monthly' | 'yearly';

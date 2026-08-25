@@ -31,7 +31,7 @@ export default function FacultyShowcase() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4 tracking-tight">
-            See How CivicsEdu Teaches Before You Enroll.
+            See How CivicsHub Teaches Before You Enroll.
           </h2>
           <p className="text-lg text-navy-300">
             No sales pitch. Watch the teaching quality yourself through our complete unedited free

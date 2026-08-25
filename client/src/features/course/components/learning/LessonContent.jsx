@@ -67,6 +67,8 @@ export default function LessonContent({
   onVideoComplete,
   onNext,
   isLastLesson,
+  isEnrolled = false,
+  courseSlug,
 }) {
   if (!lesson) {
     return (
@@ -84,12 +86,14 @@ export default function LessonContent({
     );
   }
 
-  const formatDuration = (secs) => {
-    if (!secs) return null;
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return m > 0 ? `${m}m ${s > 0 ? `${s}s` : ''}`.trim() : `${s}s`;
-  };
+  // Access is decided by the server's `isEnrolled`, not by absent fields.
+  // An enrolled user viewing a genuinely empty lesson should see the empty
+  // state for that lesson type, never a paywall.
+  // Free lessons are the demo classes — always playable, no purchase needed.
+  const isLocked = !isEnrolled && !lesson.isFree;
+  const isAvailable = !isLocked && !lesson.dripLocked;
+
+  const lockedLabel = lesson.type === 'text' ? 'notes' : lesson.type === 'quiz' ? 'quiz' : 'video';
 
   return (
     <div className="space-y-6">
@@ -105,19 +109,19 @@ export default function LessonContent({
             soon!
           </p>
         </div>
-      ) : !lesson.isFree && !lesson.videoUrl && !lesson.content && lesson.type !== 'quiz' ? (
+      ) : isLocked ? (
         <div className="bg-rose-50 dark:bg-rose-950/20 rounded-3xl p-8 text-center border border-rose-200 dark:border-rose-900/40 flex flex-col items-center justify-center min-h-[400px]">
           <span className="text-4xl mb-4">🔒</span>
           <h3 className="text-xl font-bold text-rose-800 dark:text-rose-400 mb-2">
             Premium Course Material
           </h3>
           <p className="text-slate-600 dark:text-slate-400 max-w-md mb-6 text-sm">
-            You do not have access to this full lesson. Please enroll in the course to unlock
-            unlimited access to all videos and notes.
+            This {lockedLabel} is part of the paid course. Enroll to unlock every lesson, along with
+            the notes and downloadable resources. The demo classes stay free to watch.
           </p>
-          <a href={`/courses/${lesson.courseSlug || ''}`} className="btn-primary">
+          <Link to={`/courses/${courseSlug || lesson.courseSlug || ''}`} className="btn-primary">
             Enroll to Unlock
-          </a>
+          </Link>
         </div>
       ) : lesson.type === 'video' ? (
         <div className="w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-900/10 dark:border-white/10 bg-black aspect-video relative flex items-center justify-center group ring-1 ring-black/5 dark:ring-white/5">
@@ -131,13 +135,13 @@ export default function LessonContent({
         </div>
       ) : null}
 
-      {lesson.type === 'text' && (
+      {isAvailable && lesson.type === 'text' && (
         <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-dark-800 shadow-sm">
           <TextContent content={lesson.content} />
         </div>
       )}
 
-      {lesson.type === 'quiz' && (
+      {isAvailable && lesson.type === 'quiz' && (
         <div className="bg-white dark:bg-dark-900 rounded-3xl p-8 text-center border border-slate-200 dark:border-dark-800 shadow-sm">
           <div className="text-5xl mb-3">📝</div>
           <h3 className="text-xl font-extrabold text-dark-900 dark:text-white mb-2 font-display">

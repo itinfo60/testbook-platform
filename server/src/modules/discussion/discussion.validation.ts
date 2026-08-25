@@ -1,11 +1,8 @@
 import { z } from 'zod';
 
 export const createDiscussionSchema = z.object({
-  title: z
-    .string({ required_error: 'Title is required' })
-    .trim()
-    .min(1, 'Title cannot be empty')
-    .max(200, 'Title cannot exceed 200 characters'),
+  // Title is optional — when omitted the service derives it from content.
+  title: z.string().trim().max(200, 'Title cannot exceed 200 characters').optional(),
   content: z
     .string({ required_error: 'Content is required' })
     .trim()

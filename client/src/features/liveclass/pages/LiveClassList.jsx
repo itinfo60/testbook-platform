@@ -52,7 +52,7 @@ export default function LiveClassList() {
         <div className="space-y-4">
           {classes.map((cls) => (
             <div
-              key={cls._id}
+              key={cls.id || cls._id}
               className="bg-white dark:bg-dark-800 rounded-2xl border border-slate-100 dark:border-dark-700 p-5 flex items-center gap-4"
             >
               <div

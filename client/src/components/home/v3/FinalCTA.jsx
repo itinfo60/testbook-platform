@@ -5,7 +5,8 @@ import { useSelector } from 'react-redux';
 
 export default function FinalCTA() {
   const { categories } = useExamCategories();
-  const examCount = categories.filter((c) => !c.parent).length;
+  // Hook already scopes to type:'exam' — count them all, nested or not
+  const examCount = categories.length;
 
   // Pull live counts from Redux stores populated by other sections
   const { list: courses } = useSelector((s) => s.courses || { list: [] });

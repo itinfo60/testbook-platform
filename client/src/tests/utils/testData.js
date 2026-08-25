@@ -333,14 +333,14 @@ export const mockUsers = {
   teacher: {
     _id: 'user-teacher-1',
     name: 'Teacher User',
-    email: 'teacher@testbook.com',
+    email: 'teacher@civicshub.com',
     role: 'teacher',
     avatar: '/avatars/teacher.jpg',
   },
   admin: {
     _id: 'user-admin-1',
     name: 'Admin User',
-    email: 'admin@testbook.com',
+    email: 'admin@civicshub.com',
     role: 'admin',
     avatar: '/avatars/admin.jpg',
   },

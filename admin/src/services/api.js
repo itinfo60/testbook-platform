@@ -146,7 +146,7 @@ export const authAPI = {
 // DASHBOARD — confirmed: GET /admin/dashboard
 // ══════════════════════════════════════════════
 export const dashboardAPI = {
-  getStats: () => api.get('/admin/dashboard'),
+  getStats: (params) => api.get(`/admin/dashboard${qs(params)}`),
 };
 
 // ══════════════════════════════════════════════
@@ -161,39 +161,37 @@ export const usersAPI = {
 };
 
 // ══════════════════════════════════════════════
-// COURSES — confirmed: /admin/courses
+// COURSES — confirmed: /admin/courses, /courses
 // ══════════════════════════════════════════════
 export const coursesAPI = {
   getAll: (params) => api.get(`/admin/courses${qs(params)}`),
   getById: (id) => api.get(`/courses/${id}`),
-  create: (data) =>
-    api.post('/courses', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  update: (id, data) =>
-    api.put(`/courses/${id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  create: (data) => api.post('/courses', data),
+  update: (id, data) => api.put(`/admin/courses/${id}`, data),
   delete: (id) => api.delete(`/admin/courses/${id}`),
   togglePublish: (id) => api.patch(`/courses/${id}/publish`),
   toggleFeatured: (id) => api.patch(`/admin/courses/${id}/featured`),
 };
 
 // ══════════════════════════════════════════════
-// TESTS — confirmed: /admin/tests
+// TESTS — confirmed: /admin/tests, /tests
 // ══════════════════════════════════════════════
 export const testsAPI = {
   getAll: (params) => api.get(`/admin/tests${qs(params)}`),
-  getById: (id) => api.get(`/tests/${id}`),
+  getById: (id) => api.get(`/admin/tests/${id}`),
+  create: (data) => api.post('/tests', data),
+  update: (id, data) => api.put(`/tests/${id}`, data),
   delete: (id) => api.delete(`/admin/tests/${id}`),
 };
 
 // ══════════════════════════════════════════════
-// QUIZZES — confirmed: /admin/quizzes
+// QUIZZES — confirmed: /admin/quizzes, /quizzes
 // ══════════════════════════════════════════════
 export const quizzesAPI = {
   getAll: (params) => api.get(`/admin/quizzes${qs(params)}`),
   getById: (id) => api.get(`/quizzes/${id}`),
+  create: (data) => api.post('/quizzes', data),
+  update: (id, data) => api.put(`/quizzes/${id}`, data),
   delete: (id) => api.delete(`/admin/quizzes/${id}`),
 };
 
@@ -223,11 +221,17 @@ export const enrollmentsAPI = {
 
 // ══════════════════════════════════════════════
 // REVENUE — confirmed: GET /admin/revenue
-// NO /admin/revenue/monthly endpoint!
-// ══════════════════════════════════════════════
 export const revenueAPI = {
   getAnalytics: (params) => api.get(`/admin/revenue${qs(params)}`),
   getMonthly: (params) => api.get(`/admin/revenue/monthly${qs(params)}`),
+};
+
+// ══════════════════════════════════════════════
+// PAYMENTS & ORDERS
+// ══════════════════════════════════════════════
+export const paymentsAPI = {
+  getAll: (params) => api.get(`/admin/payments${qs(params)}`),
+  getById: (id) => api.get(`/admin/payments/${id}`),
 };
 
 // ══════════════════════════════════════════════
@@ -235,6 +239,10 @@ export const revenueAPI = {
 // ══════════════════════════════════════════════
 export const teachersAPI = {
   getAll: (params) => api.get(`/admin/teachers${qs(params)}`),
+  getById: (id) => api.get(`/admin/teachers/${id}`),
+  create: (data) => api.post('/admin/teachers', data),
+  update: (id, data) => api.put(`/admin/teachers/${id}`, data),
+  delete: (id) => api.delete(`/admin/teachers/${id}`),
   verify: (id) => api.patch(`/admin/teachers/${id}/verify`),
   toggleStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }),
 };
@@ -251,10 +259,12 @@ export const couponsAPI = {
 };
 
 // ══════════════════════════════════════════════
-// CATEGORIES — confirmed: /categories (NOT /exam-categories)
+// CATEGORIES — /categories (public r/w, admin list at /categories/admin/list)
 // ══════════════════════════════════════════════
 export const examCategoriesAPI = {
-  getAll: (params) => api.get(`/categories${qs(params)}`),
+  // Admin list: paginated, filterable, returns ALL categories including sub-exams
+  getAll: (params) => api.get(`/categories/admin/list${qs(params)}`),
+  // Single record: public detail endpoint (includes subcategories virtual)
   getById: (id) => api.get(`/categories/${id}`),
   create: (data) => api.post('/categories', data),
   update: (id, data) => api.put(`/categories/${id}`, data),

@@ -179,7 +179,7 @@ export default function TeacherStudents() {
                     </h4>
                     {studentGroup.enrollments.map((enrollment) => (
                       <div
-                        key={enrollment._id}
+                        key={enrollment.id || enrollment._id}
                         className="bg-slate-50 dark:bg-dark-900/50 p-3 rounded-xl"
                       >
                         <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 font-medium">

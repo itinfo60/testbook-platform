@@ -52,7 +52,7 @@ export default function BlogDetail() {
     <article className="min-h-screen bg-slate-50 dark:bg-dark-950 pb-20 text-dark-900 dark:text-dark-100">
       <SeoHead
         title={blog?.title || 'Article'}
-        description={blog?.excerpt?.substring(0, 160) || 'Read the full article on CivicsEdu.'}
+        description={blog?.excerpt?.substring(0, 160) || 'Read the full article on CivicsHub.'}
         image={blog?.coverImage?.url}
         type="article"
         jsonLd={
@@ -63,7 +63,7 @@ export default function BlogDetail() {
                 headline: blog.title,
                 description: blog.excerpt,
                 datePublished: blog.publishedAt,
-                author: { '@type': 'Person', name: blog.author?.name || 'CivicsEdu Team' },
+                author: { '@type': 'Person', name: blog.author?.name || 'CivicsHub Team' },
                 ...(blog.type === 'job_alert' && blog.jobAlert
                   ? {
                       hiringOrganization: {
@@ -122,7 +122,7 @@ export default function BlogDetail() {
                   {currentBlog.author?.name?.charAt(0) || 'A'}
                 </div>
                 <span className="font-semibold text-white">
-                  {currentBlog.author?.name || 'CivicsEdu Team'}
+                  {currentBlog.author?.name || 'CivicsHub Team'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md">

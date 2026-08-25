@@ -1,35 +1,30 @@
-import { Document, Types } from 'mongoose';
-
-export interface IReply extends Document {
-  _id: Types.ObjectId;
-  user: Types.ObjectId;
+export interface IReply {
+  id: string;
+  user: string;
   content: string;
-  likes: Types.ObjectId[];
-  createdAt: Date;
-}
-
-export interface IDiscussion extends Document {
-  _id: Types.ObjectId;
-  user: Types.ObjectId;
-  course: Types.ObjectId;
-  lesson?: Types.ObjectId;
-  title: string;
-  content: string;
-  replies: Types.DocumentArray<IReply> | IReply[];
-  likes: Types.ObjectId[];
-  isPinned: boolean;
-  isResolved: boolean;
-  tags: string[];
-  viewCount: number;
-  tenantId: Types.ObjectId;
+  likes: string[];
   createdAt: Date;
   updatedAt: Date;
-  replyCount: number;
-  likeCount: number;
+}
+
+export interface IDiscussion {
+  id: string;
+  course: string | null;
+  lesson: string | null;
+  user: string;
+  title: string;
+  content: string;
+  tags: string[];
+  replies: IReply[];
+  likes: string[];
+  isResolved: boolean;
+  tenantId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ICreateDiscussionInput {
-  title: string;
+  title?: string;
   content: string;
   tags?: string[];
 }

@@ -26,8 +26,10 @@ export class ReviewController extends BaseController {
       throw ApiError.unauthorized();
     }
 
+    const courseId = req.body.courseId || req.body.course;
+
     const review = await this.reviewService.createReview(req.userId, {
-      course: req.body.course,
+      course: courseId,
       rating: req.body.rating,
       comment: req.body.comment,
     });

@@ -1,4 +1,5 @@
-import mongoose, { Types } from 'mongoose';
+import prisma from '../../config/prisma.js';
+
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import PDFDocument from 'pdfkit';
@@ -6,19 +7,12 @@ import { PassThrough } from 'stream';
 import { BaseService } from '../../core/base.service.js';
 import { IPayment, ICreateOrderDto, IVerifyPaymentDto, IRefundDto } from './payment.dto.js';
 import PaymentRepository from './payment.repository.js';
-import Course from '../course/course.model.js';
-import Test from '../test/test.model.js';
-import Coupon from '../coupon/coupon.model.js';
-import Enrollment from '../enrollment/enrollment.model.js';
-import User from '../user/user.model.js';
-import SubscriptionPlan from '../subscription/subscriptionPlan.model.js';
-import Institute from '../institute/institute.model.js';
+
 import { ApiError } from '../../core/api-error.js';
 import redis from '../../config/redis.js';
 import logger from '../../utils/logger.js';
 import config from '../../config/index.js';
 import { transactionalEmailQueue, notificationQueue } from '../../queues/index.js';
-import Payment from './payment.model.js';
 
 export class PaymentService extends BaseService<IPayment, PaymentRepository> {
   public razorpay: Razorpay | null;
@@ -31,89 +25,61 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
   }
 
   async createCheckoutOrder(userId: string, data: ICreateOrderDto) {
-    const { courseId, testId, planId, couponCode } = data;
+    const { courseId, testId, couponCode } = data;
 
     let item: any = null;
     let amount = 0;
-    let type: 'course' | 'test' | 'plan' = 'course';
 
     if (courseId) {
-      item = await Course.findById(courseId);
+      item = await prisma.course.findFirst({
+        where: { OR: [{ id: courseId }, { slug: courseId }] },
+      });
       if (!item) throw ApiError.notFound('Course not found');
-      amount = item.effectivePrice;
-      type = 'course';
+      amount = item.price || 0;
 
-      const existing = await Enrollment.findOne({
-        user: new mongoose.Types.ObjectId(userId),
-        course: new mongoose.Types.ObjectId(courseId),
-        status: { $in: ['active', 'completed'] },
+      const existing = await prisma.enrollment.findFirst({
+        where: { userId, courseId: item.id, status: { in: ['active', 'completed'] } },
       });
       if (existing) throw ApiError.conflict('Already enrolled in course');
     } else if (testId) {
-      item = await Test.findById(testId);
+      item = await prisma.test.findFirst({ where: { OR: [{ id: testId }, { slug: testId }] } });
+      if (!item)
+        item = await prisma.testSeries.findFirst({
+          where: { OR: [{ id: testId }, { slug: testId }] },
+        });
       if (!item || !item.isPublished) throw ApiError.notFound('Test not found');
       amount = item.price || 0;
-      type = 'test';
-
-      const existing = await Enrollment.findOne({
-        user: new mongoose.Types.ObjectId(userId),
-        test: new mongoose.Types.ObjectId(testId),
-        status: { $in: ['active', 'completed'] },
-      });
-      if (existing) throw ApiError.conflict('Already purchased test');
-    } else if (planId) {
-      item = await SubscriptionPlan.findById(planId);
-      if (!item || !item.isActive) throw ApiError.notFound('Subscription plan not found');
-      amount = item.price;
-      type = 'plan';
     }
+
+    if (!item) throw ApiError.badRequest('No valid item to purchase');
 
     let discount = 0;
-    let couponId: string | null = null;
+    let couponNotes: any = {};
 
-    if (couponCode && type !== 'plan') {
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
-      if (!coupon) throw ApiError.notFound('Coupon not found');
-
-      const validity = coupon.isValid();
-      if (!validity.valid) throw ApiError.badRequest(validity.message);
-
-      const userUsage = coupon.usedBy.filter((u) => u.user.toString() === userId).length;
-      if (userUsage >= coupon.perUserLimit) {
-        throw ApiError.badRequest('Coupon usage limit reached for your account');
+    if (couponCode) {
+      try {
+        const coupon = await prisma.coupon.findFirst({
+          where: { code: couponCode.toUpperCase(), isActive: true },
+        });
+        if (!coupon) throw new Error('Coupon not found');
+        discount = Math.min(
+          amount,
+          coupon.discountAmount ||
+            (coupon.discountPercent ? (amount * coupon.discountPercent) / 100 : 0)
+        );
+        amount = Math.max(0, amount - discount);
+        couponNotes = { couponCode, discount };
+      } catch (e: any) {
+        throw ApiError.badRequest(e.message || 'Invalid coupon');
       }
-
-      discount = coupon.calculateDiscount(amount);
-      amount = Math.max(0, amount - discount);
-      couponId = coupon._id.toString();
     }
 
-    // Free checkout bypass
-    if (amount === 0 && type !== 'plan') {
-      const enrollmentData: any = {
-        user: new mongoose.Types.ObjectId(userId),
-        amountPaid: 0,
-        couponUsed: couponId ? new mongoose.Types.ObjectId(couponId) : undefined,
-        status: 'active',
-      };
-      if (courseId) enrollmentData.course = new mongoose.Types.ObjectId(courseId);
-      if (testId) enrollmentData.test = new mongoose.Types.ObjectId(testId);
-
-      const enrollment = await Enrollment.create(enrollmentData);
-
-      if (courseId) {
-        await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
-        await User.findByIdAndUpdate(userId, { $inc: { enrolledCourses: 1 } });
-        await redis.delPattern('courses:*');
-      }
-
-      if (couponId) {
-        await Coupon.findByIdAndUpdate(couponId, {
-          $inc: { usedCount: 1 },
-          $push: { usedBy: { user: new mongoose.Types.ObjectId(userId), usedAt: new Date() } },
-        });
-      }
-
+    // Free enrollment
+    if (amount === 0 && courseId) {
+      const enrollment = await prisma.enrollment.create({
+        data: { userId, courseId: item.id, status: 'active', paymentStatus: 'free', amount: 0 },
+      });
+      await redis.delPattern('courses:*');
       return { enrollment, isFree: true };
     }
 
@@ -123,58 +89,45 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
 
     let orderId = `order_mock_${Date.now()}_${userId.slice(-6)}`;
     let orderAmount = Math.round(amount * 100);
-    let orderCurrency = 'INR';
+    const orderCurrency = 'INR';
 
     if (this.razorpay) {
       try {
         const order = await this.razorpay.orders.create({
           amount: orderAmount,
           currency: orderCurrency,
-          receipt: `receipt_${type}_${Date.now()}_${userId.slice(-6)}`,
-          notes: {
-            userId,
-            itemId: courseId || testId || planId || '',
-            itemType: type,
-            couponCode: couponCode || '',
-          },
+          receipt: `receipt_${Date.now()}_${userId.slice(-6)}`,
+          notes: { userId, itemId: courseId || testId || '', ...couponNotes },
         });
         orderId = order.id;
-        orderAmount = order.amount;
-        orderCurrency = order.currency;
+        orderAmount = order.amount as number;
       } catch (err: any) {
         if (process.env.ALLOW_MOCK_PAYMENTS === 'true') {
-          logger.warn('[Razorpay Order Fallback] Created mock order:', err.message);
+          logger.warn('[Razorpay Fallback] Created mock order:', err.message);
         } else {
           throw err;
         }
       }
     }
 
-    const paymentData: any = {
-      user: new mongoose.Types.ObjectId(userId),
-      orderId: orderId,
-      amount,
-      currency: orderCurrency,
-      status: 'pending',
-      provider: 'razorpay',
-      coupon: couponId ? new mongoose.Types.ObjectId(couponId) : undefined,
-      discount,
-      netAmount: amount,
-      metadata: { razorpayOrderId: orderId },
-    };
-
-    if (courseId) paymentData.course = new mongoose.Types.ObjectId(courseId);
-    if (testId) paymentData.test = new mongoose.Types.ObjectId(testId);
-    if (planId) paymentData.subscriptionPlan = new mongoose.Types.ObjectId(planId);
-
-    const payment = await this.repository.create(paymentData);
+    const payment = await prisma.payment.create({
+      data: {
+        userId,
+        orderId,
+        amount,
+        currency: orderCurrency,
+        status: 'pending',
+        notes: { razorpayOrderId: orderId, itemTitle: item.title, ...couponNotes },
+        tenantId: undefined,
+      },
+    });
 
     return {
-      orderId: orderId,
+      orderId,
       amount: orderAmount,
       currency: orderCurrency,
-      paymentId: payment._id.toString(),
-      key: config.razorpay.keyId || 'rzp_test_T1mFOnnIE0tkcn',
+      paymentId: payment.id,
+      key: config.razorpay.keyId || 'rzp_test_placeholder',
     };
   }
 
@@ -197,10 +150,10 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       }
     }
 
-    const payment = await Payment.findOneAndUpdate(
+    const payment = await prisma.payment.findOneAndUpdate(
       this.repository['getScopedFilter']({
         orderId: razorpay_order_id,
-        user: new mongoose.Types.ObjectId(userId),
+        user: userId,
       }),
       {
         $set: {
@@ -221,7 +174,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       const enrollmentData: any = {
         user: payment.user,
         amountPaid: payment.amount,
-        paymentId: payment._id,
+        paymentId: payment.id,
         couponUsed: payment.coupon,
       };
 
@@ -249,7 +202,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           tenantId,
           title: 'Payment Successful',
           message: `You are now enrolled in "${course?.title}"`,
-          data: { courseId: course?._id, paymentId: payment._id },
+          data: { courseId: course?.id, paymentId: payment.id },
         });
       }
 
@@ -269,13 +222,13 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       const expiresAt = new Date();
       expiresAt.setMonth(expiresAt.getMonth() + (plan.billingCycle === 'yearly' ? 12 : 1));
 
-      institute.subscription.plan = plan._id;
+      institute.subscription.plan = plan.id;
       institute.subscription.status = 'active';
       institute.subscription.expiresAt = expiresAt;
       institute.limits.studentLimit = plan.studentLimit;
       institute.limits.teacherLimit = plan.teacherLimit;
       institute.limits.storageLimit = plan.storageLimit;
-      await institute.save();
+      await prisma.payment.update({ where: { id: institute.id }, data: institute });
 
       await transactionalEmailQueue.add('send', {
         type: 'subscription_activated',
@@ -319,7 +272,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     const rPayment = payload?.payment?.entity;
 
     if (event === 'payment.captured' && rPayment) {
-      await Payment.findOneAndUpdate(
+      await prisma.payment.findOneAndUpdate(
         { orderId: rPayment.order_id, status: 'pending' },
         {
           $set: {
@@ -330,13 +283,13 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       );
       // Wait: In a real system, if the student didn't call /verify, we would also trigger enrollment here.
     } else if (event === 'payment.failed' && rPayment) {
-      await Payment.findOneAndUpdate(
+      await prisma.payment.findOneAndUpdate(
         { orderId: rPayment.order_id },
         { $set: { status: 'failed', paymentId: rPayment.id } }
       );
     } else if (event === 'refund.created' && payload?.refund?.entity) {
       const refund = payload.refund.entity;
-      const payment = await Payment.findOneAndUpdate(
+      const payment = await prisma.payment.findOneAndUpdate(
         { paymentId: refund.payment_id, status: { $ne: 'refunded' } },
         {
           $set: {
@@ -361,10 +314,10 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
   }
 
   async initiateRefund(paymentId: string, userId: string, data: IRefundDto) {
-    const payment = await Payment.findOne(
+    const payment = await prisma.payment.findFirst(
       this.repository['getScopedFilter']({
         _id: paymentId,
-        user: new mongoose.Types.ObjectId(userId),
+        user: userId,
       })
     );
     if (!payment) throw ApiError.notFound('Payment record not found');
@@ -389,7 +342,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     payment.refundId = refund.id;
     payment.refundAmount = refund.amount / 100;
     payment.refundedAt = new Date();
-    await payment.save();
+    await prisma.payment.update({ where: { id: payment.id }, data: payment });
 
     if (payment.course) {
       await Enrollment.findOneAndUpdate(
@@ -402,10 +355,10 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
   }
 
   async retryFailedOrder(paymentId: string, userId: string) {
-    const payment = await Payment.findOne(
+    const payment = await prisma.payment.findFirst(
       this.repository['getScopedFilter']({
-        _id: new mongoose.Types.ObjectId(paymentId),
-        user: new mongoose.Types.ObjectId(userId),
+        _id: paymentId,
+        user: userId,
       })
     );
 
@@ -422,7 +375,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     const order = await this.razorpay.orders.create({
       amount: Math.round(payment.amount * 100),
       currency: 'INR',
-      receipt: `retry_${payment._id.toString().slice(-8)}_${Date.now()}`,
+      receipt: `retry_${payment.id.toString().slice(-8)}_${Date.now()}`,
       notes: {
         userId,
         itemId:
@@ -436,24 +389,25 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     payment.orderId = order.id;
     payment.status = 'pending';
     payment.metadata = { ...payment.metadata, razorpayOrderId: order.id, retriedAt: new Date() };
-    await payment.save();
+    await prisma.payment.update({ where: { id: payment.id }, data: payment });
 
     return {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      paymentId: payment._id.toString(),
+      paymentId: payment.id.toString(),
       key: config.razorpay.keyId,
     };
   }
 
   async generateInvoicePDF(paymentId: string, userId: string): Promise<PassThrough> {
-    const payment = await Payment.findOne(
-      this.repository['getScopedFilter']({
-        _id: new mongoose.Types.ObjectId(paymentId),
-        user: new mongoose.Types.ObjectId(userId),
-      })
-    )
+    const payment = await prisma.payment
+      .findFirst(
+        this.repository['getScopedFilter']({
+          _id: paymentId,
+          user: userId,
+        })
+      )
       .populate('user', 'name email phone')
       .populate('course', 'title price')
       .populate('test', 'title price')
@@ -470,7 +424,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     // Write Invoice Header
     doc.fontSize(20).text('INVOICE', { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Invoice ID: INV-${payment._id.toString().slice(-8).toUpperCase()}`);
+    doc.fontSize(12).text(`Invoice ID: INV-${payment.id.toString().slice(-8).toUpperCase()}`);
     doc.text(`Date: ${payment.createdAt.toLocaleDateString()}`);
     doc.text(`Status: ${payment.status.toUpperCase()}`);
     doc.text(`Gateway Receipt: ${payment.orderId}`);

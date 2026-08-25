@@ -136,7 +136,7 @@ export default function PricingPage() {
 
             return (
               <div
-                key={plan._id}
+                key={plan.id || plan._id}
                 className={`relative flex flex-col rounded-3xl border bg-white dark:bg-dark-800 p-8 shadow-sm hover:shadow-xl transition-all duration-300 ${meta.popular ? `ring-2 ${colors.ring}` : 'border-slate-200 dark:border-dark-700'}`}
               >
                 {meta.popular && (

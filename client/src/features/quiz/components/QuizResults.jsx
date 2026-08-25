@@ -136,7 +136,7 @@ export default function QuizResults({ result, quiz, userAnswers = {}, onRetry })
           )}
           {quiz?.course && (
             <Link
-              to={`/courses/${typeof quiz.course === 'object' ? quiz.course._id : quiz.course}/learn`}
+              to={`/courses/${typeof quiz.course === 'object' ? quiz.course.slug || quiz.course._id : quiz.course}/learn`}
               className="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-dark-700 font-bold py-3 px-6 rounded-xl transition-colors flex items-center gap-2 text-sm"
             >
               <HiArrowLeft className="h-4 w-4" /> Continue Course

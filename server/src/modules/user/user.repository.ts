@@ -1,12 +1,11 @@
-import { Model } from 'mongoose';
 import { TenantRepository } from '../../core/tenant.repository.js';
 import { IUser } from '../auth/auth.dto.js';
-import User from './user.model.js';
+import prisma from '../../config/prisma.js';
 import { UserQueryInput } from './user.validation.js';
 
 export class UserRepository extends TenantRepository<IUser> {
-  constructor(model: Model<IUser> = User as Model<IUser>) {
-    super(model);
+  constructor(model = prisma.user) {
+    super(model as any);
   }
 
   async paginateUsers(query: UserQueryInput): Promise<{ docs: IUser[]; total: number }> {
@@ -20,9 +19,9 @@ export class UserRepository extends TenantRepository<IUser> {
     filter.isActive = query.isActive !== undefined ? query.isActive : true;
 
     if (query.search) {
-      filter.$or = [
-        { name: { $regex: query.search, $options: 'i' } },
-        { email: { $regex: query.search, $options: 'i' } },
+      filter.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
@@ -30,8 +29,13 @@ export class UserRepository extends TenantRepository<IUser> {
     const skip = (query.page - 1) * query.limit;
 
     const [docs, total] = await Promise.all([
-      this.model.find(scopedFilter).skip(skip).limit(query.limit).sort({ createdAt: -1 }).exec(),
-      this.model.countDocuments(scopedFilter).exec(),
+      this.model.findMany({
+        where: scopedFilter,
+        skip,
+        take: query.limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.model.count({ where: scopedFilter }),
     ]);
 
     return { docs, total };

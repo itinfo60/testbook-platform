@@ -198,10 +198,15 @@ export default function TestTaking() {
     }
   }, [result, navigate, id, attemptId]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     setShowSubmitModal(false);
-    dispatch(submitTest({ attemptId, answers }));
-    toast.success('Test submitted successfully!');
+    try {
+      await dispatch(submitTest({ attemptId, answers })).unwrap();
+      toast.success('Test submitted successfully!');
+    } catch (err) {
+      toast.error(err || 'Submission failed. Your answers are saved. Please try again.');
+      setShowSubmitModal(true); // re-open so user can retry
+    }
   }, [dispatch, attemptId, answers]);
 
   const handleTimeUp = useCallback(() => {

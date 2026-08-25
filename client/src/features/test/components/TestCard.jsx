@@ -3,6 +3,7 @@ import { HiClipboardList, HiClock, HiUsers, HiArrowRight } from 'react-icons/hi'
 export default function TestCard({ test }) {
   const {
     _id,
+    id,
     title,
     description,
     duration,

@@ -328,7 +328,7 @@ export default function BlogList() {
                 ? filteredBlogs.slice(1)
                 : filteredBlogs
               ).map((blog) => (
-                <BlogCard key={blog._id} blog={blog} />
+                <BlogCard key={blog.id || blog._id} blog={blog} />
               ))}
             </div>
           </div>

@@ -104,6 +104,8 @@ function OrderCard({ order }) {
   const payment = order.paymentId;
   const itemTitle = item?.title || 'Unknown item';
   const sc = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+  // Nothing was charged: no payment record, or a zero-value enrollment
+  const isFree = !order.amountPaid && !payment?.amount;
 
   return (
     <div className="bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm overflow-hidden group">
@@ -285,8 +287,8 @@ function OrderCard({ order }) {
               <Link
                 to={
                   itemType === 'course'
-                    ? `/courses/${item.slug || item._id}/learn`
-                    : `/tests/${item.slug || item._id}`
+                    ? `/courses/${item.slug || item.id || item._id}/learn`
+                    : `/tests/${item.slug || item.id || item._id}`
                 }
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-md transition-all active:scale-95"
                 onClick={(e) => e.stopPropagation()}
@@ -433,7 +435,7 @@ export default function OrderHistory() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <OrderCard key={order._id} order={order} />
+            <OrderCard key={order.id || order._id} order={order} />
           ))}
         </div>
       )}

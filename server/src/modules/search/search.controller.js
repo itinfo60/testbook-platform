@@ -1,10 +1,6 @@
-import Course from '../course/course.model.js';
-import Test from '../test/test.model.js';
-import Blog from '../blog/blog.model.js';
-import LibraryResource from '../library/library.model.js';
-import ExamCategory from '../exam-category/examCategory.model.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
+import prisma from '../../config/prisma.js';
 
 /**
  * Global search across all content types.
@@ -23,61 +19,109 @@ export const globalSearch = catchAsync(async (req, res) => {
     });
   }
 
-  const searchRegex = new RegExp(q.trim(), 'i');
+  const query = q.trim();
   const maxResults = Math.min(parseInt(limit) || 5, 20);
 
   const [exams, courses, tests, blogs, resources] = await Promise.all([
-    ExamCategory.find({
-      isActive: true,
-      $or: [{ name: searchRegex }, { description: searchRegex }, { conductingBody: searchRegex }],
-    })
-      .select('name slug icon description conductingBody courseCount testCount')
-      .limit(maxResults)
-      .lean(),
+    prisma.category.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, name: true, slug: true, icon: true, description: true, type: true },
+      take: maxResults,
+    }),
 
-    Course.find({
-      isPublished: true,
-      $or: [{ title: searchRegex }, { description: searchRegex }],
-    })
-      .select(
-        'title slug thumbnail price discountPrice isFree category averageRating enrollmentCount'
-      )
-      .populate('category', 'name slug')
-      .limit(maxResults)
-      .lean(),
+    prisma.course.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        thumbnail: true,
+        price: true,
+        categoryId: true,
+        rating: true,
+        totalRatings: true,
+        category: { select: { name: true, slug: true } },
+      },
+      take: maxResults,
+    }),
 
-    Test.find({
-      isPublished: true,
-      $or: [{ title: searchRegex }, { description: searchRegex }],
-    })
-      .select('title slug duration questionsCount totalMarks isFree price category')
-      .populate('category', 'name slug')
-      .limit(maxResults)
-      .lean(),
+    prisma.test.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        duration: true,
+        totalQuestions: true,
+        totalMarks: true,
+        categoryId: true,
+        category: { select: { name: true, slug: true } },
+      },
+      take: maxResults,
+    }),
 
-    Blog.find({
-      status: 'published',
-      $or: [{ title: searchRegex }, { excerpt: searchRegex }, { tags: searchRegex }],
-    })
-      .select('title slug excerpt type coverImage publishedAt examCategory')
-      .populate('examCategory', 'name slug')
-      .limit(maxResults)
-      .lean(),
+    prisma.blog.findMany({
+      where: {
+        status: 'published',
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { excerpt: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        type: true,
+        thumbnail: true,
+        createdAt: true,
+      },
+      take: maxResults,
+    }),
 
-    LibraryResource.find({
-      $or: [{ title: searchRegex }, { description: searchRegex }, { tags: searchRegex }],
-    })
-      .select('title description fileUrl fileType accessLevel resourceType category')
-      .populate('category', 'name slug')
-      .limit(maxResults)
-      .lean(),
+    prisma.library.findMany({
+      where: {
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        url: true,
+        type: true,
+        accessLevel: true,
+        fileData: true,
+      },
+      take: maxResults,
+    }),
   ]);
 
   const totalResults =
     exams.length + courses.length + tests.length + blogs.length + resources.length;
 
   ApiResponse.ok(res, {
-    query: q.trim(),
+    query,
     totalResults,
     exams,
     courses,

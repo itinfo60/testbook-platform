@@ -1,43 +1,88 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
+  TrendingUp,
+  CreditCard,
   Users,
+  GraduationCap,
+  FolderOpen,
+  Trophy,
   BookOpen,
+  ClipboardList,
   FileText,
   Brain,
-  Tag,
-  GraduationCap,
+  Video,
+  FileCode,
+  Library,
   Star,
-  TrendingUp,
-  FolderOpen,
+  Briefcase,
+  Tag,
   Megaphone,
   Palette,
-  Video,
-  ClipboardList,
   X,
   ChevronLeft,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
-const navItems = [
-  { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { label: 'Users', path: '/users', icon: Users },
-  { label: 'Courses', path: '/courses', icon: BookOpen },
-  { label: 'Test Series', path: '/test-series', icon: ClipboardList },
-  { label: 'Tests', path: '/tests', icon: FileText },
-  { label: 'Quizzes', path: '/quizzes', icon: Brain },
-  { label: 'Reviews', path: '/reviews', icon: Star },
-  { label: 'Enrollments', path: '/enrollments', icon: GraduationCap },
-  { label: 'Revenue', path: '/revenue', icon: TrendingUp },
-  { label: 'Teachers', path: '/teachers', icon: Users },
-  { label: 'Exam Categories', path: '/exam-categories', icon: FolderOpen },
-  { label: 'Coupons', path: '/coupons', icon: Tag },
-  { label: 'Announcements', path: '/announcements', icon: Megaphone },
-  { label: 'Digital Library', path: '/library', icon: FolderOpen },
-  { label: 'Blogs & Articles', path: '/blogs', icon: FileText },
-  { label: 'Job Alerts', path: '/job-alerts', icon: Megaphone },
-  { label: 'Live Classes', path: '/live-classes', icon: Video },
-  { label: 'Branding', path: '/branding', icon: Palette },
+const navSections = [
+  {
+    title: '1. Dashboard',
+    items: [{ label: 'Dashboard', path: '/', icon: LayoutDashboard }],
+  },
+  {
+    title: '2. Analytics & Revenue',
+    items: [
+      { label: 'Revenue Analytics', path: '/revenue', icon: TrendingUp },
+      { label: 'Orders & Payments', path: '/payments', icon: CreditCard },
+      { label: 'Enrollments', path: '/enrollments', icon: BookOpen },
+    ],
+  },
+  {
+    title: '3. User Management',
+    items: [
+      { label: 'Students', path: '/users', icon: Users },
+      { label: 'Teachers', path: '/teachers', icon: GraduationCap },
+    ],
+  },
+  {
+    title: '4. Academic Management',
+    items: [
+      { label: 'Categories', path: '/categories', icon: FolderOpen },
+      { label: 'Exams', path: '/exam-categories', icon: Trophy },
+    ],
+  },
+  {
+    title: '5. Academic Content',
+    items: [
+      { label: 'Courses', path: '/courses', icon: BookOpen },
+      { label: 'Test Series', path: '/test-series', icon: ClipboardList },
+      { label: 'Tests', path: '/tests', icon: FileText },
+      { label: 'Quizzes', path: '/quizzes', icon: Brain },
+      { label: 'Live Classes', path: '/live-classes', icon: Video },
+      { label: 'Blogs & Articles', path: '/blogs', icon: FileCode },
+      { label: 'Free Resources', path: '/library', icon: Library },
+    ],
+  },
+  {
+    title: '6. Engagement',
+    items: [{ label: 'Reviews', path: '/reviews', icon: Star }],
+  },
+  {
+    title: '7. Career',
+    items: [{ label: 'Job Alerts', path: '/job-alerts', icon: Briefcase }],
+  },
+  {
+    title: '8. Marketing & Offers',
+    items: [{ label: 'Coupons', path: '/coupons', icon: Tag }],
+  },
+  {
+    title: '9. Communication',
+    items: [{ label: 'Announcements', path: '/announcements', icon: Megaphone }],
+  },
+  {
+    title: '10. Branding & Settings',
+    items: [{ label: 'Branding', path: '/branding', icon: Palette }],
+  },
 ];
 
 export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
@@ -57,17 +102,17 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 flex-shrink-0">
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-slate-950 rounded flex items-center justify-center border-l-2 border-yellow-500 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold uppercase tracking-tight">
-                Civics<span className="text-blue-400">Edu</span>
+              <span className="text-xl font-bold font-display text-white">
+                Civics<span className="text-primary-400">Hub</span>
               </span>
             </div>
           )}
           {collapsed && (
-            <div className="w-8 h-8 bg-slate-950 rounded flex items-center justify-center border-l-2 border-yellow-500 shadow-sm mx-auto">
+            <div className="h-9 w-9 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm mx-auto">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
           )}
@@ -85,34 +130,44 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/'}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                  isActive
-                    ? 'bg-sidebar-active text-white shadow-lg shadow-blue-900/20'
-                    : 'text-gray-300 hover:bg-sidebar-hover hover:text-white',
-                  collapsed && 'justify-center px-2'
-                )
-              }
-              title={collapsed ? item.label : undefined}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </NavLink>
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-4 scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
+          {navSections.map((section, sIdx) => (
+            <div key={section.title || sIdx} className="space-y-1">
+              {!collapsed && section.title && (
+                <div className="px-3 pt-2 pb-1 text-[11px] font-bold tracking-wider text-gray-400 uppercase">
+                  {section.title}
+                </div>
+              )}
+              {collapsed && section.title && <div className="my-2 border-t border-white/10" />}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/'}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'bg-sidebar-active text-white shadow-md shadow-blue-900/20 font-semibold'
+                        : 'text-gray-300 hover:bg-sidebar-hover hover:text-white',
+                      collapsed && 'justify-center px-2'
+                    )
+                  }
+                  title={collapsed ? item.label : undefined}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
         {/* Footer */}
         {!collapsed && (
-          <div className="p-4 border-t border-white/10 flex-shrink-0">
-            <p className="text-xs text-gray-400 text-center">© 2024 CivicsEdu Admin</p>
+          <div className="p-3 border-t border-white/10 flex-shrink-0">
+            <p className="text-xs text-gray-400 text-center">© 2026 CivicsHub Admin</p>
           </div>
         )}
       </aside>

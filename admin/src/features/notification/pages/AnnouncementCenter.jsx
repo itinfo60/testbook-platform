@@ -128,9 +128,9 @@ export default function AnnouncementCenter() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Target Audience
                 </label>
                 <select
@@ -138,15 +138,15 @@ export default function AnnouncementCenter() {
                   onChange={handleChange('targetRole')}
                   className="input-field"
                 >
-                  <option value="all">All Users</option>
+                  <option value="all">All Users (Students, Teachers, Admins)</option>
                   <option value="student">Students Only</option>
                   <option value="teacher">Teachers Only</option>
                   <option value="admin">Admins Only</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Broadcast Type
                 </label>
                 <select value={form.type} onChange={handleChange('type')} className="input-field">
                   {typeOptions.map((opt) => (
@@ -157,28 +157,28 @@ export default function AnnouncementCenter() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Priority
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Priority Level
                 </label>
                 <select
                   value={form.priority}
                   onChange={handleChange('priority')}
                   className="input-field"
                 >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
+                  <option value="low">Low (Standard update)</option>
+                  <option value="normal">Normal (Regular announcement)</option>
+                  <option value="high">High (Urgent alert / banner)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Schedule Send (Optional)
                 </label>
                 <input
                   type="datetime-local"
                   value={form.scheduledAt}
                   onChange={handleChange('scheduledAt')}
-                  className="input-field"
+                  className="input-field cursor-pointer"
                 />
               </div>
             </div>

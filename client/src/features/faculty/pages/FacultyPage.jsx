@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiAcademicCap, HiStar, HiBookOpen, HiUserGroup, HiBadgeCheck } from 'react-icons/hi';
+import api from '@/services/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 export default function FacultyPage() {

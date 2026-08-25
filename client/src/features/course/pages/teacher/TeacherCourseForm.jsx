@@ -18,8 +18,14 @@ import {
   HiTrash,
   HiVideoCamera,
 } from 'react-icons/hi';
-import { createCourse, updateCourse, fetchCourseById } from '@/features/course/courseSlice';
+import {
+  createCourse,
+  updateCourse,
+  fetchCourseById,
+  publishCourse,
+} from '@/features/course/courseSlice';
 import { examCategoryAPI } from '@/services/api';
+import { getUnifiedCategories, getUnifiedExams } from '@/services/categories';
 import { Input, Button } from '@/components/ui';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -58,6 +64,7 @@ export default function TeacherCourseForm() {
     discountPrice: '',
     isFree: false,
     categoryId: '',
+    examCategoryId: '',
     level: 'all_levels',
     language: 'Bilingual (Hindi + English)',
     thumbnailUrl: '',
@@ -71,6 +78,7 @@ export default function TeacherCourseForm() {
   const [openSections, setOpenSections] = useState({ 0: true });
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [exams, setExams] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
 
@@ -78,10 +86,13 @@ export default function TeacherCourseForm() {
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   useEffect(() => {
-    getUnifiedExamCategories()
-      .then((list) => {
-        setCategories(list);
-      })
+    // Categories (type:'category') for the category dropdown
+    getUnifiedCategories()
+      .then((list) => setCategories(list))
+      .catch(() => {});
+    // Exams (type:'exam') for the optional exam-association dropdown
+    getUnifiedExams()
+      .then((list) => setExams(list))
       .catch(() => {});
   }, []);
 
@@ -99,6 +110,7 @@ export default function TeacherCourseForm() {
         discountPrice: currentCourse.discountPrice || 0,
         isFree: currentCourse.isFree || currentCourse.price === 0,
         categoryId: currentCourse.category?._id || currentCourse.category || '',
+        examCategoryId: currentCourse.examCategory?._id || currentCourse.examCategory || '',
         level: currentCourse.level || 'all_levels',
         language: currentCourse.language || 'Bilingual (Hindi + English)',
         thumbnailUrl: currentCourse.thumbnail?.url || currentCourse.thumbnail || '',
@@ -206,7 +218,7 @@ export default function TeacherCourseForm() {
   };
 
   // ── Submit ────────────────────────────────────────────────────────
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, publishAfterSave = false) => {
     e.preventDefault();
     if (!form.title.trim()) {
       toast.error('Course title is required');
@@ -217,7 +229,7 @@ export default function TeacherCourseForm() {
       return;
     }
     if (!form.categoryId) {
-      toast.error('Please select an Exam Category');
+      toast.error('Please select a category');
       return;
     }
 
@@ -229,6 +241,7 @@ export default function TeacherCourseForm() {
       discountPrice: form.isFree ? 0 : Number(form.discountPrice) || 0,
       isFree: form.isFree,
       category: form.categoryId,
+      ...(form.examCategoryId ? { examCategory: form.examCategoryId } : {}),
       level: form.level,
       language: form.language,
       thumbnail: { url: form.thumbnailUrl, publicId: '' },
@@ -253,16 +266,46 @@ export default function TeacherCourseForm() {
 
     setSaving(true);
     try {
+      let savedCourse;
       if (isEdit) {
-        await dispatch(updateCourse({ id, ...payload })).unwrap();
-        toast.success('Course updated successfully!');
+        savedCourse = await dispatch(updateCourse({ id, ...payload })).unwrap();
+        toast.success('Course saved!');
       } else {
-        await dispatch(createCourse(payload)).unwrap();
-        toast.success('Course created and published!');
+        savedCourse = await dispatch(createCourse(payload)).unwrap();
+        toast.success('Course saved as draft!');
       }
+
+      // If publish was requested, publish immediately after save
+      if (publishAfterSave) {
+        const courseId = savedCourse?.course?._id || savedCourse?._id || id;
+        try {
+          await dispatch(publishCourse(courseId)).unwrap();
+          toast.success('Course published! Students can now enroll.');
+        } catch (pubErr) {
+          toast.error(pubErr || 'Saved but could not publish. Check curriculum and thumbnail.');
+          navigate('/teacher/courses');
+          return;
+        }
+      }
+
       navigate('/teacher/courses');
     } catch (err) {
       toast.error(err?.message || err || 'Failed to save course');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Unpublish (hide from students) ────────────────────────────────
+  const handleUnpublish = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      await dispatch(updateCourse({ id, status: 'draft', isPublished: false })).unwrap();
+      toast.success('Course hidden from students.');
+      navigate('/teacher/courses');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to unpublish');
     } finally {
       setSaving(false);
     }
@@ -373,7 +416,8 @@ export default function TeacherCourseForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Target Exam Category *
+                    Category *
+                    <span className="text-slate-400 font-normal ml-1">(for catalog filter)</span>
                   </label>
                   <select
                     required
@@ -381,10 +425,31 @@ export default function TeacherCourseForm() {
                     onChange={(e) => setField('categoryId', e.target.value)}
                     className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:border-primary-500 text-dark-900 dark:text-white font-medium"
                   >
-                    <option value="">-- Select Target Exam --</option>
+                    <option value="">-- Select Category --</option>
                     {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c.id || c._id} value={c.id || c._id}>
+                        {c.icon ? `${c.icon} ` : ''}
                         {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Exam
+                    <span className="text-slate-400 font-normal ml-1">(shows on exam page)</span>
+                  </label>
+                  <select
+                    value={form.examCategoryId || ''}
+                    onChange={(e) => setField('examCategoryId', e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:border-primary-500 text-dark-900 dark:text-white font-medium"
+                  >
+                    <option value="">-- None --</option>
+                    {exams.map((e) => (
+                      <option key={e.id || e._id} value={e.id || e._id}>
+                        {e.icon ? `${e.icon} ` : ''}
+                        {e.name}
                       </option>
                     ))}
                   </select>
@@ -403,6 +468,22 @@ export default function TeacherCourseForm() {
                     <option value="Hindi">Hindi Medium</option>
                     <option value="English">English Medium</option>
                     <option value="Rajasthani / Regional">Rajasthani / Regional</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Course Level
+                  </label>
+                  <select
+                    value={form.level}
+                    onChange={(e) => setField('level', e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl focus:outline-none focus:border-primary-500 text-dark-900 dark:text-white font-medium"
+                  >
+                    <option value="all_levels">All Levels</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
                   </select>
                 </div>
               </div>
@@ -471,6 +552,45 @@ export default function TeacherCourseForm() {
                 className="text-xs text-primary-600 font-semibold hover:underline flex items-center gap-1 pt-1"
               >
                 <HiPlus className="h-3.5 w-3.5" /> Add Highlight Badge
+              </button>
+            </div>
+
+            {/* ── Requirements ─────────────────────────────────────── */}
+            <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-dark-800 pb-3">
+                <h3 className="font-bold text-dark-900 dark:text-white text-sm flex items-center gap-1.5">
+                  Requirements / Prerequisites
+                </h3>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  Shown on course detail page
+                </span>
+              </div>
+
+              {form.requirements.map((item, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={item}
+                    onChange={(e) => setArrayItem('requirements', i, e.target.value)}
+                    placeholder="e.g. Basic knowledge of Rajasthan GK"
+                    className="w-full px-3.5 py-1.5 text-xs bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl text-dark-900 dark:text-white"
+                  />
+                  {form.requirements.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeArrayItem('requirements', i)}
+                      className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
+                    >
+                      <HiTrash className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addArrayItem('requirements', '')}
+                className="text-xs text-primary-600 font-semibold hover:underline flex items-center gap-1 pt-1"
+              >
+                <HiPlus className="h-3.5 w-3.5" /> Add Requirement
               </button>
             </div>
           </div>
@@ -707,20 +827,48 @@ export default function TeacherCourseForm() {
                 Continue &rarr;
               </button>
             ) : (
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {saving ? (
-                  'Saving...'
-                ) : (
-                  <>
-                    <HiCheckCircle className="h-4 w-4" />
-                    {isEdit ? 'Update Course' : 'Publish Course'}
-                  </>
+              <>
+                {/* Save as Draft — always visible */}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  onClick={(e) => handleSubmit(e, false)}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-700 dark:text-dark-300 transition-all disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Save as Draft'}
+                </button>
+
+                {/* Unpublish — only on edit when already published */}
+                {isEdit && currentCourse?.isPublished && (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={handleUnpublish}
+                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 transition-all disabled:opacity-50"
+                  >
+                    Hide from Students
+                  </button>
                 )}
-              </button>
+
+                {/* Publish — save + publish in one click */}
+                {(!isEdit || !currentCourse?.isPublished) && (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={(e) => handleSubmit(e, true)}
+                    className="px-6 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      'Publishing...'
+                    ) : (
+                      <>
+                        <HiCheckCircle className="h-4 w-4" />
+                        {isEdit ? 'Save & Publish' : 'Publish Course'}
+                      </>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

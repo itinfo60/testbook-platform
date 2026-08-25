@@ -47,7 +47,7 @@ export default function Footer() {
     Support: [
       { label: 'Help Center & FAQs', path: '/help' },
       { label: 'Faculty Members', path: '/faculty' },
-      { label: 'About CivicsEdu', path: '/about' },
+      { label: 'About CivicsHub', path: '/about' },
       { label: 'Privacy Policy', path: '/legal/privacy' },
       { label: 'Terms & Conditions', path: '/legal/terms' },
     ],
@@ -68,13 +68,12 @@ export default function Footer() {
         <div className="py-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
-            <Link to="/" className="flex items-center gap-2.5 mb-4">
-              <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
+            <Link to="/" className="inline-flex items-center gap-2.5 mb-4">
+              <div className="h-10 w-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm">
                 <HiAcademicCap className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-bold font-display tracking-tight uppercase">
-                <span className="text-white">Civics</span>
-                <span className="text-blue-400">Edu</span>
+              <span className="text-2xl font-bold font-display text-white">
+                Civics<span className="text-primary-500">Hub</span>
               </span>
             </Link>
             <p className="text-sm text-slate-400 mb-5 max-w-xs leading-relaxed">
@@ -84,7 +83,7 @@ export default function Footer() {
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <HiMail className="h-4 w-4 text-primary-400" />
-                <span>support@civicsedu.com</span>
+                <span>support@civicshub.com</span>
               </div>
             </div>
           </div>
@@ -114,7 +113,7 @@ export default function Footer() {
         {/* Bottom Footer */}
         <div className="py-6 border-t border-dark-800/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-slate-400">
-            © {new Date().getFullYear()} CivicsEdu. All rights reserved. Specialized Coaching for
+            © {new Date().getFullYear()} CivicsHub. All rights reserved. Specialized Coaching for
             RPSC & Political Science.
           </p>
           <div className="flex items-center gap-3">

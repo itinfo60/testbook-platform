@@ -17,7 +17,7 @@ export default function FinalCTA() {
         </h2>
 
         <p className="text-xl text-navy-200 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Join 25,000+ aspirants using CivicsEdu to prepare smarter, practice harder and measure
+          Join 25,000+ aspirants using CivicsHub to prepare smarter, practice harder and measure
           their progress.
         </p>
 

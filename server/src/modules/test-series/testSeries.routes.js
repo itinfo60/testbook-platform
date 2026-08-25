@@ -4,6 +4,14 @@ import { authenticate, authorize, optionalAuth } from '../../middleware/auth.js'
 
 const router = Router();
 
+// Teacher: their own series (includes drafts) — must be before /:slug to avoid slug capture
+router.get(
+  '/teacher/my-series',
+  authenticate,
+  authorize('teacher', 'admin', 'super_admin'),
+  testSeriesController.getMyTestSeries
+);
+
 // Public / optionalAuth routes
 router.get('/', optionalAuth, testSeriesController.getTestSeries);
 router.get('/:slug', optionalAuth, testSeriesController.getTestSeriesBySlug);

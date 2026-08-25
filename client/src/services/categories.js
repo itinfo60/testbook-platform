@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { examCategoryAPI } from './api';
+import api from './api';
 
-let cachedCategories = null;
-let fetchPromise = null;
+// ── per-type cache ────────────────────────────────────────────────────────────
+const cache = { exam: null, category: null, all: null };
+const pending = { exam: null, category: null, all: null };
 
 /**
- * Standardize category objects from any backend endpoint
+ * Standardize a raw category/exam document from any API endpoint.
  */
 export function normalizeCategory(cat) {
   if (!cat) return null;
@@ -13,10 +14,22 @@ export function normalizeCategory(cat) {
   return {
     _id: id,
     id: id,
-    name: cat.name || cat.title || 'General Exam',
+    name: cat.name || cat.title || 'General',
     slug: cat.slug || id,
     description: cat.description || '',
     icon: cat.icon || '🎯',
+    type: cat.type || 'category',
+    // Exam metadata
+    latestStatus: cat.latestStatus || '',
+    conductingBody: cat.conductingBody || '',
+    officialWebsite: cat.officialWebsite || '',
+    syllabus: cat.syllabus || '',
+    examPattern: cat.examPattern || '',
+    eligibility: cat.eligibility || '',
+    selectionProcess: cat.selectionProcess || '',
+    importantDates: cat.importantDates || [],
+    isActive: cat.isActive !== false,
+    order: cat.order || 0,
     courseCount: cat.courseCount || cat.coursesCount || 0,
     coursesCount: cat.coursesCount || cat.courseCount || 0,
     testCount: cat.testCount || cat.testsCount || 0,
@@ -31,56 +44,109 @@ export function normalizeCategory(cat) {
 }
 
 /**
- * Fetch all exam categories with caching and canonical fallbacks (Single Source of Truth)
+ * Internal fetcher. Calls the public GET /categories endpoint with an optional
+ * `type` param and normalises the result. Results are cached per type key.
+ *
+ * type: 'exam' | 'category' | undefined (= all)
  */
-export async function getUnifiedExamCategories(forceRefresh = false) {
-  if (cachedCategories && !forceRefresh) {
-    return cachedCategories;
-  }
+async function fetchByType(type, forceRefresh = false) {
+  const key = type || 'all';
 
-  if (fetchPromise && !forceRefresh) {
-    return fetchPromise;
-  }
+  if (cache[key] && !forceRefresh) return cache[key];
+  if (pending[key] && !forceRefresh) return pending[key];
 
-  fetchPromise = (async () => {
+  pending[key] = (async () => {
     try {
-      const res = await examCategoryAPI.getAll();
-      const rawList =
-        res.data?.data?.allCategories ||
-        res.data?.data?.categories ||
-        res.data?.categories ||
-        res.data?.data ||
-        [];
+      const params = type ? { type } : {};
+      const res = await api.get('/categories', { params });
+      const raw = res.data?.data;
+      // Public endpoint shape: { categories: [...], allCategories: [...] }
+      const rawList = Array.isArray(raw) ? raw : raw?.allCategories || raw?.categories || [];
 
-      const list = Array.isArray(rawList) ? rawList.map(normalizeCategory).filter(Boolean) : [];
-
-      cachedCategories = list;
+      const list = rawList.map(normalizeCategory).filter(Boolean);
+      cache[key] = list;
       return list;
     } catch (err) {
-      console.warn('Failed to load categories from API', err);
-      cachedCategories = [];
+      console.warn(`Failed to load categories (type=${key})`, err);
+      cache[key] = [];
       return [];
     } finally {
-      fetchPromise = null;
+      pending[key] = null;
     }
   })();
 
-  return fetchPromise;
+  return pending[key];
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/**
+ * Fetch only `type:'exam'` records — used by /exams pages, CuratedExams section.
+ */
+export function getUnifiedExams(forceRefresh = false) {
+  return fetchByType('exam', forceRefresh);
 }
 
 /**
- * React Hook for consuming exam categories everywhere in client components
+ * Fetch only `type:'category'` records — used by course catalog filter and
+ * the teacher/admin course creation category dropdown.
+ */
+export function getUnifiedCategories(forceRefresh = false) {
+  return fetchByType('category', forceRefresh);
+}
+
+/**
+ * Fetch all records regardless of type (legacy — kept for backwards compat).
+ * New code should prefer getUnifiedExams or getUnifiedCategories.
+ */
+export function getUnifiedExamCategories(forceRefresh = false) {
+  return fetchByType(undefined, forceRefresh);
+}
+
+// ── React Hooks ───────────────────────────────────────────────────────────────
+
+/**
+ * Hook: returns only exams (type:'exam') — for home section and exam catalog.
  */
 export function useExamCategories() {
-  const [categories, setCategories] = useState(cachedCategories || []);
-  const [loading, setLoading] = useState(!cachedCategories);
+  const [categories, setCategories] = useState(cache.exam || []);
+  const [loading, setLoading] = useState(!cache.exam);
 
   useEffect(() => {
-    getUnifiedExamCategories().then((cats) => {
-      setCategories(cats);
-      setLoading(false);
+    let cancelled = false;
+    getUnifiedExams().then((list) => {
+      if (!cancelled) {
+        setCategories(list);
+        setLoading(false);
+      }
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  return { categories, loading, refresh: () => getUnifiedExamCategories(true) };
+  return { categories, loading, refresh: () => getUnifiedExams(true).then(setCategories) };
+}
+
+/**
+ * Hook: returns only course categories (type:'category') — for course forms.
+ */
+export function useCourseCategories() {
+  const [categories, setCategories] = useState(cache.category || []);
+  const [loading, setLoading] = useState(!cache.category);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUnifiedCategories().then((list) => {
+      if (!cancelled) {
+        setCategories(list);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { categories, loading, refresh: () => getUnifiedCategories(true).then(setCategories) };
 }

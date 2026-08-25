@@ -69,7 +69,7 @@ export default function NotificationDropdown({ onClose }) {
             const colorClass = typeColors[notif.type] || typeColors.default;
             return (
               <div
-                key={notif._id}
+                key={notif.id || notif._id}
                 className={`flex gap-4 px-6 py-4 hover:bg-slate-50 dark:hover:bg-dark-800 transition-colors cursor-pointer border-b border-slate-100 dark:border-dark-800/50 last:border-0 group ${
                   !notif.read ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
                 }`}
@@ -98,7 +98,7 @@ export default function NotificationDropdown({ onClose }) {
                 </div>
                 {!notif.read && (
                   <button
-                    onClick={(e) => handleMarkRead(e, notif._id)}
+                    onClick={(e) => handleMarkRead(e, notif.id || notif._id)}
                     className="flex-shrink-0 p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-dark-900 hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-400 border border-slate-200 dark:border-dark-700 shadow-sm self-start"
                     title="Mark as read"
                   >

@@ -9,7 +9,7 @@ import LoadingSpinner from '@/components/loadingSpinner';
 export default function BlogForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isEdit = !!id;
+  const isEdit = Boolean(id && id !== 'undefined');
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,8 +45,12 @@ export default function BlogForm() {
 
   useEffect(() => {
     examCategoriesAPI
-      .getAll()
-      .then((res) => setCategories(res.data?.categories || res.data?.data?.categories || []))
+      .getAll({ limit: 200 })
+      .then((res) => {
+        const cats =
+          res.data?.data?.allCategories || res.data?.data?.categories || res.data?.categories || [];
+        setCategories(Array.isArray(cats) ? cats : []);
+      })
       .catch(console.error);
 
     if (isEdit) {
@@ -230,7 +234,7 @@ export default function BlogForm() {
                 >
                   <option value="">None / General</option>
                   {categories.map((c) => (
-                    <option key={c._id} value={c._id}>
+                    <option key={c.id || c._id} value={c.id || c._id}>
                       {c.name}
                     </option>
                   ))}

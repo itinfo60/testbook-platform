@@ -1,9 +1,10 @@
-import { Button } from '@/components/ui';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiExternalLink, HiPencil, HiPlus, HiPuzzle, HiSearch, HiTrash } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 import { fetchTeacherQuizzes } from '@/features/quiz/quizSlice';
+import { quizAPI } from '@/services/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 export default function TeacherQuizzes() {
@@ -127,7 +128,7 @@ export default function TeacherQuizzes() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredQuizzes.map((quiz) => (
             <div
-              key={quiz._id}
+              key={quiz.id || quiz._id}
               className="bg-white dark:bg-dark-900 rounded-2xl p-5 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div>

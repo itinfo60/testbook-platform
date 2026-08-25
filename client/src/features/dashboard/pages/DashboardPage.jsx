@@ -348,7 +348,7 @@ export default function Dashboard() {
 
               return (
                 <div
-                  key={enrollment._id}
+                  key={enrollment.id || enrollment._id}
                   className="bg-white dark:bg-dark-900 p-5 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div>
@@ -439,7 +439,7 @@ export default function Dashboard() {
           {recentAttempts.length > 0 ? (
             recentAttempts.slice(0, 3).map((attempt) => (
               <div
-                key={attempt._id}
+                key={attempt.id || attempt._id}
                 className="bg-white dark:bg-dark-900 p-5 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm flex flex-col justify-between"
               >
                 <div>
@@ -528,7 +528,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {quizzes.slice(0, 3).map((quiz, index) => (
               <div
-                key={quiz._id}
+                key={quiz.id || quiz._id}
                 className={`${index === 0 ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white relative overflow-hidden' : 'bg-white dark:bg-dark-900'} p-5 rounded-3xl border ${index === 0 ? 'border-transparent' : 'border-slate-200 dark:border-dark-800'} shadow-sm flex flex-col justify-between`}
               >
                 {index === 0 && (
@@ -611,7 +611,7 @@ export default function Dashboard() {
           {liveClasses.length > 0 ? (
             liveClasses.map((lc) => (
               <div
-                key={lc._id}
+                key={lc.id || lc._id}
                 className="bg-white dark:bg-dark-900 p-5 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm flex flex-col justify-between"
               >
                 <div>
@@ -639,7 +639,7 @@ export default function Dashboard() {
                 </div>
 
                 <Link
-                  to={`/live/${lc._id}`}
+                  to={`/live-classes/${lc._id}/room`}
                   className="mt-4 w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all text-xs text-center flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <HiVideoCamera className="h-4 w-4" /> Enter Live Classroom
@@ -690,9 +690,16 @@ export default function Dashboard() {
 
         {wishlistItems && wishlistItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {wishlistItems.map((item) => (
+            {wishlistItems.map((item, idx) => (
               <div
-                key={item._id}
+                key={
+                  item.id ||
+                  item._id ||
+                  item.course?.id ||
+                  item.course?._id ||
+                  item.testSeries?.id ||
+                  idx
+                }
                 className="bg-white dark:bg-dark-900 p-5 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm flex flex-col justify-between"
               >
                 <div>
@@ -700,14 +707,18 @@ export default function Dashboard() {
                     {item.course?.title || item.testSeries?.title || 'Saved Course/Test'}
                   </h3>
                   <p className="text-xs text-amber-700 dark:text-amber-500 font-black mb-3">
-                    ₹{item.course?.effectivePrice || item.testSeries?.price || 'Free'}
+                    ₹
+                    {item.course?.effectivePrice ||
+                      item.course?.price ||
+                      item.testSeries?.price ||
+                      'Free'}
                   </p>
                 </div>
                 <Link
                   to={
                     item.course
-                      ? `/checkout/${item.course.slug || item.course._id}`
-                      : `/checkout/${item.testSeries?.slug || item.testSeries?._id}?type=test_series`
+                      ? `/checkout/${item.course.slug || item.course.id || item.course._id}`
+                      : `/checkout/${item.testSeries?.slug || item.testSeries?.id || item.testSeries?._id}?type=test_series`
                   }
                   className="w-full bg-amber-800 hover:bg-amber-900 text-white font-bold py-2.5 px-4 rounded-xl text-center text-xs transition-colors shadow-sm"
                 >
@@ -762,7 +773,7 @@ export default function Dashboard() {
             <div className="divide-y divide-slate-100 dark:divide-dark-800">
               {orders.map((ord) => (
                 <div
-                  key={ord._id}
+                  key={ord.id || ord._id}
                   className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-dark-800/50 transition-colors"
                 >
                   <div className="min-w-0">

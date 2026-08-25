@@ -527,7 +527,7 @@ export default function TestSeriesDetail() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {moreSeriesList.slice(0, 4).map((mSeries) => (
                     <Link
-                      key={mSeries._id}
+                      key={mSeries.id || mSeries._id}
                       to={`/test-series/${mSeries.slug || mSeries._id}`}
                       className="p-4 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-primary-400 hover:shadow-sm transition-all duration-200 block group"
                     >

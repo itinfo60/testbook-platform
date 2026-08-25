@@ -17,8 +17,9 @@ const CHIP_STYLES = [
 export default function JourneyHero() {
   const { categories, loading } = useExamCategories();
 
-  // Only root-level categories for the marquee
-  const examChips = categories.filter((c) => !c.parent);
+  // All exams belong in the marquee — including those nested inside a category.
+  // (`useExamCategories` already scopes to type:'exam', so no categories leak in.)
+  const examChips = categories;
 
   // Repeat enough times to fill the marquee scroll
   const repeated = examChips.length > 0 ? Array.from({ length: 5 }, () => examChips).flat() : [];

@@ -65,9 +65,10 @@ export default function BlogList() {
   };
 
   const handleToggleStatus = async (blog) => {
+    const blogId = blog.id || blog._id;
     const newStatus = blog.status === 'published' ? 'draft' : 'published';
     try {
-      await blogsAPI.update(blog._id, { status: newStatus });
+      await blogsAPI.update(blogId, { status: newStatus });
       toast.success(`Post ${newStatus}`);
       fetchBlogs();
     } catch {
@@ -168,7 +169,10 @@ export default function BlogList() {
                 </tr>
               ) : (
                 blogs.map((blog) => (
-                  <tr key={blog._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr
+                    key={blog.id || blog._id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  >
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
                         {blog.title}
@@ -211,13 +215,13 @@ export default function BlogList() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <Link
-                          to={`/blogs/${blog._id}/edit`}
+                          to={`/blogs/${blog.id || blog._id}/edit`}
                           className="text-primary-600 hover:text-primary-900 dark:hover:text-primary-400"
                         >
                           <HiPencilAlt className="w-5 h-5" />
                         </Link>
                         <button
-                          onClick={() => handleDelete(blog._id)}
+                          onClick={() => handleDelete(blog.id || blog._id)}
                           className="text-red-600 hover:text-red-900 dark:hover:text-red-400"
                         >
                           <HiTrash className="w-5 h-5" />

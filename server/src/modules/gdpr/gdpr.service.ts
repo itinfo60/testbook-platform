@@ -1,17 +1,18 @@
-import User from '../user/user.model.js';
-import Enrollment from '../enrollment/enrollment.model.js';
-import Payment from '../payment/payment.model.js';
+import prisma from '../../config/prisma.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 import { ApiError } from '../../core/api-error.js';
 import redis from '../../config/redis.js';
 import { IGdprExportPayload } from './gdpr.dto.js';
+import { comparePassword } from '../user/user.utils.js';
 
 export class GdprService {
   async exportMyData(userId: string): Promise<IGdprExportPayload> {
     const [user, enrollments, payments] = await Promise.all([
-      User.findById(userId).select('-password -refreshTokens -mfaSecret -mfaBackupCodes'),
-      Enrollment.find({ user: userId }),
-      runWithTenant(null, true, () => Payment.find({ user: userId })),
+      prisma.user.findUnique({
+        where: { id: userId },
+      }),
+      prisma.enrollment.findMany({ where: { userId } }),
+      runWithTenant(null, true, () => prisma.payment.findMany({ where: { userId } })),
     ]);
 
     if (!user) {
@@ -21,7 +22,7 @@ export class GdprService {
     return {
       exportedAt: new Date().toISOString(),
       personal: {
-        id: user._id.toString(),
+        id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -33,7 +34,7 @@ export class GdprService {
         consentAt: user.consentAt,
       },
       enrollments: enrollments.map((e: any) => ({
-        courseId: e.course?.toString() || e.test?.toString() || '',
+        courseId: e.courseId || e.testId || '',
         enrolledAt: e.createdAt,
         completedAt: e.completedAt,
         completionPercentage: e.progressPercentage || 0,
@@ -48,7 +49,7 @@ export class GdprService {
   }
 
   async eraseMyData(userId: string, password?: string): Promise<void> {
-    const user = await User.findById(userId).select('+password');
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw ApiError.notFound('User not found');
     }
@@ -57,7 +58,7 @@ export class GdprService {
       if (!password) {
         throw ApiError.badRequest('Password is required to confirm data erasure');
       }
-      const isValid = await user.comparePassword(password);
+      const isValid = await comparePassword(user.password, password);
       if (!isValid) {
         throw ApiError.unauthorized('Invalid password');
       }
@@ -65,21 +66,20 @@ export class GdprService {
 
     // Scrub PII — keep record for audit/analytics but anonymize personal details
     await runWithTenant(null, true, async () => {
-      await User.findByIdAndUpdate(userId, {
-        $set: {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
           name: '[Deleted User]',
           email: `deleted_${userId}@erased.invalid`,
-          avatar: { url: '', publicId: '' },
+          avatar: '',
           isActive: false,
           fcmTokens: [],
           refreshTokens: [],
-          googleId: undefined,
-          mfaSecret: undefined,
+          googleId: null,
+          mfaSecret: null,
           mfaEnabled: false,
-        },
-        $unset: {
-          phone: 1,
-          bio: 1,
+          phone: null,
+          bio: null,
         },
       });
     });
@@ -89,10 +89,13 @@ export class GdprService {
   }
 
   async recordConsent(userId: string, version: string = '1.0'): Promise<void> {
-    const user = await User.findByIdAndUpdate(userId, {
-      consentGiven: true,
-      consentAt: new Date(),
-      dataRetentionPolicyVersion: version,
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        consentGiven: true,
+        consentAt: new Date(),
+        dataRetentionPolicyVersion: version,
+      },
     });
 
     if (!user) {
@@ -103,9 +106,14 @@ export class GdprService {
   }
 
   async getConsentStatus(userId: string): Promise<any> {
-    const user = await User.findById(userId).select(
-      'consentGiven consentAt dataRetentionPolicyVersion'
-    );
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        consentGiven: true,
+        consentAt: true,
+        dataRetentionPolicyVersion: true,
+      },
+    });
     if (!user) {
       throw ApiError.notFound('User not found');
     }

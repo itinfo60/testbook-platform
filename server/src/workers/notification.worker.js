@@ -1,6 +1,5 @@
 import { Worker } from 'bullmq';
-import Notification from '../modules/notification/notification.model.js';
-import User from '../modules/user/user.model.js';
+import prisma from '../config/prisma.js';
 import { sendMulticastPush } from '../utils/pushNotification.js';
 import logger from '../utils/logger.js';
 import { queueConnection } from '../queues/index.js';
@@ -14,10 +13,22 @@ const notificationWorker = new Worker(
 
     await runWithTenant(tenantId, false, async () => {
       // Save in-app notification
-      await Notification.create({ user: userId, tenantId, type, title, message, data: data || {} });
+      await prisma.notification.create({
+        data: {
+          userId,
+          tenantId,
+          type,
+          title,
+          message,
+          data: data || {},
+        },
+      });
 
       // Send FCM push if user has tokens
-      const user = await User.findById(userId).select('fcmTokens');
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { fcmTokens: true },
+      });
       if (user?.fcmTokens?.length) {
         await sendMulticastPush({ tokens: user.fcmTokens, title, body: message, data });
       }

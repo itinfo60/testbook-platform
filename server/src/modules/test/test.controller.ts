@@ -97,7 +97,8 @@ export class TestController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized('Authentication required to update a test');
     }
-    const test = await this.testService.updateTest(req.params.id, req.body, req.userId);
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    const test = await this.testService.updateTest(req.params.id, req.body, req.userId, isAdmin);
     return this.ok(res, { test }, 'Test updated successfully');
   });
 

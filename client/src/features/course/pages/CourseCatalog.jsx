@@ -12,7 +12,7 @@ import Pagination from '@/components/common/Pagination';
 export default function CourseCatalog() {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { courses, loading, pagination, filters } = useSelector((state) => state.courses);
+  const { courses, loading, pagination, filters, error } = useSelector((state) => state.courses);
   const { examCategories } = useSelector((state) => state.categories);
   const [page, setPage] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function CourseCatalog() {
     },
     {
       key: 'category',
-      label: 'Exam Categories',
+      label: 'Filter by Category',
       type: 'checkbox',
       options: [
         ...(examCategories?.map((cat) => ({
@@ -256,15 +256,31 @@ export default function CourseCatalog() {
 
         {/* Course Grid + Pagination */}
         <div className="flex-1 min-w-0">
-          <CourseGrid courses={courses} loading={loading} />
-          {pagination && (
-            <div className="mt-6 sm:mt-8">
-              <Pagination
-                currentPage={pagination.page || page}
-                totalPages={pagination.totalPages || 1}
-                onPageChange={(p) => setPage(p)}
-              />
+          {error ? (
+            <div className="text-center py-16 bg-white dark:bg-dark-900 rounded-3xl border border-red-200 dark:border-red-900/30">
+              <div className="text-4xl mb-3">⚠️</div>
+              <p className="font-bold text-dark-900 dark:text-white mb-1">Failed to load courses</p>
+              <p className="text-sm text-slate-500 mb-4">{error}</p>
+              <button
+                onClick={() => dispatch(fetchCourses({ page, limit: 12, sort: 'newest' }))}
+                className="btn-primary text-sm px-5 py-2"
+              >
+                Retry
+              </button>
             </div>
+          ) : (
+            <>
+              <CourseGrid courses={courses} loading={loading} />
+              {pagination && (
+                <div className="mt-6 sm:mt-8">
+                  <Pagination
+                    currentPage={pagination.page || page}
+                    totalPages={pagination.totalPages || 1}
+                    onPageChange={(p) => setPage(p)}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

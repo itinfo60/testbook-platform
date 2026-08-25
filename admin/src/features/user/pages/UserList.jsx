@@ -1,7 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, ToggleRight, ToggleLeft, Edit, Trash2, BookOpen } from 'lucide-react';
+import {
+  Plus,
+  Users,
+  ToggleRight,
+  ToggleLeft,
+  Edit,
+  Trash2,
+  BookOpen,
+  Eye,
+  GraduationCap,
+  CheckCircle2,
+} from 'lucide-react';
 
 // Actions
 import { fetchUsers, deleteUser, toggleUserStatus } from '@/features/user/userSlice';
@@ -15,7 +26,7 @@ import LoadingSpinner from '@/components/loadingSpinner';
 import Modal from '@/components/Modal';
 
 // Utils
-import { formatDate, getRoleBadge, getStatusColor } from '@/utils';
+import { formatDate, getStatusColor } from '@/utils';
 import useDebounce from '@/hooks/useDebounce';
 
 export default function UserList() {
@@ -24,7 +35,8 @@ export default function UserList() {
   const { list, pagination, loading } = useSelector((s) => s.users);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('student');
+  const [statusFilter, setStatusFilter] = useState(''); // '' = all, 'true' = active, 'false' = inactive
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -44,12 +56,14 @@ export default function UserList() {
         page,
         limit: 10,
         search: debouncedSearch,
-        role: roleFilter,
+        role: roleFilter || 'student',
+        // pass isActive explicitly so backend shows inactive when selected
+        ...(statusFilter !== '' && { isActive: statusFilter === 'true' }),
         sort: sortField,
         order: sortOrder,
       })
     );
-  }, [dispatch, page, debouncedSearch, roleFilter, sortField, sortOrder]);
+  }, [dispatch, page, debouncedSearch, roleFilter, statusFilter, sortField, sortOrder]);
 
   useEffect(() => {
     loadUsers();
@@ -74,7 +88,7 @@ export default function UserList() {
   const columns = [
     {
       key: 'name',
-      label: 'User',
+      label: 'Student',
       sortable: true,
       render: (_, row) => (
         <div className="flex items-center gap-3">
@@ -89,71 +103,122 @@ export default function UserList() {
       ),
     },
     {
-      key: 'role',
-      label: 'Role',
-      sortable: true,
-      render: (val) => <span className={getRoleBadge(val)}>{val}</span>,
-    },
-    {
       key: 'status',
       label: 'Status',
       sortable: true,
       render: (_, row) => {
-        const status = row.isActive !== false ? 'active' : 'inactive';
-        return <span className={getStatusColor(status)}>{status}</span>;
+        const isActive = row.isActive !== false;
+        return (
+          <span className={getStatusColor(isActive ? 'active' : 'inactive')}>
+            {isActive ? 'Active' : 'Inactive'}
+          </span>
+        );
       },
     },
     {
       key: 'createdAt',
-      label: 'Joined',
+      label: 'Joined Date',
       sortable: true,
       render: (val) => formatDate(val),
     },
   ];
+
+  // Student KPIs
+  const totalStudents = pagination?.total || list.length;
+  const activeStudents = list.filter((u) => u.isActive !== false).length;
+  const verifiedStudents = list.filter((u) => u.isEmailVerified !== false).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight">
-            Users
+            Students Management
           </h2>
-          <p className="mt-1 text-sm font-bold text-gray-500 dark:text-gray-400">
-            Manage all platform users and bulk assignments
+          <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+            Manage student registrations, profile histories, enrollments, and progress
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {selectedUsers.length > 0 && (
             <button
               onClick={() => setAssignModalOpen(true)}
-              className="btn-outline gap-2 border-primary-500 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 font-bold"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-50 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 border border-primary-300 dark:border-primary-700/60 hover:bg-primary-100 transition-all shadow-sm shrink-0"
+              title={`Assign courses or test series to ${selectedUsers.length} selected students`}
             >
-              <BookOpen className="w-4 h-4" /> Bulk Assign ({selectedUsers.length})
+              <BookOpen className="w-4 h-4 shrink-0 text-primary-600 dark:text-primary-400" />
+              <span>Bulk Assign</span>
+              <span className="px-2 py-0.5 rounded-full text-xs bg-primary-600 text-white font-bold">
+                {selectedUsers.length}
+              </span>
             </button>
           )}
           <button
             onClick={() => navigate('/users/create')}
-            className="btn-primary gap-2 font-bold shadow-md"
+            className="btn-primary gap-2 font-bold shadow-md shrink-0"
+            title="Register a new student account"
           >
-            <Plus className="w-4 h-4" /> Add User
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>Add Student</span>
           </button>
         </div>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Total Students
+            </p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{totalStudents}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center font-bold">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+        </div>
+        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Active Students
+            </p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              {activeStudents}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center font-bold">
+            <ToggleRight className="w-5 h-5" />
+          </div>
+        </div>
+        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Verified Accounts
+            </p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+              {verifiedStudents}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center font-bold">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <select
-          value={roleFilter}
+          value={statusFilter}
           onChange={(e) => {
-            setRoleFilter(e.target.value);
+            setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="input-field w-40 py-2"
+          className="input-field w-44 py-2"
+          title="Filter by student active status"
         >
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="teacher">Teacher</option>
-          <option value="student">Student</option>
+          <option value="">All Statuses</option>
+          <option value="true">Active Only</option>
+          <option value="false">Inactive (Deactivated)</option>
         </select>
       </div>
 
@@ -169,7 +234,7 @@ export default function UserList() {
           setSearch(val);
           setPage(1);
         }}
-        searchPlaceholder="Search users..."
+        searchPlaceholder="Search users by name or email..."
         sortField={sortField}
         sortOrder={sortOrder}
         onSort={handleSort}
@@ -177,45 +242,62 @@ export default function UserList() {
         emptyIcon={Users}
         selectable={true}
         selectedRows={selectedUsers}
-        onSelectRow={(id, selected) => {
-          setSelectedUsers((prev) => (selected ? [...prev, id] : prev.filter((uId) => uId !== id)));
+        onSelectRow={(id, isChecked) => {
+          setSelectedUsers((prev) => {
+            const shouldAdd = isChecked !== undefined ? isChecked : !prev.includes(id);
+            return shouldAdd
+              ? prev.includes(id)
+                ? prev
+                : [...prev, id]
+              : prev.filter((uId) => uId !== id);
+          });
         }}
         onSelectAll={(selected) => {
           if (selected) {
-            setSelectedUsers(list.map((u) => u._id));
+            setSelectedUsers(list.map((u) => u.id || u._id));
           } else {
             setSelectedUsers([]);
           }
         }}
-        actions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => dispatch(toggleUserStatus(row))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Toggle status"
-            >
-              {row.status === 'active' ? (
-                <ToggleRight className="w-4 h-4 text-emerald-600" />
-              ) : (
-                <ToggleLeft className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-            <button
-              onClick={() => navigate(`/users/${row._id}/edit`)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Edit"
-            >
-              <Edit className="w-4 h-4 text-blue-600" />
-            </button>
-            <button
-              onClick={() => setDeleteTarget(row._id)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </button>
-          </div>
-        )}
+        actions={(row) => {
+          const rowId = row.id || row._id;
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => navigate(`/users/${rowId}`)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 transition-colors"
+                title="View Full Student Profile & Enrollments"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => dispatch(toggleUserStatus(row))}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title={row.isActive !== false ? 'Deactivate User' : 'Activate User'}
+              >
+                {row.isActive !== false ? (
+                  <ToggleRight className="w-4 h-4 text-emerald-600" />
+                ) : (
+                  <ToggleLeft className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
+              <button
+                onClick={() => navigate(`/users/${rowId}/edit`)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Edit User Profile"
+              >
+                <Edit className="w-4 h-4 text-blue-600" />
+              </button>
+              <button
+                onClick={() => setDeleteTarget(rowId)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Delete User Account"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
+          );
+        }}
       />
 
       <ConfirmDialog

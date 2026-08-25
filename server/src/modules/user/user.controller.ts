@@ -23,7 +23,7 @@ export class UserController extends BaseController {
   });
 
   getUserById = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const user = await this.userService.getUserById(req.params.id);
+    const user = await this.userService.getUserById(req.params.id as string);
     return this.ok(res, { user });
   });
 
@@ -33,12 +33,12 @@ export class UserController extends BaseController {
   });
 
   updateUser = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const user = await this.userService.updateUser(req.params.id, req.body);
+    const user = await this.userService.updateUser(req.params.id as string, req.body);
     return this.ok(res, { user }, 'User updated successfully');
   });
 
   deleteUser = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    await this.userService.deleteUser(req.params.id);
+    await this.userService.deleteUser(req.params.id as string);
     // Bust the per-tenant dashboard cache so stats update immediately
     const tenantId = req.tenantId || 'global';
     await redis.del(`admin:dashboard:${tenantId}`);
@@ -46,12 +46,15 @@ export class UserController extends BaseController {
   });
 
   updateUserRole = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const user = await this.userService.updateUserRole(req.params.id, req.body.role);
+    const user = await this.userService.updateUserRole(req.params.id as string, req.body.role);
     return this.ok(res, { user }, 'User role updated successfully');
   });
 
   updateUserStatus = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const user = await this.userService.updateUserStatus(req.params.id, req.body.isActive);
+    const user = await this.userService.updateUserStatus(
+      req.params.id as string,
+      req.body.isActive
+    );
     return this.ok(res, { user }, 'User status updated successfully');
   });
 }

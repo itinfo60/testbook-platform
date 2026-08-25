@@ -1,11 +1,9 @@
-import { Model } from 'mongoose';
 import { BaseRepository } from '../../core/base.repository.js';
-import { ISubscriptionPlan } from '../payment/payment.dto.js';
-import SubscriptionPlan from './subscriptionPlan.model.js';
+import prisma from '../../config/prisma.js';
 
-export class SubscriptionPlanRepository extends BaseRepository<ISubscriptionPlan> {
-  constructor(model: Model<ISubscriptionPlan> = SubscriptionPlan as Model<ISubscriptionPlan>) {
-    super(model);
+export class SubscriptionPlanRepository extends BaseRepository<any> {
+  constructor(model = prisma.subscriptionPlan) {
+    super(model as any);
   }
 }
 export default SubscriptionPlanRepository;

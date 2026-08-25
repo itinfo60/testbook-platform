@@ -1,49 +1,49 @@
-import mongoose from 'mongoose';
+import prisma from '../../config/prisma.js';
 import { BaseService } from '../../core/base.service.js';
 import { ISubscriptionPlan, ISubscriptionPlanDto } from '../payment/payment.dto.js';
 import SubscriptionPlanRepository from './subscriptionPlan.repository.js';
-import Institute from '../institute/institute.model.js';
 import { ApiError } from '../../core/api-error.js';
 import { transactionalEmailQueue } from '../../queues/index.js';
-import SubscriptionPlan from './subscriptionPlan.model.js';
 
-export class SubscriptionService extends BaseService<
-  ISubscriptionPlan,
-  SubscriptionPlanRepository
-> {
+export class SubscriptionService extends BaseService<any, SubscriptionPlanRepository> {
   constructor(repository: SubscriptionPlanRepository = new SubscriptionPlanRepository()) {
     super(repository);
   }
 
-  async createPlan(data: ISubscriptionPlanDto): Promise<ISubscriptionPlan> {
-    const existing = await SubscriptionPlan.findOne({ name: data.name.toLowerCase() });
+  async createPlan(data: ISubscriptionPlanDto): Promise<any> {
+    const existing = await prisma.subscriptionPlan.findFirst({
+      where: { name: data.name.toLowerCase() },
+    });
     if (existing) {
       throw ApiError.conflict('Plan with this name already exists');
     }
 
-    return this.repository.create({
-      ...data,
-      name: data.name.toLowerCase(),
+    return prisma.subscriptionPlan.create({
+      data: {
+        ...data,
+        name: data.name.toLowerCase(),
+      } as any,
     });
   }
 
-  async getPlans(): Promise<ISubscriptionPlan[]> {
-    return this.repository.find({ isActive: true });
+  async getPlans(): Promise<any[]> {
+    return prisma.subscriptionPlan.findMany({ where: { isActive: true } });
   }
 
-  async updatePlan(
-    id: string,
-    updates: Partial<ISubscriptionPlanDto>
-  ): Promise<ISubscriptionPlan | null> {
-    const plan = await this.repository.updateById(id, updates);
+  async updatePlan(id: string, updates: Partial<ISubscriptionPlanDto>): Promise<any | null> {
+    const plan = await prisma.subscriptionPlan
+      .update({ where: { id }, data: updates as any })
+      .catch(() => null);
     if (!plan) {
       throw ApiError.notFound('Plan not found');
     }
     return plan;
   }
 
-  async deletePlan(id: string): Promise<ISubscriptionPlan | null> {
-    const plan = await this.repository.updateById(id, { isActive: false });
+  async deletePlan(id: string): Promise<any | null> {
+    const plan = await prisma.subscriptionPlan
+      .update({ where: { id }, data: { isActive: false } })
+      .catch(() => null);
     if (!plan) {
       throw ApiError.notFound('Plan not found');
     }
@@ -51,57 +51,73 @@ export class SubscriptionService extends BaseService<
   }
 
   async upgradeSubscriptionDemo(tenantId: string, planId: string) {
-    const plan = await SubscriptionPlan.findById(planId);
+    const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
     if (!plan || !plan.isActive) throw ApiError.notFound('Plan not found');
 
-    const institute = await Institute.findById(tenantId);
+    const institute = await prisma.institute.findUnique({ where: { id: tenantId } });
     if (!institute) throw ApiError.notFound('Institute not found');
 
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + (plan.billingCycle === 'yearly' ? 12 : 1));
 
-    institute.subscription.plan = plan._id;
-    institute.subscription.status = 'active';
-    institute.subscription.expiresAt = expiresAt;
-    institute.limits.studentLimit = plan.studentLimit;
-    institute.limits.teacherLimit = plan.teacherLimit;
-    institute.limits.storageLimit = plan.storageLimit;
-    await institute.save();
+    const updatedInstitute = await prisma.institute.update({
+      where: { id: tenantId },
+      data: {
+        subscription: {
+          plan: plan.id,
+          status: 'active',
+          expiresAt,
+        },
+        limits: {
+          studentLimit: plan.studentLimit,
+          teacherLimit: plan.teacherLimit,
+          storageLimit: plan.storageLimit,
+        },
+      },
+    });
 
-    return { institute, plan };
+    return { institute: updatedInstitute, plan };
   }
 
   async getMySubscription(tenantId: string) {
-    const institute = await Institute.findById(tenantId).populate('subscription.plan');
+    // Note: Assuming subscription JSON or relations. If it's a relation, include it.
+    // If it's JSON, the plan ID is inside subscription. We'll return as is or fetch plan if needed.
+    const institute = await prisma.institute.findUnique({ where: { id: tenantId } });
     if (!institute) throw ApiError.notFound('Institute not found');
 
+    let planData = null;
+    if (institute.subscription && (institute.subscription as any).plan) {
+      planData = await prisma.subscriptionPlan.findUnique({
+        where: { id: (institute.subscription as any).plan },
+      });
+    }
+
     return {
-      subscription: institute.subscription,
+      subscription: { ...((institute.subscription as any) || {}), plan: planData },
       limits: institute.limits,
       storageUsed: institute.storageUsed,
     };
   }
 
-  /**
-   * Dunning Engine: Audits tenant expiresAt dates.
-   * Warns tenants whose subscription expired but are in the 7-day grace period.
-   * Suspends tenants whose grace period has expired (> 7 days).
-   */
   async runDunningCycle() {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // 1. Suspend institutes that are past due by more than 7 days
-    const toSuspend = await Institute.find({
-      'subscription.status': 'active',
-      'subscription.expiresAt': { $lt: sevenDaysAgo },
-    });
+    // Prisma doesn't natively query JSON properties efficiently across all dbs for `$lt`, so we might need a raw query or iterate.
+    // Given the small size, we can fetch all active, then filter. Or use a native JSON query if Postgres.
+    // Assuming Postgres raw query for the JSON fields.
+    const toSuspend = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "Institute"
+      WHERE "subscription"->>'status' = 'active'
+        AND ("subscription"->>'expiresAt')::timestamp < ${sevenDaysAgo}
+    `;
 
     for (const inst of toSuspend) {
-      inst.subscription.status = 'suspended';
-      await inst.save();
+      await prisma.institute.update({
+        where: { id: inst.id },
+        data: { subscription: { ...inst.subscription, status: 'suspended' } },
+      });
 
-      // Dispatch email notification
       await transactionalEmailQueue
         .add('send', {
           type: 'subscription_suspended',
@@ -110,11 +126,12 @@ export class SubscriptionService extends BaseService<
         .catch(() => {});
     }
 
-    // 2. Warn/notify institutes that are past due but still inside the grace period
-    const toWarn = await Institute.find({
-      'subscription.status': 'active',
-      'subscription.expiresAt': { $lt: now, $gte: sevenDaysAgo },
-    });
+    const toWarn = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "Institute"
+      WHERE "subscription"->>'status' = 'active'
+        AND ("subscription"->>'expiresAt')::timestamp < ${now}
+        AND ("subscription"->>'expiresAt')::timestamp >= ${sevenDaysAgo}
+    `;
 
     for (const inst of toWarn) {
       await transactionalEmailQueue

@@ -99,9 +99,9 @@ export default function EnrollmentList() {
       label: 'Actions',
       render: (_, row) => (
         <button
-          onClick={() => setDeleteTarget(row._id)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600"
-          title="Revoke"
+          onClick={() => setDeleteTarget(row.id || row._id)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 transition-colors"
+          title="Revoke Student Course Enrollment"
         >
           <Trash2 className="w-4 h-4" />
         </button>

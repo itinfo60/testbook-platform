@@ -11,7 +11,7 @@ export default function AuthLayout() {
               <HiAcademicCap className="h-6 w-6 text-white" />
             </div>
             <span className="text-2xl font-bold font-display text-dark-900 dark:text-white">
-              Learn<span className="text-primary-600">Hub</span>
+              Civics<span className="text-primary-600">Hub</span>
             </span>
           </Link>
         </div>

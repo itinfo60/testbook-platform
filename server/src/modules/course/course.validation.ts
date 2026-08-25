@@ -1,17 +1,26 @@
 import { z } from 'zod';
 
-const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+const objectIdRegex = /^[0-9a-fA-F-]{36}$|^[0-9a-fA-F]{24}$/;
 const objectId = z.string().regex(objectIdRegex, { message: 'Invalid ObjectId' });
 
-const resourceSchema = z.object({
-  title: z.string().trim().optional(),
-  url: z.string().trim().optional(),
-  type: z.enum(['link', 'pdf', 'doc']).default('link'),
-});
+const resourceSchema = z
+  .object({
+    title: z.string().trim().optional(),
+    url: z.string().trim().optional(),
+    type: z.enum(['link', 'pdf', 'doc']).default('link'),
+  })
+  // A resource with a title but no url is never something an author meant to
+  // save — it is the signature of a redacted payload being written back.
+  // Reject it loudly instead of silently persisting an unusable attachment.
+  .refine((r) => !r.title || !!r.url, {
+    message: 'Resource url is required when a title is provided',
+    path: ['url'],
+  });
 
 const lessonSchema = z.object({
+  id: z.string().optional(),
   title: z.string().trim().min(1, 'Lesson title is required'),
-  type: z.enum(['video', 'text', 'quiz']),
+  type: z.enum(['video', 'text', 'quiz']).default('video'),
   content: z.string().trim().default(''),
   videoUrl: z.string().url().or(z.string().max(0)).optional(),
   duration: z.number().min(0).default(0),
@@ -21,27 +30,41 @@ const lessonSchema = z.object({
 });
 
 const sectionSchema = z.object({
+  id: z.string().optional(),
   title: z.string().trim().min(1, 'Section title is required'),
+  order: z.number().optional().default(1),
   description: z.string().trim().default(''),
   lessons: z.array(lessonSchema).default([]),
 });
 
 export const createCourseSchema = z.object({
   title: z.string().trim().min(3, 'Title must be at least 3 characters').max(200),
+  slug: z.string().optional(),
   description: z.string().trim().min(10, 'Description must be at least 10 characters').max(5000),
   shortDescription: z.string().trim().max(300).default(''),
-  category: objectId,
+  category: objectId.optional(),
+  categoryId: objectId.optional(),
+  examCategory: objectId.optional(),
+  teacherId: objectId.optional(),
   price: z.number().min(0).max(100000).default(0),
   discountPrice: z.number().min(0).optional().default(0),
+  isFree: z.boolean().optional().default(false),
   language: z.string().default('English'),
-  level: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
+  level: z.enum(['beginner', 'intermediate', 'advanced', 'all_levels']).default('beginner'),
   thumbnail: z
-    .object({
-      url: z.string().url().or(z.string().max(0)).default(''),
-      publicId: z.string().default(''),
-    })
+    .union([
+      z.object({
+        url: z.string().default(''),
+        publicId: z.string().default(''),
+      }),
+      z.string(),
+    ])
+    .optional()
     .default({ url: '', publicId: '' }),
+  previewVideo: z.string().optional(),
+  demoVideoUrl: z.string().optional(),
   tags: z.array(z.string().trim()).default([]),
+  highlights: z.array(z.string().trim()).default([]),
   requirements: z.array(z.string().trim()).default([]),
   whatYouLearn: z.array(z.string().trim()).default([]),
   sections: z.array(sectionSchema).default([]),
@@ -52,20 +75,31 @@ export const updateCourseSchema = z.object({
   description: z.string().trim().min(10).max(5000).optional(),
   shortDescription: z.string().trim().max(300).optional(),
   category: objectId.optional(),
+  categoryId: objectId.optional(),
+  examCategory: objectId.optional(),
+  teacherId: objectId.optional(),
   price: z.number().min(0).max(100000).optional(),
   discountPrice: z.number().min(0).optional(),
+  isFree: z.boolean().optional(),
   language: z.string().optional(),
-  level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  level: z.enum(['beginner', 'intermediate', 'advanced', 'all_levels']).optional(),
   thumbnail: z
-    .object({
-      url: z.string().url().or(z.string().max(0)).optional(),
-      publicId: z.string().optional(),
-    })
+    .union([
+      z.object({
+        url: z.string().optional(),
+        publicId: z.string().optional(),
+      }),
+      z.string(),
+    ])
     .optional(),
+  previewVideo: z.string().optional(),
+  demoVideoUrl: z.string().optional(),
   tags: z.array(z.string().trim()).optional(),
+  highlights: z.array(z.string().trim()).optional(),
   requirements: z.array(z.string().trim()).optional(),
   whatYouLearn: z.array(z.string().trim()).optional(),
   status: z.enum(['draft', 'published', 'archived']).optional(),
+  isPublished: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
   sections: z.array(sectionSchema).optional(),
 });

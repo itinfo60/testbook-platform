@@ -24,7 +24,7 @@ test.describe('Admin Panel Management Features - Deep Dive', () => {
     await page.waitForURL('/users/create');
     await page.waitForLoadState('networkidle');
 
-    const uniqueEmail = `e2e-user-${Date.now()}@testbook.com`;
+    const uniqueEmail = `e2e-user-${Date.now()}@civicshub.com`;
     const uniqueName = `E2E Test Student ${Date.now()}`;
 
     // Fill the user form

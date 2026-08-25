@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 // ── Helper: extract array + pagination from any response shape ──
 const extractListData = (responseData, key) => {
   const data = responseData?.data || responseData;
-  
 
   let list = [];
   let pagination = null;
@@ -21,9 +20,8 @@ const extractListData = (responseData, key) => {
     list = data;
   } else if (data) {
     // Try to find the array
-    list = data.users || data.docs || data.data || data.results || 
-           data.items || data.records || [];
-    
+    list = data.users || data.docs || data.data || data.results || data.items || data.records || [];
+
     // If still not an array, check if data itself has user properties (single user)
     if (!Array.isArray(list)) {
       // Maybe the entire data object IS the paginate result
@@ -43,7 +41,6 @@ const extractListData = (responseData, key) => {
     };
   }
 
-  
   return { list, pagination };
 };
 
@@ -72,19 +69,16 @@ export const fetchUserById = createAsyncThunk(
   }
 );
 
-export const createUser = createAsyncThunk(
-  'users/create',
-  async (data, { rejectWithValue }) => {
-    try {
-      const res = await usersAPI.create(data);
-      toast.success('User created successfully');
-      const d = res.data?.data || res.data;
-      return d?.user || d;
-    } catch (err) {
-      return rejectWithValue(err.response?.data);
-    }
+export const createUser = createAsyncThunk('users/create', async (data, { rejectWithValue }) => {
+  try {
+    const res = await usersAPI.create(data);
+    toast.success('User created successfully');
+    const d = res.data?.data || res.data;
+    return d?.user || d;
+  } catch (err) {
+    return rejectWithValue(err.response?.data);
   }
-);
+});
 
 export const updateUser = createAsyncThunk(
   'users/update',
@@ -100,25 +94,23 @@ export const updateUser = createAsyncThunk(
   }
 );
 
-export const deleteUser = createAsyncThunk(
-  'users/delete',
-  async (id, { rejectWithValue }) => {
-    try {
-      await usersAPI.delete(id);
-      toast.success('User deleted');
-      return id;
-    } catch (err) {
-      return rejectWithValue(err.response?.data);
-    }
+export const deleteUser = createAsyncThunk('users/delete', async (id, { rejectWithValue }) => {
+  try {
+    await usersAPI.delete(id);
+    toast.success('User deleted');
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data);
   }
-);
+});
 
 export const toggleUserStatus = createAsyncThunk(
   'users/toggleStatus',
   async (user, { rejectWithValue }) => {
     try {
+      const userId = user.id || user._id;
       const newIsActive = !(user.isActive ?? user.status === 'active');
-      const res = await usersAPI.update(user._id, { isActive: newIsActive });
+      const res = await usersAPI.update(userId, { isActive: newIsActive });
       toast.success('Status updated');
       const data = res.data?.data || res.data;
       return data?.user || data;
@@ -138,14 +130,16 @@ const userSlice = createSlice({
     error: null,
   },
   reducers: {
-    clearSelected: (state) => { state.selected = null; },
+    clearSelected: (state) => {
+      state.selected = null;
+    },
   },
   extraReducers: (builder) => {
     builder
       // Fetch all
-      .addCase(fetchUsers.pending, (state) => { 
-        state.loading = true; 
-        state.error = null; 
+      .addCase(fetchUsers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
@@ -153,32 +147,37 @@ const userSlice = createSlice({
         state.list = list;
         state.pagination = pagination;
       })
-      .addCase(fetchUsers.rejected, (state, action) => { 
-        state.loading = false; 
+      .addCase(fetchUsers.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload?.message;
       })
       // Fetch by ID
-      .addCase(fetchUserById.pending, (state) => { state.loading = true; })
-      .addCase(fetchUserById.fulfilled, (state, action) => { 
-        state.loading = false; 
-        state.selected = action.payload; 
+      .addCase(fetchUserById.pending, (state) => {
+        state.loading = true;
       })
-      .addCase(fetchUserById.rejected, (state) => { state.loading = false; })
+      .addCase(fetchUserById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selected = action.payload;
+      })
+      .addCase(fetchUserById.rejected, (state) => {
+        state.loading = false;
+      })
       // Create - refetch will happen from component
       .addCase(createUser.fulfilled, (state, action) => {
-        if (action.payload?._id) {
+        if (action.payload) {
           state.list.unshift(action.payload);
         }
       })
       // Delete
       .addCase(deleteUser.fulfilled, (state, action) => {
-        state.list = state.list.filter((u) => u._id !== action.payload);
+        state.list = state.list.filter((u) => (u.id || u._id) !== action.payload);
       })
       // Toggle Status
       .addCase(toggleUserStatus.fulfilled, (state, action) => {
-        if (action.payload?._id) {
-          const idx = state.list.findIndex((u) => u._id === action.payload._id);
-          if (idx >= 0) state.list[idx] = action.payload;
+        const payloadId = action.payload?.id || action.payload?._id;
+        if (payloadId) {
+          const idx = state.list.findIndex((u) => (u.id || u._id) === payloadId);
+          if (idx >= 0) state.list[idx] = { ...state.list[idx], ...action.payload };
         }
       });
   },

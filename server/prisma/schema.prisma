@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────────────────────────
+model User {
+  id                        String   @id @default(uuid())
+  name                      String
+  email                     String   @unique
+  password                  String?
+  role                      String   @default("student")
+  avatar                    Json?
+  bio                       String?
+  phone                     String?
+  isActive                  Boolean  @default(true)
+  isEmailVerified           Boolean  @default(false)
+  emailVerificationToken    String?
+  emailVerificationExpire   DateTime?
+  resetPasswordToken        String?
+  resetPasswordExpire       DateTime?
+  refreshTokens             Json     @default("[]")
+  mfaSecret                 String?
+  mfaEnabled                Boolean  @default(false)
+  mfaBackupCodes            String[]
+  consentGiven              Boolean  @default(false)
+  consentAt                 DateTime?
+  dataRetentionPolicyVersion String  @default("1.0")
+  googleId                  String?
+  authProvider              String   @default("local")
+  fcmTokens                 String[]
+  enrolledCourses           Int      @default(0)
+  completedCourses          Int      @default(0)
+  totalTestsTaken           Int      @default(0)
+  totalPoints               Int      @default(0)
+  streak                    Int      @default(0)
+  lastActiveAt              DateTime @default(now())
+  teacherProfile            Json?
+  tenantId                  String?
+
+  enrollments               Enrollment[]
+  courses                   Course[]     @relation("TeacherCourses")
+  reviews                   Review[]
+  payments                  Payment[]
+  testAttempts              TestAttempt[]
+  quizAttempts              QuizAttempt[]
+
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([role, isActive])
+  @@index([tenantId, role, isActive])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([totalPoints(sort: Desc)])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// INSTITUTE
+// ─────────────────────────────────────────────────────────────────
+model Institute {
+  id              String   @id @default(uuid())
+  name            String
+  subdomain       String   @unique
+  websiteTitle    String?
+  theme           Json?
+  logo            Json?
+  contactDetails  Json?
+  description     String?
+  isActive        Boolean  @default(true)
+  limits          Json?
+  settings        Json?
+  tenantId        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CATEGORY / EXAM CATEGORY
+// ─────────────────────────────────────────────────────────────────
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  type        String   @default("exam")
+  icon        String?
+  isActive    Boolean  @default(true)
+  parentId    String?
+  tenantId    String?
+
+  courses     Course[]
+  tests       Test[]
+  testSeries  TestSeries[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COURSE
+// ─────────────────────────────────────────────────────────────────
+model Course {
+  id            String   @id @default(uuid())
+  title         String
+  slug          String   @unique
+  description   String?
+  price         Float    @default(0)
+  isPublished   Boolean  @default(false)
+  isFeatured    Boolean  @default(false)
+  thumbnail     Json?
+  language      String   @default("English")
+  level         String   @default("beginner")
+  sections      Json     @default("[]")
+  totalLessons  Int      @default(0)
+  totalDuration Int      @default(0)
+  rating        Float    @default(0)
+  totalRatings  Int      @default(0)
+  tenantId      String?
+
+  teacherId     String
+  teacher       User     @relation("TeacherCourses", fields: [teacherId], references: [id])
+
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+
+  enrollments   Enrollment[]
+  reviews       Review[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ENROLLMENT
+// ─────────────────────────────────────────────────────────────────
+model Enrollment {
+  id                  String   @id @default(uuid())
+  status              String   @default("active")
+  progressPercentage  Float    @default(0)
+  completedLessons    String[]
+  paymentStatus       String   @default("free")
+  paymentId           String?
+  orderId             String?
+  amount              Float    @default(0)
+  tenantId            String?
+
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+
+  courseId            String
+  course              Course   @relation(fields: [courseId], references: [id])
+
+  enrolledAt          DateTime @default(now())
+  completedAt         DateTime?
+
+  @@unique([userId, courseId])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TEST
+// ─────────────────────────────────────────────────────────────────
+model Test {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  duration        Int      @default(60)
+  totalMarks      Float    @default(0)
+  totalQuestions  Int      @default(0)
+  passingMarks    Float    @default(0)
+  isPublished     Boolean  @default(false)
+  questions       Json     @default("[]")
+  settings        Json?
+  tenantId        String?
+
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+
+  attempts        TestAttempt[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TEST ATTEMPT
+// ─────────────────────────────────────────────────────────────────
+model TestAttempt {
+  id          String   @id @default(uuid())
+  score       Float    @default(0)
+  totalMarks  Float    @default(0)
+  percentage  Float    @default(0)
+  status      String   @default("completed")
+  answers     Json     @default("[]")
+  timeTaken   Int      @default(0)
+  tenantId    String?
+
+  testId      String
+  test        Test     @relation(fields: [testId], references: [id])
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TEST SERIES
+// ─────────────────────────────────────────────────────────────────
+model TestSeries {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  price       Float    @default(0)
+  isPublished Boolean  @default(false)
+  tests       String[]
+  tenantId    String?
+
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// QUIZ
+// ─────────────────────────────────────────────────────────────────
+model Quiz {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  isPublished Boolean  @default(false)
+  questions   Json     @default("[]")
+  timeLimit   Int?
+  tenantId    String?
+
+  attempts    QuizAttempt[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// QUIZ ATTEMPT
+// ─────────────────────────────────────────────────────────────────
+model QuizAttempt {
+  id        String   @id @default(uuid())
+  score     Float    @default(0)
+  answers   Json     @default("[]")
+  timeTaken Int      @default(0)
+  tenantId  String?
+
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────────────────────────────────
+model Payment {
+  id            String   @id @default(uuid())
+  amount        Float
+  currency      String   @default("INR")
+  status        String   @default("pending")
+  method        String?
+  transactionId String?
+  orderId       String?
+  receipt       String?
+  notes         Json?
+  tenantId      String?
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// REVIEW
+// ─────────────────────────────────────────────────────────────────
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int
+  comment    String?
+  isApproved Boolean  @default(false)
+  tenantId   String?
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BLOG
+// ─────────────────────────────────────────────────────────────────
+model Blog {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  content     String
+  excerpt     String?
+  status      String   @default("draft")
+  type        String   @default("article")
+  tags        String[]
+  thumbnail   Json?
+  tenantId    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COUPON
+// ─────────────────────────────────────────────────────────────────
+model Coupon {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  discountType    String   @default("percentage")
+  discountPercent Float    @default(0)
+  discountAmount  Float    @default(0)
+  maxDiscount     Float?
+  minOrderAmount  Float    @default(0)
+  validFrom       DateTime?
+  validUntil      DateTime?
+  maxUses         Int?
+  usedCount       Int      @default(0)
+  isActive        Boolean  @default(true)
+  tenantId        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// NOTIFICATION
+// ─────────────────────────────────────────────────────────────────
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false)
+  data      Json?
+  tenantId  String?
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LIBRARY
+// ─────────────────────────────────────────────────────────────────
+model Library {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  type        String
+  url         String?
+  fileData    Json?
+  accessLevel String   @default("free")
+  tenantId    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LIVE CLASS
+// ─────────────────────────────────────────────────────────────────
+model LiveClass {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  teacherId   String
+  scheduledAt DateTime
+  duration    Int      @default(60)
+  status      String   @default("scheduled")
+  roomId      String?
+  tenantId    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SUBSCRIPTION PLAN
+// ─────────────────────────────────────────────────────────────────
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  name        String
+  price       Float
+  duration    Int
+  features    Json     @default("[]")
+  isActive    Boolean  @default(true)
+  tenantId    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

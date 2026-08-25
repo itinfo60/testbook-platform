@@ -9,15 +9,9 @@ const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5000,
 
-  mongoose: {
-    url: process.env.NODE_ENV === 'test' ? process.env.MONGODB_URI_TEST : process.env.MONGODB_URI,
-    options: {
-      maxPoolSize: 50,
-      minPoolSize: 10,
-      socketTimeoutMS: 45000,
-      serverSelectionTimeoutMS: 5000,
-      heartbeatFrequencyMS: 10000,
-    },
+  database: {
+    url: process.env.DATABASE_URL,
+    directUrl: process.env.DIRECT_URL,
   },
 
   redis: {
@@ -51,7 +45,7 @@ const config = {
         pass: process.env.SMTP_PASS,
       },
     },
-    from: process.env.EMAIL_FROM || 'noreply@testbook.com',
+    from: process.env.EMAIL_FROM || 'noreply@civicshub.com',
   },
 
   google: {
@@ -104,7 +98,7 @@ const config = {
 };
 
 // Validate required env vars (always, not just production)
-const required = ['JWT_SECRET', 'MONGODB_URI'];
+const required = ['JWT_SECRET', 'DATABASE_URL'];
 if (config.env === 'production') {
   required.push('SMTP_USER', 'REDIS_URL');
 }

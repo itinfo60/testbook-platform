@@ -88,7 +88,7 @@ export default function LibraryPage() {
 
   const handleDownload = async (resource) => {
     try {
-      const { data } = await api.get(`/library/${resource._id}/download`);
+      const { data } = await api.get(`/library/${resource.id || resource._id}/download`);
       const url = data.data?.fileUrl || data.fileUrl || resource.fileUrl;
       window.open(url, '_blank');
     } catch {
@@ -244,7 +244,10 @@ export default function LibraryPage() {
           {filtered.map((resource) => {
             const Icon = getIcon(resource.fileType);
             return (
-              <div key={resource._id} className="card p-5 hover:shadow-md transition-all group">
+              <div
+                key={resource.id || resource._id}
+                className="card p-5 hover:shadow-md transition-all group"
+              >
                 <div className="flex items-start gap-3 mb-3">
                   <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
                     <Icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -272,7 +275,7 @@ export default function LibraryPage() {
                   <div className="flex items-center gap-2">
                     {isTeacher && (
                       <button
-                        onClick={() => handleDelete(resource._id)}
+                        onClick={() => handleDelete(resource.id || resource._id)}
                         className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
                       >
                         <HiX className="h-3.5 w-3.5" />

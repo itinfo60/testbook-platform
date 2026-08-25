@@ -1,7 +1,6 @@
+import prisma from '../../config/prisma.js';
 import { Request, Response } from 'express';
 import { BaseController } from '../../core/base.controller.js';
-import { Attendance } from './attendance.model.js';
-import Course from '../course/course.model.ts';
 import { ApiError } from '../../core/api-error.js';
 
 export class AttendanceController extends BaseController {
@@ -13,10 +12,12 @@ export class AttendanceController extends BaseController {
       throw ApiError.badRequest('Date query parameter is required');
     }
 
-    const attendance = await Attendance.findOne({
-      course: courseId,
-      date: new Date(date as string),
-    }).populate('records.student', 'name email avatar');
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        course: courseId,
+        date: new Date(date as string),
+      },
+    });
 
     return this.ok(res, { attendance });
   });
@@ -29,23 +30,29 @@ export class AttendanceController extends BaseController {
       throw ApiError.badRequest('Date and records are required');
     }
 
-    const course = await Course.findById(courseId);
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
     if (!course) {
       throw ApiError.notFound('Course not found');
     }
 
     const attendanceDate = new Date(date);
 
-    let attendance = await Attendance.findOne({ course: courseId, date: attendanceDate });
+    let attendance = await prisma.attendance.findFirst({
+      where: { course: courseId, date: attendanceDate },
+    });
 
     if (attendance) {
-      attendance.records = records;
-      await attendance.save();
+      attendance = await prisma.attendance.update({
+        where: { id: attendance.id },
+        data: { records },
+      });
     } else {
-      attendance = await Attendance.create({
-        course: courseId,
-        date: attendanceDate,
-        records,
+      attendance = await prisma.attendance.create({
+        data: {
+          course: courseId,
+          date: attendanceDate,
+          records,
+        },
       });
     }
 

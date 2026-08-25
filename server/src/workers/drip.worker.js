@@ -1,6 +1,5 @@
 import { Worker } from 'bullmq';
-import Enrollment from '../modules/enrollment/enrollment.model.js';
-import Course from '../modules/course/course.model.js';
+import prisma from '../config/prisma.js';
 import { notificationQueue } from '../queues/index.js';
 import logger from '../utils/logger.js';
 import { queueConnection } from '../queues/index.js';
@@ -17,17 +16,17 @@ const dripWorker = new Worker(
     logger.info(`Drip unlock: enrollment=${enrollmentId} lesson=${lessonId}`);
 
     await runWithTenant(tenantId, false, async () => {
-      const enrollment = await Enrollment.findById(enrollmentId);
+      const enrollment = await prisma.enrollment.findUnique({ where: { id: enrollmentId } });
       if (!enrollment || enrollment.status !== 'active') return;
 
       // Notify the student
       await notificationQueue.add('send', {
         type: 'drip_unlock',
-        userId: enrollment.user.toString(),
+        userId: enrollment.userId,
         tenantId,
         title: 'New Lesson Unlocked',
         message: `"${lessonTitle}" is now available in ${courseTitle}`,
-        data: { courseId: enrollment.course, lessonId, sectionId },
+        data: { courseId: enrollment.courseId, lessonId, sectionId },
       });
     });
   },

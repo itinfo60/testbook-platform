@@ -42,13 +42,18 @@ export default function LeaderboardPage() {
         <div className="card p-4 mb-6 border-2 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-bold text-primary-600">#{userRank.rank}</span>
+              {/* userRank may be a plain number (old cache) or { rank, points } */}
+              <span className="text-lg font-bold text-primary-600">
+                #{typeof userRank === 'object' ? userRank.rank : userRank}
+              </span>
               <span className="font-medium text-dark-900 dark:text-white">Your Position</span>
             </div>
-            <div className="flex items-center gap-1 text-primary-600">
-              <HiTrendingUp className="h-4 w-4" />
-              <span className="text-sm font-medium">{userRank.points.toLocaleString()} pts</span>
-            </div>
+            {typeof userRank === 'object' && userRank.points != null && (
+              <div className="flex items-center gap-1 text-primary-600">
+                <HiTrendingUp className="h-4 w-4" />
+                <span className="text-sm font-medium">{userRank.points.toLocaleString()} pts</span>
+              </div>
+            )}
           </div>
         </div>
       ) : (

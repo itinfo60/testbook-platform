@@ -125,9 +125,9 @@ export default function TeacherLiveClasses() {
 
   const handleStart = async (cls) => {
     try {
-      const { data } = await api.post(`/live-classes/${cls._id}/start`);
+      const { data } = await api.post(`/live-classes/${cls.id || cls._id}/start`);
       toast.success('Class is now live!');
-      navigate(`/live-classes/${cls._id}/room`);
+      navigate(`/live-classes/${cls.id || cls._id}/room`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to start');
     }
@@ -136,7 +136,7 @@ export default function TeacherLiveClasses() {
   const handleEnd = async (cls) => {
     if (!window.confirm('End this live class?')) return;
     try {
-      await api.post(`/live-classes/${cls._id}/end`);
+      await api.post(`/live-classes/${cls.id || cls._id}/end`);
       toast.success('Class ended');
       load();
     } catch (err) {
@@ -237,7 +237,7 @@ export default function TeacherLiveClasses() {
                   >
                     <option value="">None (open to all)</option>
                     {courses.map((c) => (
-                      <option key={c._id} value={c._id}>
+                      <option key={c.id || c._id} value={c.id || c._id}>
                         {c.title}
                       </option>
                     ))}
@@ -310,7 +310,7 @@ export default function TeacherLiveClasses() {
         <div className="space-y-3">
           {classes.map((cls) => (
             <div
-              key={cls._id}
+              key={cls.id || cls._id}
               className="bg-white dark:bg-dark-800 rounded-2xl border border-dark-100 dark:border-dark-700 p-4 flex items-center gap-4"
             >
               <div
@@ -370,7 +370,7 @@ export default function TeacherLiveClasses() {
                 {cls.status === 'live' && (
                   <>
                     <button
-                      onClick={() => navigate(`/live-classes/${cls._id}/room`)}
+                      onClick={() => navigate(`/live-classes/${cls.id || cls._id}/room`)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold"
                     >
                       <HiVideoCamera className="h-3.5 w-3.5" /> Rejoin

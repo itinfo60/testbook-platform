@@ -836,13 +836,13 @@ const run = async () => {
   console.log('👑 Creating super admin...');
   const superAdmin = await User.create({
     name: 'Super Admin',
-    email: 'admin@testbook.com',
+    email: 'admin@civicshub.com',
     password: 'Admin@123456',
     role: 'super_admin',
     isEmailVerified: true,
     isActive: true,
   });
-  console.log(`   ✓ admin@testbook.com / Admin@123456\n`);
+  console.log(`   ✓ admin@civicshub.com / Admin@123456\n`);
 
   // ── 3. INSTITUTE (owned by a platform admin user) ───────────────────────────
   console.log('🏫 Creating demo institute...');
@@ -896,7 +896,7 @@ const run = async () => {
 
   const teacher = await User.create({
     name: 'Rahul Sharma',
-    email: 'teacher@testbook.com',
+    email: 'teacher@civicshub.com',
     password: 'Teacher@123456',
     role: 'teacher',
     isEmailVerified: true,
@@ -1149,9 +1149,9 @@ const run = async () => {
   console.log('─'.repeat(60));
   console.log('  LOGIN CREDENTIALS');
   console.log('─'.repeat(60));
-  console.log('  Super Admin  :  admin@testbook.com         /  Admin@123456');
+  console.log('  Super Admin  :  admin@civicshub.com         /  Admin@123456');
   console.log('  Inst. Admin  :  institute@demo.com         /  Admin@123456');
-  console.log('  Teacher      :  teacher@testbook.com       /  Teacher@123456');
+  console.log('  Teacher      :  teacher@civicshub.com       /  Teacher@123456');
   console.log('  Teacher 2    :  teacher2@demo.com          /  Teacher@123456');
   console.log('  Student      :  arjun@student.com          /  Student@123456');
   console.log('  (all 10 students use Student@123456)');

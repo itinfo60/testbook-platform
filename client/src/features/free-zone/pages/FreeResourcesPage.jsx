@@ -125,7 +125,7 @@ export default function FreeResourcesPage() {
         setLoading(true);
         const [resRes, catRes] = await Promise.all([
           api.get('/library', { params: { accessLevel: 'all', limit: 100 } }),
-          examCategoryAPI.getAll().catch(() => ({ data: { data: [] } })),
+          examCategoryAPI.getExams().catch(() => ({ data: { data: [] } })),
         ]);
 
         const resData =
@@ -181,12 +181,18 @@ export default function FreeResourcesPage() {
           matchesTab = tabDef.types.includes(item.resourceType);
         }
 
-        // 2. Category Match
+        // 2. Category Match — check both `category` and `examCategory` fields
         let matchesCategory = true;
         if (activeCategory !== 'all') {
           const itemCatId = item.category?._id || item.category;
           const itemCatSlug = item.category?.slug;
-          matchesCategory = itemCatId === activeCategory || itemCatSlug === activeCategory;
+          const itemExamCatId = item.examCategory?._id || item.examCategory;
+          const itemExamCatSlug = item.examCategory?.slug;
+          matchesCategory =
+            itemCatId === activeCategory ||
+            itemCatSlug === activeCategory ||
+            itemExamCatId === activeCategory ||
+            itemExamCatSlug === activeCategory;
         }
 
         // 3. Search Match
@@ -439,7 +445,7 @@ export default function FreeResourcesPage() {
 
                   return (
                     <div
-                      key={resource._id}
+                      key={resource.id || resource._id}
                       className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-400 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between group"
                     >
                       <div>

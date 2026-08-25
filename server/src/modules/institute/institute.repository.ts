@@ -1,23 +1,27 @@
-import { Model } from 'mongoose';
 import { BaseRepository } from '../../core/base.repository.js';
-import { IInstitute } from './institute.model.js';
-import Institute from './institute.model.js';
+import prisma from '../../config/prisma.js';
 
-export class InstituteRepository extends BaseRepository<IInstitute> {
-  constructor(model: Model<IInstitute> = Institute as Model<IInstitute>) {
-    super(model);
+export class InstituteRepository extends BaseRepository<any> {
+  constructor(model = prisma.institute) {
+    super(model as any);
   }
 
-  async findBySubdomain(subdomain: string): Promise<IInstitute | null> {
-    return this.model.findOne({ subdomain: subdomain.toLowerCase(), isActive: true }).exec();
+  async findBySubdomain(subdomain: string): Promise<any> {
+    return this.model.findFirst({
+      where: { subdomain: subdomain.toLowerCase(), isActive: true },
+    });
   }
 
-  async findByCustomDomain(customDomain: string): Promise<IInstitute | null> {
-    return this.model.findOne({ customDomain: customDomain.toLowerCase(), isActive: true }).exec();
+  async findByCustomDomain(customDomain: string): Promise<any> {
+    return this.model.findFirst({
+      where: { customDomain: customDomain.toLowerCase(), isActive: true },
+    });
   }
 
-  async findActiveById(id: string): Promise<IInstitute | null> {
-    return this.model.findOne({ _id: id, isActive: true }).exec();
+  async findActiveById(id: string): Promise<any> {
+    return this.model.findFirst({
+      where: { id, isActive: true },
+    });
   }
 }
 export default InstituteRepository;

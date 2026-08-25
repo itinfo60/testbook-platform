@@ -1,9 +1,8 @@
 import { BadgeRepository } from './badge.repository.js';
 import { UserBadgeRepository } from './userBadge.repository.js';
-import { IBadge, IUserBadge } from './badge.dto.js';
-import User from '../user/user.model.js';
 import { ApiError } from '../../core/api-error.js';
 import { sendToUser } from '../../sockets/index.js';
+import prisma from '../../config/prisma.js';
 
 export class BadgeService {
   private readonly badgeRepository: BadgeRepository;
@@ -22,24 +21,26 @@ export class BadgeService {
     totalEarned: number;
     totalAvailable: number;
   }> {
-    const userBadges = await this.userBadgeRepository.find({ user: userId }, null, {
-      populate: 'badge',
-      sort: '-earnedAt',
+    // Note: populate depends on Prisma includes now, but base repo might not support it fully.
+    // Using Prisma client directly is safer.
+    const userBadges = await prisma.userBadge.findMany({
+      where: { user: userId },
+      include: { badgeObj: true },
+      orderBy: { earnedAt: 'desc' },
     });
 
-    const allBadges = await this.badgeRepository.find({ isActive: true }, null, {
-      sort: 'category name',
+    const allBadges = await prisma.badge.findMany({
+      where: { isActive: true },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
 
-    const earnedBadgeIds = userBadges.map((ub: any) => (ub.badge ? ub.badge._id.toString() : ''));
+    const earnedBadgeIds = userBadges.map((ub: any) => (ub.badge ? ub.badge : ''));
 
     const badges = allBadges.map((badge) => {
-      const isEarned = earnedBadgeIds.includes(badge._id.toString());
-      const ubMatch = userBadges.find(
-        (ub: any) => ub.badge && ub.badge._id.toString() === badge._id.toString()
-      );
+      const isEarned = earnedBadgeIds.includes(badge.id);
+      const ubMatch = userBadges.find((ub: any) => ub.badge && ub.badge === badge.id);
       return {
-        ...badge.toObject(),
+        ...badge,
         isEarned,
         earnedAt: ubMatch ? ubMatch.earnedAt : null,
       };
@@ -52,55 +53,63 @@ export class BadgeService {
     };
   }
 
-  async checkAndAwardBadges(userId: string, io?: any): Promise<IBadge[]> {
+  async checkAndAwardBadges(userId: string, io?: any): Promise<any[]> {
     try {
-      const user = await User.findById(userId);
+      const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) return [];
 
-      const activeBadges = await this.badgeRepository.find({ isActive: true });
-      const earnedBadges = await this.userBadgeRepository.find({ user: userId });
-      const earnedBadgeIds = earnedBadges.map((ub) => ub.badge.toString());
+      const activeBadges = await prisma.badge.findMany({ where: { isActive: true } });
+      const earnedBadges = await prisma.userBadge.findMany({ where: { user: userId } });
+      const earnedBadgeIds = earnedBadges.map((ub) => ub.badge);
 
-      const newBadges: IBadge[] = [];
+      const newBadges: any[] = [];
 
       for (const badge of activeBadges) {
-        if (earnedBadgeIds.includes(badge._id.toString())) continue;
+        if (earnedBadgeIds.includes(badge.id)) continue;
 
         let isCriteriaMet = false;
 
-        switch (badge.criteria.type) {
+        const criteria: any =
+          typeof badge.criteria === 'string' ? JSON.parse(badge.criteria) : badge.criteria;
+        const cType = criteria.type;
+        const cValue = criteria.value;
+
+        switch (cType) {
           case 'courses_completed':
-            isCriteriaMet = (user.completedCourses || 0) >= badge.criteria.value;
+            isCriteriaMet = (user.completedCourses || 0) >= cValue;
             break;
           case 'tests_taken':
-            isCriteriaMet = (user.totalTestsTaken || 0) >= badge.criteria.value;
+            isCriteriaMet = (user.totalTestsTaken || 0) >= cValue;
             break;
           case 'points_earned':
-            isCriteriaMet = (user.totalPoints || 0) >= badge.criteria.value;
+            isCriteriaMet = (user.totalPoints || 0) >= cValue;
             break;
           case 'streak_days':
-            isCriteriaMet = (user.streak || 0) >= badge.criteria.value;
+            isCriteriaMet = (user.streak || 0) >= cValue;
             break;
           case 'courses_enrolled':
-            isCriteriaMet = (user.enrolledCourses || 0) >= badge.criteria.value;
+            isCriteriaMet = (user.enrolledCourses || 0) >= cValue;
             break;
           default:
             break;
         }
 
         if (isCriteriaMet) {
-          await this.userBadgeRepository.create({
-            user: userId,
-            badge: badge._id,
-            tenantId: user.tenantId,
+          await prisma.userBadge.create({
+            data: {
+              user: userId,
+              badge: badge.id,
+              tenantId: user.tenantId as string,
+            },
           });
 
-          // Award points to the user
-          await User.findByIdAndUpdate(userId, { $inc: { totalPoints: badge.points } });
+          await prisma.user.update({
+            where: { id: userId },
+            data: { totalPoints: { increment: badge.points } },
+          });
 
           newBadges.push(badge);
 
-          // Emit real-time Socket.IO notification if io is present
           if (io) {
             sendToUser(io, userId, 'badge_earned', {
               badge: {
@@ -121,17 +130,16 @@ export class BadgeService {
     }
   }
 
-  // Admin template CRUD
-  async getAllBadges(): Promise<IBadge[]> {
-    return this.badgeRepository.find({}, null, { sort: 'category name' });
+  async getAllBadges(): Promise<any[]> {
+    return prisma.badge.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   }
 
-  async createBadge(body: any): Promise<IBadge> {
-    return this.badgeRepository.create(body);
+  async createBadge(body: any): Promise<any> {
+    return prisma.badge.create({ data: body });
   }
 
-  async updateBadge(id: string, body: any): Promise<IBadge> {
-    const badge = await this.badgeRepository.updateById(id, body, { runValidators: true });
+  async updateBadge(id: string, body: any): Promise<any> {
+    const badge = await prisma.badge.update({ where: { id }, data: body }).catch(() => null);
     if (!badge) {
       throw ApiError.notFound('Badge not found');
     }
@@ -139,13 +147,12 @@ export class BadgeService {
   }
 
   async deleteBadge(id: string): Promise<void> {
-    const badge = await this.badgeRepository.deleteById(id);
+    const badge = await prisma.badge.delete({ where: { id } }).catch(() => null);
     if (!badge) {
       throw ApiError.notFound('Badge not found');
     }
 
-    // Delete user earned records for this badge
-    await this.userBadgeRepository.deleteMany({ badge: id });
+    await prisma.userBadge.deleteMany({ where: { badge: id } });
   }
 }
 

@@ -1,11 +1,9 @@
-import { Model } from 'mongoose';
 import { TenantRepository } from '../../core/tenant.repository.js';
-import { INote } from './note.dto.js';
-import Note from './note.model.js';
+import prisma from '../../config/prisma.js';
 
-export class NoteRepository extends TenantRepository<INote> {
-  constructor(model: Model<INote> = Note) {
-    super(model);
+export class NoteRepository extends TenantRepository<any> {
+  constructor(model = prisma.note) {
+    super(model as any);
   }
 }
 

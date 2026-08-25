@@ -22,7 +22,9 @@ const CourseList = lazy(() => import('@/features/course/pages/CourseList'));
 const CourseOversight = lazy(() => import('@/features/course/pages/CourseOversight'));
 const CourseForm = lazy(() => import('@/features/course/pages/CourseForm'));
 const TestOversight = lazy(() => import('@/features/test/pages/TestOversight'));
+const TestForm = lazy(() => import('@/features/test/pages/TestForm'));
 const QuizOversight = lazy(() => import('@/features/quiz/pages/QuizOversight'));
+const QuizForm = lazy(() => import('@/features/quiz/pages/QuizForm'));
 const TestSeriesList = lazy(() => import('@/features/testseries/pages/TestSeriesList'));
 const TestSeriesForm = lazy(() => import('@/features/testseries/pages/TestSeriesForm'));
 const ReviewModeration = lazy(() => import('@/features/review/pages/ReviewModeration'));
@@ -31,8 +33,16 @@ const RevenueDashboard = lazy(() => import('@/features/revenue/pages/RevenueDash
 const TeacherList = lazy(() => import('@/features/teacher/pages/TeacherList'));
 const CategoryList = lazy(() => import('@/features/category/pages/CategoryList'));
 const CategoryForm = lazy(() => import('@/features/category/pages/CategoryForm'));
+const CategoryDetail = lazy(() => import('@/features/category/pages/CategoryDetail'));
 const ExamCategoryList = lazy(() => import('@/features/examcategory/pages/ExamCategoryList'));
 const ExamCategoryForm = lazy(() => import('@/features/examcategory/pages/ExamCategoryForm'));
+const ExamCategoryDetail = lazy(() => import('@/features/examcategory/pages/ExamCategoryDetail'));
+const UserDetail = lazy(() => import('@/features/user/pages/UserDetail'));
+const CourseDetail = lazy(() => import('@/features/course/pages/CourseDetail'));
+const TeacherDetail = lazy(() => import('@/features/teacher/pages/TeacherDetail'));
+const TestDetail = lazy(() => import('@/features/test/pages/TestDetail'));
+const QuizDetail = lazy(() => import('@/features/quiz/pages/QuizDetail'));
+const TestSeriesDetail = lazy(() => import('@/features/testseries/pages/TestSeriesDetail'));
 const CouponList = lazy(() => import('@/features/coupon/pages/CouponList'));
 const CouponForm = lazy(() => import('@/features/coupon/pages/CouponForm'));
 const BlogList = lazy(() => import('@/features/blog/pages/BlogList'));
@@ -41,6 +51,7 @@ const JobAlertList = lazy(() => import('@/features/blog/pages/JobAlertList'));
 const AnnouncementCenter = lazy(() => import('@/features/notification/pages/AnnouncementCenter'));
 const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingSettings'));
 const LiveClassesPage = lazy(() => import('@/features/liveclass/pages/LiveClassesPage'));
+const PaymentList = lazy(() => import('@/features/payment/pages/PaymentList'));
 
 export default function App() {
   const dispatch = useDispatch();
@@ -83,25 +94,39 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="users" element={<UserList />} />
             <Route path="users/create" element={<UserForm />} />
+            <Route path="users/:id" element={<UserDetail />} />
             <Route path="users/:id/edit" element={<UserForm />} />
             <Route path="courses" element={<CourseList />} />
             <Route path="courses/oversight" element={<CourseOversight />} />
             <Route path="courses/create" element={<CourseForm />} />
+            <Route path="courses/:id" element={<CourseDetail />} />
             <Route path="courses/:id/edit" element={<CourseForm />} />
             <Route path="tests" element={<TestOversight />} />
+            <Route path="tests/create" element={<TestForm />} />
+            <Route path="tests/:id" element={<TestDetail />} />
+            <Route path="tests/:id/edit" element={<TestForm />} />
             <Route path="test-series" element={<TestSeriesList />} />
             <Route path="test-series/create" element={<TestSeriesForm />} />
+            <Route path="test-series/:id" element={<TestSeriesDetail />} />
             <Route path="test-series/:id/edit" element={<TestSeriesForm />} />
             <Route path="quizzes" element={<QuizOversight />} />
+            <Route path="quizzes/create" element={<QuizForm />} />
+            <Route path="quizzes/:id" element={<QuizDetail />} />
+            <Route path="quizzes/:id/edit" element={<QuizForm />} />
             <Route path="reviews" element={<ReviewModeration />} />
             <Route path="enrollments" element={<EnrollmentList />} />
             <Route path="revenue" element={<RevenueDashboard />} />
+            <Route path="payments" element={<PaymentList />} />
+            <Route path="orders" element={<PaymentList />} />
             <Route path="teachers" element={<TeacherList />} />
+            <Route path="teachers/:id" element={<TeacherDetail />} />
             <Route path="categories" element={<CategoryList />} />
             <Route path="categories/create" element={<CategoryForm />} />
+            <Route path="categories/:id" element={<CategoryDetail />} />
             <Route path="categories/:id/edit" element={<CategoryForm />} />
             <Route path="exam-categories" element={<ExamCategoryList />} />
             <Route path="exam-categories/create" element={<ExamCategoryForm />} />
+            <Route path="exam-categories/:id" element={<ExamCategoryDetail />} />
             <Route path="exam-categories/:id/edit" element={<ExamCategoryForm />} />
             <Route path="coupons" element={<CouponList />} />
             <Route path="coupons/create" element={<CouponForm />} />

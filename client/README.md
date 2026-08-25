@@ -1,10 +1,10 @@
-# LearnHub - Enterprise Learning Platform (Client)
+# CivicsHub - Enterprise Learning Platform (Client)
 
 A modern, feature-rich learning platform built with React, Vite, Tailwind CSS, and Redux Toolkit.
 
 ## 🚀 Features
 
-- **Beautiful UI** — Modern Testbook-inspired design with dark mode
+- **Beautiful UI** — Modern CivicsHub-inspired design with dark mode
 - **Course Catalog** — Browse, search, filter courses with beautiful cards
 - **Course Learning** — Video player, lesson sidebar, notes, discussions
 - **Test Series** — Full-screen test taking with timer, navigator, question review
@@ -42,3 +42,4 @@ npm run dev
 
 # Build for production
 npm run build
+```

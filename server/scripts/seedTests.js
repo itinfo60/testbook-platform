@@ -11,14 +11,19 @@ import ExamCategory from '../src/modules/exam-category/examCategory.model.js';
 import Test from '../src/modules/test/test.model.js';
 import TestAttempt from '../src/modules/test/testAttempt.model.js';
 
-const slugify = str =>
-  str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
-  '-' + Date.now();
+const slugify = (str) =>
+  str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') +
+  '-' +
+  Date.now();
 
 const testsData = [
   {
     title: 'JavaScript Fundamentals',
-    description: 'Test your core JavaScript knowledge covering variables, functions, closures, and ES6+ features.',
+    description:
+      'Test your core JavaScript knowledge covering variables, functions, closures, and ES6+ features.',
     duration: 30,
     difficulty: 'beginner',
     questions: [
@@ -33,7 +38,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: '`let` declares block-scoped variables introduced in ES6. `var` is function-scoped.',
+        explanation:
+          '`let` declares block-scoped variables introduced in ES6. `var` is function-scoped.',
       },
       {
         question: 'What does `typeof null` return in JavaScript?',
@@ -46,7 +52,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'A historic bug in JavaScript — `typeof null` returns "object" even though null is not an object.',
+        explanation:
+          'A historic bug in JavaScript — `typeof null` returns "object" even though null is not an object.',
       },
       {
         question: 'Which method is used to add an element at the end of an array?',
@@ -59,7 +66,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: '`Array.push()` appends one or more elements to the end and returns the new length.',
+        explanation:
+          '`Array.push()` appends one or more elements to the end and returns the new length.',
       },
       {
         question: 'What is the output of `0 == false` in JavaScript?',
@@ -98,7 +106,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'When a number is added to a string, JavaScript coerces the number to a string and concatenates.',
+        explanation:
+          'When a number is added to a string, JavaScript coerces the number to a string and concatenates.',
       },
       {
         question: 'Which ES6 feature allows you to extract values from objects into variables?',
@@ -111,7 +120,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'Destructuring assignment lets you unpack values from arrays or properties from objects.',
+        explanation:
+          'Destructuring assignment lets you unpack values from arrays or properties from objects.',
       },
       {
         question: 'What does the `===` operator check?',
@@ -137,26 +147,32 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: '`JSON.parse()` parses a JSON string and returns the corresponding JavaScript value.',
+        explanation:
+          '`JSON.parse()` parses a JSON string and returns the corresponding JavaScript value.',
       },
       {
         question: 'What is a closure in JavaScript?',
         type: 'mcq',
         options: [
           { text: 'A function that closes the browser window', isCorrect: false },
-          { text: 'A function with access to its outer scope even after the outer function returns', isCorrect: true },
+          {
+            text: 'A function with access to its outer scope even after the outer function returns',
+            isCorrect: true,
+          },
           { text: 'A method to close database connections', isCorrect: false },
           { text: 'An error handling block', isCorrect: false },
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'A closure is a function that retains access to its lexical scope even when called outside that scope.',
+        explanation:
+          'A closure is a function that retains access to its lexical scope even when called outside that scope.',
       },
     ],
   },
   {
     title: 'React.js Core Concepts',
-    description: 'Test your understanding of React — components, hooks, state management, and the virtual DOM.',
+    description:
+      'Test your understanding of React — components, hooks, state management, and the virtual DOM.',
     duration: 25,
     difficulty: 'intermediate',
     questions: [
@@ -184,7 +200,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'Keys help React identify changed, added, or removed items for efficient DOM updates.',
+        explanation:
+          'Keys help React identify changed, added, or removed items for efficient DOM updates.',
       },
       {
         question: 'What does `useEffect` with an empty dependency array `[]` do?',
@@ -197,7 +214,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'An empty dependency array means the effect runs once after mount, similar to `componentDidMount`.',
+        explanation:
+          'An empty dependency array means the effect runs once after mount, similar to `componentDidMount`.',
       },
       {
         question: 'What is the Virtual DOM?',
@@ -210,7 +228,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'React keeps a Virtual DOM, diffs it with the previous version, and only updates changed real DOM nodes.',
+        explanation:
+          'React keeps a Virtual DOM, diffs it with the previous version, and only updates changed real DOM nodes.',
       },
       {
         question: 'Which of the following is NOT a React hook?',
@@ -223,7 +242,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: '`useService` is not a React hook. `useHistory` is from React Router v5; the others are built-in React hooks.',
+        explanation:
+          '`useService` is not a React hook. `useHistory` is from React Router v5; the others are built-in React hooks.',
       },
       {
         question: 'How do you pass data from a parent to a child component in React?',
@@ -236,39 +256,49 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'Props (properties) are the standard mechanism for passing data from parent to child components.',
+        explanation:
+          'Props (properties) are the standard mechanism for passing data from parent to child components.',
       },
       {
         question: 'What does React.memo do?',
         type: 'mcq',
         options: [
           { text: 'Memoizes async calls', isCorrect: false },
-          { text: 'Prevents a component from re-rendering if its props have not changed', isCorrect: true },
+          {
+            text: 'Prevents a component from re-rendering if its props have not changed',
+            isCorrect: true,
+          },
           { text: 'Stores data in localStorage', isCorrect: false },
           { text: 'Creates a memoized selector', isCorrect: false },
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'React.memo is a HOC that skips re-rendering when props are shallowly equal to the previous render.',
+        explanation:
+          'React.memo is a HOC that skips re-rendering when props are shallowly equal to the previous render.',
       },
       {
         question: 'What is JSX?',
         type: 'mcq',
         options: [
-          { text: 'A JavaScript extension that allows HTML-like syntax in JS files', isCorrect: true },
+          {
+            text: 'A JavaScript extension that allows HTML-like syntax in JS files',
+            isCorrect: true,
+          },
           { text: 'A CSS preprocessor', isCorrect: false },
           { text: 'A state management library', isCorrect: false },
           { text: 'A testing framework', isCorrect: false },
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'JSX is a syntax extension compiled by Babel to `React.createElement()` calls.',
+        explanation:
+          'JSX is a syntax extension compiled by Babel to `React.createElement()` calls.',
       },
     ],
   },
   {
     title: 'Python Programming Basics',
-    description: 'Cover Python fundamentals — data types, control flow, functions, and OOP concepts.',
+    description:
+      'Cover Python fundamentals — data types, control flow, functions, and OOP concepts.',
     duration: 20,
     difficulty: 'beginner',
     questions: [
@@ -283,7 +313,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'Tuples are immutable sequences — their elements cannot be changed after creation.',
+        explanation:
+          'Tuples are immutable sequences — their elements cannot be changed after creation.',
       },
       {
         question: 'What is the output of `len("Hello")` in Python?',
@@ -354,7 +385,8 @@ const testsData = [
   },
   {
     title: 'Data Structures & Algorithms',
-    description: 'Test your knowledge of arrays, linked lists, trees, sorting algorithms, and Big-O complexity.',
+    description:
+      'Test your knowledge of arrays, linked lists, trees, sorting algorithms, and Big-O complexity.',
     duration: 45,
     difficulty: 'advanced',
     questions: [
@@ -369,7 +401,8 @@ const testsData = [
         ],
         marks: 3,
         negativeMarks: 1,
-        explanation: 'Binary search halves the search space each step, giving O(log n) time complexity.',
+        explanation:
+          'Binary search halves the search space each step, giving O(log n) time complexity.',
       },
       {
         question: 'Which data structure uses LIFO (Last In, First Out) order?',
@@ -395,7 +428,8 @@ const testsData = [
         ],
         marks: 3,
         negativeMarks: 1,
-        explanation: 'QuickSort degrades to O(n²) when the pivot is always the smallest or largest element (e.g., sorted input with naive pivot).',
+        explanation:
+          'QuickSort degrades to O(n²) when the pivot is always the smallest or largest element (e.g., sorted input with naive pivot).',
       },
       {
         question: 'Which traversal of a Binary Search Tree visits nodes in sorted order?',
@@ -408,7 +442,8 @@ const testsData = [
         ],
         marks: 3,
         negativeMarks: 1,
-        explanation: 'In-order traversal (left → root → right) of a BST visits nodes in ascending sorted order.',
+        explanation:
+          'In-order traversal (left → root → right) of a BST visits nodes in ascending sorted order.',
       },
       {
         question: 'What is the space complexity of Merge Sort?',
@@ -421,7 +456,8 @@ const testsData = [
         ],
         marks: 3,
         negativeMarks: 1,
-        explanation: 'Merge Sort requires O(n) auxiliary space for the temporary arrays used during merging.',
+        explanation:
+          'Merge Sort requires O(n) auxiliary space for the temporary arrays used during merging.',
       },
       {
         question: 'A hash table has average time complexity of ___ for search, insert, and delete.',
@@ -434,13 +470,15 @@ const testsData = [
         ],
         marks: 3,
         negativeMarks: 1,
-        explanation: 'With a good hash function and low load factor, hash table operations are O(1) on average.',
+        explanation:
+          'With a good hash function and low load factor, hash table operations are O(1) on average.',
       },
     ],
   },
   {
     title: 'Database SQL Fundamentals',
-    description: 'Test your SQL knowledge — queries, joins, aggregations, and database design concepts.',
+    description:
+      'Test your SQL knowledge — queries, joins, aggregations, and database design concepts.',
     duration: 20,
     difficulty: 'intermediate',
     questions: [
@@ -455,10 +493,12 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: '`HAVING` filters groups created by `GROUP BY`, while `WHERE` filters individual rows before grouping.',
+        explanation:
+          '`HAVING` filters groups created by `GROUP BY`, while `WHERE` filters individual rows before grouping.',
       },
       {
-        question: 'What type of JOIN returns all rows from both tables, with NULLs for non-matching rows?',
+        question:
+          'What type of JOIN returns all rows from both tables, with NULLs for non-matching rows?',
         type: 'mcq',
         options: [
           { text: 'INNER JOIN', isCorrect: false },
@@ -468,7 +508,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'FULL OUTER JOIN returns all rows from both tables; unmatched rows get NULL for the other table\'s columns.',
+        explanation:
+          "FULL OUTER JOIN returns all rows from both tables; unmatched rows get NULL for the other table's columns.",
       },
       {
         question: 'Which constraint ensures a column has no duplicate values?',
@@ -481,7 +522,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: 'The UNIQUE constraint ensures all values in a column are distinct. (PRIMARY KEY also implies UNIQUE but also NOT NULL.)',
+        explanation:
+          'The UNIQUE constraint ensures all values in a column are distinct. (PRIMARY KEY also implies UNIQUE but also NOT NULL.)',
       },
       {
         question: 'What does `SELECT COUNT(*) FROM users` return?',
@@ -507,7 +549,8 @@ const testsData = [
         ],
         marks: 2,
         negativeMarks: 0.5,
-        explanation: '`UPDATE` modifies existing rows. `INSERT` adds new rows, `ALTER` changes table structure.',
+        explanation:
+          '`UPDATE` modifies existing rows. `INSERT` adds new rows, `ALTER` changes table structure.',
       },
     ],
   },
@@ -531,9 +574,11 @@ const seedTests = async () => {
     }
 
     const catMap = {};
-    categories.forEach(c => { catMap[c.slug] = c._id; });
+    categories.forEach((c) => {
+      catMap[c.slug] = c._id;
+    });
 
-    const categoryIds = categories.map(c => c._id);
+    const categoryIds = categories.map((c) => c._id);
 
     await Test.deleteMany({});
     console.log('🗑️  Cleared existing tests');
@@ -573,7 +618,9 @@ const seedTests = async () => {
       });
 
       await test.save();
-      console.log(`✅ Created: "${t.title}" (${t.questions.length} questions, ${totalMarks} marks)`);
+      console.log(
+        `✅ Created: "${t.title}" (${t.questions.length} questions, ${totalMarks} marks)`
+      );
     }
 
     console.log('');
@@ -581,7 +628,7 @@ const seedTests = async () => {
     console.log(`📝 ${testsData.length} tests created and published.`);
     console.log('');
     console.log('Login as student to take tests:');
-    console.log('   student@testbook.com / Student@123456');
+    console.log('   student@civicshub.com / Student@123456');
     console.log('');
 
     process.exit(0);

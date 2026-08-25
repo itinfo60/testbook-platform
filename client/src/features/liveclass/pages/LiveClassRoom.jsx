@@ -11,7 +11,7 @@ import {
   useTrackToggle,
   useDisconnectButton,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { Track, Room } from 'livekit-client';
 import {
   HiMicrophone,
   HiOutlineMicrophone,
@@ -287,6 +287,13 @@ export default function LiveClassRoom() {
   const [livekitUrl, setLivekitUrl] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Pre-configure the Room to avoid livekit-client picking up browser language
+  // (throws "language override unsupported: Hindi/etc" when locale ≠ en)
+  const roomRef = useRef(null);
+  if (!roomRef.current) {
+    roomRef.current = new Room();
+  }
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -340,6 +347,7 @@ export default function LiveClassRoom() {
 
   return (
     <LiveKitRoom
+      room={roomRef.current}
       token={livekitToken}
       serverUrl={livekitUrl}
       connect

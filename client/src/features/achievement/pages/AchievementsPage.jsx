@@ -71,7 +71,7 @@ export default function AchievementsPage() {
 
             return (
               <div
-                key={enrollment._id}
+                key={enrollment.id || enrollment._id}
                 className="card p-5 flex flex-col gap-4 ring-2 ring-green-200 dark:ring-green-800 bg-green-50/30 dark:bg-green-950/10"
               >
                 <div className="flex items-start gap-3">

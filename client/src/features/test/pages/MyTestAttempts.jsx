@@ -69,7 +69,7 @@ export default function MyTestAttempts() {
               if (!test) return null;
               return (
                 <div
-                  key={enrollment._id}
+                  key={enrollment.id || enrollment._id}
                   className="bg-white dark:bg-dark-900 p-6 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group relative overflow-hidden"
                 >
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-400 to-secondary-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -125,7 +125,7 @@ export default function MyTestAttempts() {
           <div className="space-y-3 sm:space-y-4">
             {attempts.map((attempt) => (
               <div
-                key={attempt._id}
+                key={attempt.id || attempt._id}
                 className="bg-white dark:bg-dark-900 p-5 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md flex flex-col sm:flex-row sm:items-center gap-4 transition-all group"
               >
                 <div className="flex-1 min-w-0">

@@ -1,5 +1,5 @@
+import prisma from '../../config/prisma.js';
 import crypto from 'crypto';
-import { Referral, ReferralRecord } from './affiliate.model.js';
 import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
@@ -11,15 +11,17 @@ const generateCode = (userId) =>
  * POST /api/v1/affiliate/register — Register as an affiliate and get a referral code
  */
 export const registerAffiliate = catchAsync(async (req, res) => {
-  const existing = await Referral.findOne({ user: req.userId });
+  const existing = await prisma.referral.findFirst({ where: { user: req.userId } });
   if (existing)
     return ApiResponse.ok(res, { affiliate: existing }, 'Already registered as affiliate');
 
   const referralCode = generateCode(req.userId);
-  const affiliate = await Referral.create({
-    user: req.userId,
-    referralCode,
-    commissionRate: 10,
+  const affiliate = await prisma.referral.create({
+    data: {
+      user: req.userId,
+      referralCode,
+      commissionRate: 10,
+    },
   });
 
   ApiResponse.created(res, { affiliate }, 'Affiliate account created');
@@ -29,10 +31,11 @@ export const registerAffiliate = catchAsync(async (req, res) => {
  * GET /api/v1/affiliate/me — Get my affiliate stats
  */
 export const getMyAffiliate = catchAsync(async (req, res) => {
-  const affiliate = await Referral.findOne({ user: req.userId });
+  const affiliate = await prisma.referral.findFirst({ where: { user: req.userId } });
   if (!affiliate) throw ApiError.notFound('Affiliate account not found. Register first.');
 
-  const records = await ReferralRecord.find({ referrer: req.userId })
+  const records = await prisma.referralRecord
+    .findMany({ where: { referrer: req.userId } })
     .populate('referred', 'name email createdAt')
     .sort({ createdAt: -1 })
     .limit(50);
@@ -45,10 +48,14 @@ export const getMyAffiliate = catchAsync(async (req, res) => {
  */
 export const validateReferralCode = catchAsync(async (req, res) => {
   const { code } = req.params;
-  const affiliate = await Referral.findOne({
-    referralCode: code.toUpperCase(),
-    isActive: true,
-  }).populate('user', 'name');
+  const affiliate = await prisma.referral
+    .findFirst({
+      where: {
+        referralCode: code.toUpperCase(),
+        isActive: true,
+      },
+    })
+    .populate('user', 'name');
   if (!affiliate) throw ApiError.notFound('Invalid referral code');
   ApiResponse.ok(res, {
     valid: true,
@@ -69,25 +76,34 @@ export const recordReferralConversion = async ({
 }) => {
   if (!referralCode) return;
 
-  const affiliate = await Referral.findOne({
-    referralCode: referralCode.toUpperCase(),
-    isActive: true,
+  const affiliate = await prisma.referral.findFirst({
+    where: {
+      referralCode: referralCode.toUpperCase(),
+      isActive: true,
+    },
   });
   if (!affiliate) return;
 
   const commission = Math.round((affiliate.commissionRate / 100) * amount * 100) / 100;
 
-  await ReferralRecord.create({
-    referralCode,
-    referrer: affiliate.user,
-    referred: referredUserId,
-    payment: paymentId,
-    commissionAmount: commission,
-    status: 'pending',
+  await prisma.referralRecord.create({
+    data: {
+      referralCode,
+      referrer: affiliate.user,
+      referred: referredUserId,
+      payment: paymentId,
+      commissionAmount: commission,
+      status: 'pending',
+    },
   });
 
-  await Referral.findByIdAndUpdate(affiliate._id, {
-    $inc: { totalReferrals: 1, totalEarnings: commission, pendingPayout: commission },
+  await prisma.referral.update({
+    where: { id: affiliate.id },
+    data: {
+      totalReferrals: { increment: 1 },
+      totalEarnings: { increment: commission },
+      pendingPayout: { increment: commission },
+    },
   });
 };
 
@@ -95,7 +111,8 @@ export const recordReferralConversion = async ({
  * [ADMIN] GET /api/v1/affiliate/admin — List all affiliates
  */
 export const listAffiliates = catchAsync(async (req, res) => {
-  const affiliates = await Referral.find()
+  const affiliates = await prisma.referral
+    .findMany({})
     .populate('user', 'name email')
     .sort({ totalEarnings: -1 });
   ApiResponse.ok(res, { affiliates, count: affiliates.length });
@@ -106,19 +123,22 @@ export const listAffiliates = catchAsync(async (req, res) => {
  */
 export const processPayout = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const affiliate = await Referral.findById(id);
+  const affiliate = await prisma.referral.findUnique({ where: { id: id } });
   if (!affiliate) throw ApiError.notFound('Affiliate not found');
 
   const amount = affiliate.pendingPayout;
-  await Referral.findByIdAndUpdate(id, {
-    $inc: { paidOut: amount },
-    $set: { pendingPayout: 0 },
+  await prisma.referral.update({
+    where: { id },
+    data: {
+      paidOut: { increment: amount },
+      pendingPayout: 0,
+    },
   });
 
-  await ReferralRecord.updateMany(
-    { referrer: affiliate.user, status: 'approved' },
-    { status: 'paid', paidAt: new Date() }
-  );
+  await prisma.referralRecord.updateMany({
+    where: { referrer: affiliate.user, status: 'approved' },
+    data: { status: 'paid', paidAt: new Date() },
+  });
 
   ApiResponse.ok(res, { paidAmount: amount }, `Payout of ₹${amount} processed`);
 });

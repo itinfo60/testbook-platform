@@ -9,7 +9,7 @@ vi.mock('../../src/utils/logger.js', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),
-  }
+  },
 }));
 
 vi.mock('../../src/config/index.js', () => ({
@@ -18,12 +18,12 @@ vi.mock('../../src/config/index.js', () => ({
       smtp: {
         host: 'smtp.test.com',
         port: 587,
-        auth: { user: 'test', pass: 'test' }
+        auth: { user: 'test', pass: 'test' },
       },
-      from: 'test@test.com'
+      from: 'test@test.com',
     },
-    clientUrl: 'http://localhost:3000'
-  }
+    clientUrl: 'http://localhost:3000',
+  },
 }));
 
 describe('Email Service', () => {
@@ -32,9 +32,9 @@ describe('Email Service', () => {
   beforeEach(() => {
     mockSendMail = vi.fn().mockResolvedValue({ messageId: 'test-id' });
     nodemailer.createTransport.mockReturnValue({
-      sendMail: mockSendMail
+      sendMail: mockSendMail,
     });
-    
+
     // Force re-init to use mocked transport
     emailService._init();
     vi.clearAllMocks();
@@ -64,10 +64,10 @@ describe('Email Service', () => {
       const error = new Error('SMTP Error');
       mockSendMail.mockRejectedValue(error);
 
-      await expect(
-        emailService.send({ to: 'user@test.com', subject: 'Test' })
-      ).rejects.toThrow('SMTP Error');
-      
+      await expect(emailService.send({ to: 'user@test.com', subject: 'Test' })).rejects.toThrow(
+        'SMTP Error'
+      );
+
       expect(logger.error).toHaveBeenCalled();
     });
   });
@@ -79,11 +79,13 @@ describe('Email Service', () => {
 
       await emailService.sendVerificationEmail(user, token);
 
-      expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
-        to: 'user@test.com',
-        subject: 'Verify Your Email - TestBook',
-        html: expect.stringContaining('http://localhost:3000/verify-email?token=verify-token'),
-      }));
+      expect(mockSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@test.com',
+          subject: 'Verify Your Email - CivicsHub',
+          html: expect.stringContaining('http://localhost:3000/verify-email?token=verify-token'),
+        })
+      );
     });
   });
 
@@ -94,11 +96,13 @@ describe('Email Service', () => {
 
       await emailService.sendResetPasswordEmail(user, token);
 
-      expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
-        to: 'user@test.com',
-        subject: 'Reset Password - TestBook',
-        html: expect.stringContaining('http://localhost:3000/reset-password?token=reset-token'),
-      }));
+      expect(mockSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@test.com',
+          subject: 'Reset Password - CivicsHub',
+          html: expect.stringContaining('http://localhost:3000/reset-password?token=reset-token'),
+        })
+      );
     });
   });
 
@@ -109,11 +113,13 @@ describe('Email Service', () => {
 
       await emailService.sendEnrollmentConfirmation(user, course);
 
-      expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
-        to: 'user@test.com',
-        subject: 'Enrolled: Test Course - TestBook',
-        html: expect.stringContaining('http://localhost:3000/learning/course123'),
-      }));
+      expect(mockSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@test.com',
+          subject: 'Enrolled: Test Course - CivicsHub',
+          html: expect.stringContaining('http://localhost:3000/learning/course123'),
+        })
+      );
     });
   });
 });

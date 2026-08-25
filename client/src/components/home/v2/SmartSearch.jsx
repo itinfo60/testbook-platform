@@ -19,11 +19,9 @@ export default function SmartSearch() {
     navigate(`/search?q=${encodeURIComponent(term)}`);
   };
 
-  // Use root-level exam category names as popular searches (up to 6)
-  const popularSearches = categories
-    .filter((c) => !c.parent)
-    .slice(0, 6)
-    .map((c) => c.name);
+  // Exam names as popular searches (up to 6).
+  // Hook already scopes to type:'exam' — no parent filter needed.
+  const popularSearches = categories.slice(0, 6).map((c) => c.name);
 
   return (
     <section className="bg-white py-12 relative -mt-8 z-20 mx-4 sm:mx-6 lg:mx-8 rounded-2xl shadow-xl shadow-navy-900/5 max-w-5xl xl:mx-auto border border-navy-50">

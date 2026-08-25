@@ -2,18 +2,18 @@ import { Link } from 'react-router-dom';
 import { HiArrowRight } from 'react-icons/hi';
 
 const categoryIcons = {
-  'Banking': '🏦',
-  'SSC': '🏛️',
-  'Railways': '🚂',
-  'UPSC': '📜',
+  Banking: '🏦',
+  SSC: '🏛️',
+  Railways: '🚂',
+  UPSC: '📜',
   'State PSC': '🏢',
-  'Teaching': '📖',
-  'Defence': '🎖️',
-  'Engineering': '⚙️',
-  'Medical': '🩺',
-  'Law': '⚖️',
-  'MBA': '📊',
-  'Programming': '💻',
+  Teaching: '📖',
+  Defence: '🎖️',
+  Engineering: '⚙️',
+  Medical: '🩺',
+  Law: '⚖️',
+  MBA: '📊',
+  Programming: '💻',
 };
 
 export default function CategoryCard({ category }) {
@@ -21,7 +21,7 @@ export default function CategoryCard({ category }) {
 
   return (
     <Link
-      to={`/courses?category=${category._id}`}
+      to={`/courses?category=${category.id || _id}`}
       className="card-hover p-6 group text-center"
     >
       <div className="text-4xl mb-3">{icon}</div>

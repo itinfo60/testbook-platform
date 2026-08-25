@@ -1,11 +1,10 @@
-import { Model } from 'mongoose';
+import prisma from '../../config/prisma.js';
 import { TenantRepository } from '../../core/tenant.repository.js';
 import { IReview } from './review.dto.js';
-import Review from './review.model.js';
 
 export class ReviewRepository extends TenantRepository<IReview> {
-  constructor(model: Model<IReview> = Review) {
-    super(model);
+  constructor(model = prisma.review) {
+    super(model as any);
   }
 }
 

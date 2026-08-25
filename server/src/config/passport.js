@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import User from '../modules/user/user.model.ts';
+import prisma from './prisma.js';
 import config from './index.js';
 
 if (config.google.clientId && config.google.clientSecret) {
@@ -17,26 +17,33 @@ if (config.google.clientId && config.google.clientSecret) {
           const email = profile.emails?.[0]?.value;
           if (!email) return done(new Error('No email from Google'), null);
 
-          let user = await User.findOne({ email });
+          let user = await prisma.user.findFirst({ where: { email } });
 
           if (user) {
             if (!user.googleId) {
-              user.googleId = profile.id;
-              user.isEmailVerified = true;
+              const data = {
+                googleId: profile.id,
+                isEmailVerified: true,
+              };
               if (!user.avatar && profile.photos?.[0]?.value) {
-                user.avatar = profile.photos[0].value;
+                data.avatar = profile.photos[0].value;
               }
-              await user.save();
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data,
+              });
             }
           } else {
-            user = await User.create({
-              name: profile.displayName,
-              email,
-              googleId: profile.id,
-              isEmailVerified: true,
-              role: 'student',
-              avatar: profile.photos?.[0]?.value || '',
-              password: Math.random().toString(36).slice(-12) + 'Aa1!',
+            user = await prisma.user.create({
+              data: {
+                name: profile.displayName,
+                email,
+                googleId: profile.id,
+                isEmailVerified: true,
+                role: 'student',
+                avatar: profile.photos?.[0]?.value || '',
+                password: Math.random().toString(36).slice(-12) + 'Aa1!',
+              },
             });
           }
 
@@ -49,10 +56,10 @@ if (config.google.clientId && config.google.clientSecret) {
   );
 }
 
-passport.serializeUser((user, done) => done(null, user._id));
+passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await User.findById(id);
+    const user = await prisma.user.findUnique({ where: { id } });
     done(null, user);
   } catch (err) {
     done(err, null);

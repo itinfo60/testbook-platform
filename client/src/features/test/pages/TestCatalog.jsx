@@ -177,7 +177,7 @@ export default function TestCatalog() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredTests.map((test) => (
-            <TestCard key={test._id} test={test} />
+            <TestCard key={test.id || test._id} test={test} />
           ))}
         </div>
       )}

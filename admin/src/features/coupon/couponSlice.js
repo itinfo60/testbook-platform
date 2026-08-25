@@ -92,7 +92,7 @@ const couponSlice = createSlice({
         state.list.unshift(action.payload);
       })
       .addCase(deleteCoupon.fulfilled, (state, action) => {
-        state.list = state.list.filter((c) => c._id !== action.payload);
+        state.list = state.list.filter((c) => (c.id || c._id) !== action.payload);
       });
   },
 });

@@ -81,16 +81,17 @@ export default function DataTable({
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800/50">
+            <tr className="bg-gray-50 dark:bg-gray-800/60">
               {selectable && (
-                <th className="w-12 px-4 py-3">
+                <th className="w-12 px-6 py-3.5">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={(e) => onSelectAll?.(e.target.checked)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    title={allSelected ? 'Deselect All' : 'Select All'}
                   />
                 </th>
               )}
@@ -98,7 +99,7 @@ export default function DataTable({
                 <th
                   key={col.key}
                   className={cn(
-                    'px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
+                    'px-6 py-3.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
                     col.sortable &&
                       'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200',
                     col.className
@@ -106,25 +107,25 @@ export default function DataTable({
                   style={{ width: col.width }}
                   onClick={() => col.sortable && onSort?.(col.key)}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
                     {col.label}
                     {col.sortable && <SortIcon field={col.key} />}
                   </div>
                 </th>
               ))}
               {actions && (
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
             {loading ? (
               <tr>
                 <td
                   colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)}
-                  className="px-4 py-16"
+                  className="px-6 py-16"
                 >
                   <LoadingSpinner size="md" />
                 </td>
@@ -133,7 +134,7 @@ export default function DataTable({
               <tr>
                 <td
                   colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)}
-                  className="px-4 py-16 text-center"
+                  className="px-6 py-16 text-center"
                 >
                   <div className="flex flex-col items-center gap-3">
                     {EmptyIcon && (
@@ -144,35 +145,41 @@ export default function DataTable({
                 </td>
               </tr>
             ) : (
-              data.map((row, idx) => (
-                <tr
-                  key={row._id || idx}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
-                >
-                  {selectable && (
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.includes(row._id)}
-                        onChange={() => onSelectRow?.(row._id)}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                    </td>
-                  )}
-                  {columns.map((col) => (
-                    <td
-                      key={col.key}
-                      className={cn(
-                        'px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
-                        col.cellClass
-                      )}
-                    >
-                      {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '-')}
-                    </td>
-                  ))}
-                  {actions && <td className="px-4 py-3 text-right">{actions(row)}</td>}
-                </tr>
-              ))
+              data.map((row, idx) => {
+                const rowId = row.id || row._id || idx;
+                return (
+                  <tr
+                    key={rowId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                  >
+                    {selectable && (
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.includes(rowId)}
+                          onChange={(e) => onSelectRow?.(rowId, e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                          title={selectedRows.includes(rowId) ? 'Deselect row' : 'Select row'}
+                        />
+                      </td>
+                    )}
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={cn(
+                          'px-6 py-4 text-sm text-gray-700 dark:text-gray-300',
+                          col.cellClass
+                        )}
+                      >
+                        {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '-')}
+                      </td>
+                    ))}
+                    {actions && (
+                      <td className="px-6 py-4 text-right whitespace-nowrap">{actions(row)}</td>
+                    )}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

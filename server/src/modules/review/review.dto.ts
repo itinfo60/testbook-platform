@@ -1,16 +1,14 @@
-import { Document, Types } from 'mongoose';
-
-export interface IReview extends Document {
-  _id: Types.ObjectId;
-  user: Types.ObjectId;
-  course: Types.ObjectId;
+export interface IReview {
+  _id: string;
+  user: string;
+  course: string;
   rating: number;
   comment: string;
   isApproved: boolean;
   isFlagged: boolean;
   helpfulCount: number;
   reportCount: number;
-  tenantId: Types.ObjectId;
+  tenantId: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,12 +1,10 @@
-import { Document, Types } from 'mongoose';
-
 export interface IUsedByUser {
-  user: Types.ObjectId;
+  user: string;
   usedAt: Date;
 }
 
-export interface ICoupon extends Document {
-  _id: Types.ObjectId;
+export interface ICoupon {
+  _id: string;
   code: string;
   description?: string;
   discountType: 'percentage' | 'fixed';
@@ -16,13 +14,13 @@ export interface ICoupon extends Document {
   usageLimit: number;
   usedCount: number;
   perUserLimit: number;
-  applicableCourses: Types.ObjectId[];
-  applicableCategories: Types.ObjectId[];
+  applicableCourses: string[];
+  applicableCategories: string[];
   isActive: boolean;
   startDate: Date;
   endDate: Date;
   usedBy: IUsedByUser[];
-  tenantId: Types.ObjectId;
+  tenantId: string;
   createdAt: Date;
   updatedAt: Date;
 

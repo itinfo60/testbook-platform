@@ -56,7 +56,7 @@ const JobAlertList = lazy(() => import('@/features/blog/pages/JobAlertList'));
 const PricingPage = lazy(() => import('@/features/subscription/pages/PricingPage'));
 const NotFoundPage = lazy(() => import('@/features/home/pages/NotFoundPage'));
 
-// CivicsEdu Public Pages
+// CivicsHub Public Pages
 const ExamsCatalog = lazy(() => import('@/features/exams/pages/ExamsCatalog'));
 const ExamDetail = lazy(() => import('@/features/exams/pages/ExamDetail'));
 const SearchResultsPage = lazy(() => import('@/features/search/pages/SearchResultsPage'));
@@ -119,10 +119,6 @@ const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingS
 // Test taking
 const TestTaking = lazy(() => import('@/features/test/pages/TestTaking'));
 const TestResult = lazy(() => import('@/features/test/pages/TestResult'));
-
-// Parent Portal
-const ParentDashboard = lazy(() => import('@/features/parent/pages/ParentDashboard'));
-const ParentMessages = lazy(() => import('@/features/parent/pages/ParentMessages'));
 
 const FullScreenLoader = () => (
   <div className="h-screen bg-slate-950 flex items-center justify-center">
@@ -372,26 +368,6 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <LiveClassList />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
-
-          {/* Parent Routes */}
-          <Route element={<FeatureBoundary />}>
-            <Route
-              path="/parent"
-              element={
-                <ProtectedRoute roles={['parent', 'admin']}>
-                  <ParentDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/messages"
-              element={
-                <ProtectedRoute roles={['parent', 'teacher', 'admin']}>
-                  <ParentMessages />
                 </ProtectedRoute>
               }
             />

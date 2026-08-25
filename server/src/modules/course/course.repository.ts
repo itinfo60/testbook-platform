@@ -1,37 +1,33 @@
-import { Model } from 'mongoose';
 import { TenantRepository } from '../../core/tenant.repository.js';
-import { ICourse } from './course.model.js';
-import Course from './course.model.js';
+import prisma from '../../config/prisma.js';
 import { CourseQueryInput } from './course.validation.js';
-import ExamCategory from '../exam-category/examCategory.model.js';
 
-export class CourseRepository extends TenantRepository<ICourse> {
-  constructor(model: Model<ICourse> = Course as Model<ICourse>) {
-    super(model);
+export class CourseRepository extends TenantRepository<any> {
+  constructor(model = prisma.course) {
+    super(model as any);
   }
 
-  async paginateCourses(query: CourseQueryInput): Promise<{ docs: ICourse[]; total: number }> {
+  async paginateCourses(query: CourseQueryInput): Promise<{ docs: any[]; total: number }> {
     const filter: any = {};
 
     if (query.category) {
       const categoryInputs = query.category.split(',').filter(Boolean);
-      // Find matching categories by either _id or slug
-      const matchedCats = await ExamCategory.find({
-        $or: [
-          { _id: { $in: categoryInputs.filter((id) => id.match(/^[0-9a-fA-F]{24}$/)) } },
-          { slug: { $in: categoryInputs } },
-        ],
-      }).distinct('_id');
+      const matchedCats = await prisma.category.findMany({
+        where: {
+          OR: [{ id: { in: categoryInputs } }, { slug: { in: categoryInputs } }],
+        },
+        select: { id: true },
+      });
 
-      const subcats = await ExamCategory.find({ parent: { $in: matchedCats } }).distinct('_id');
-      const allCategoryIds = [
-        ...new Set([
-          ...matchedCats.map((id) => id.toString()),
-          ...subcats.map((id) => id.toString()),
-        ]),
-      ];
+      const matchedCatIds = matchedCats.map((c) => c.id);
+      const subcats = await prisma.category.findMany({
+        where: { parentId: { in: matchedCatIds } },
+        select: { id: true },
+      });
 
-      filter.category = { $in: allCategoryIds.length > 0 ? allCategoryIds : categoryInputs };
+      const allCategoryIds = [...new Set([...matchedCatIds, ...subcats.map((c) => c.id)])];
+
+      filter.categoryId = { in: allCategoryIds.length > 0 ? allCategoryIds : categoryInputs };
     }
 
     if (query.level) {
@@ -39,7 +35,11 @@ export class CourseRepository extends TenantRepository<ICourse> {
     }
 
     if (query.status) {
-      filter.status = query.status;
+      if (query.status === 'published') {
+        filter.isPublished = true;
+      } else if (query.status === 'draft') {
+        filter.isPublished = false;
+      }
     }
 
     if (query.isFeatured !== undefined) {
@@ -47,49 +47,49 @@ export class CourseRepository extends TenantRepository<ICourse> {
     }
 
     if (query.priceMin !== undefined || query.priceMax !== undefined) {
-      filter.effectivePrice = {};
+      filter.price = {};
       if (query.priceMin !== undefined) {
-        filter.effectivePrice.$gte = query.priceMin;
+        filter.price.gte = query.priceMin;
       }
       if (query.priceMax !== undefined) {
-        filter.effectivePrice.$lte = query.priceMax;
+        filter.price.lte = query.priceMax;
       }
     }
 
     if (query.search) {
-      filter.$or = [
-        { title: { $regex: query.search, $options: 'i' } },
-        { description: { $regex: query.search, $options: 'i' } },
+      filter.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
     const scopedFilter = this.getScopedFilter(filter);
 
-    let sortObj: any = { createdAt: -1 };
+    let orderBy: any = { createdAt: 'desc' };
     if (query.sort === 'oldest') {
-      sortObj = { createdAt: 1 };
+      orderBy = { createdAt: 'asc' };
     } else if (query.sort === 'price_low') {
-      sortObj = { effectivePrice: 1 };
+      orderBy = { price: 'asc' };
     } else if (query.sort === 'price_high') {
-      sortObj = { effectivePrice: -1 };
+      orderBy = { price: 'desc' };
     } else if (query.sort === 'rating') {
-      sortObj = { averageRating: -1 };
-    } else if (query.sort === 'popular') {
-      sortObj = { enrollmentCount: -1 };
+      orderBy = { rating: 'desc' };
     }
 
     const skip = (query.page - 1) * query.limit;
 
     const [docs, total] = await Promise.all([
-      this.model
-        .find(scopedFilter)
-        .populate('teacher', 'name email avatar')
-        .populate('category', 'name')
-        .sort(sortObj)
-        .skip(skip)
-        .limit(query.limit)
-        .exec(),
-      this.model.countDocuments(scopedFilter).exec(),
+      prisma.course.findMany({
+        where: scopedFilter,
+        include: {
+          teacher: { select: { name: true, email: true, avatar: true } },
+          category: { select: { name: true } },
+        },
+        orderBy,
+        skip,
+        take: query.limit,
+      }),
+      prisma.course.count({ where: scopedFilter }),
     ]);
 
     return { docs, total };

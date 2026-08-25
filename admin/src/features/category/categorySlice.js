@@ -6,7 +6,8 @@ export const fetchCategories = createAsyncThunk(
   'categories/fetchAll',
   async (params, { rejectWithValue }) => {
     try {
-      const res = await examCategoriesAPI.getAll(params);
+      // Always scope to type:'category' so the Categories section never shows exams
+      const res = await examCategoriesAPI.getAll({ type: 'category', ...params });
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data);
@@ -18,7 +19,8 @@ export const createCategory = createAsyncThunk(
   'categories/create',
   async (data, { rejectWithValue }) => {
     try {
-      const res = await examCategoriesAPI.create(data);
+      // Always create as type:'category'
+      const res = await examCategoriesAPI.create({ type: 'category', ...data });
       toast.success('Category created');
       return res.data.data;
     } catch (err) {
@@ -68,9 +70,12 @@ const categorySlice = createSlice({
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
-        const data = action.payload.data;
-        state.list = data?.categories || (Array.isArray(data) ? data : []);
-        state.pagination = action.payload.pagination || null;
+        const payload = action.payload;
+        const data = payload.data;
+        // admin/list: ApiResponse.paginated → { data: [...], pagination }
+        // public GET /categories: { data: { categories, allCategories } }
+        state.list = Array.isArray(data) ? data : data?.docs || data?.categories || [];
+        state.pagination = payload.pagination || null;
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;
@@ -80,7 +85,7 @@ const categorySlice = createSlice({
         state.list.unshift(action.payload);
       })
       .addCase(deleteCategory.fulfilled, (state, action) => {
-        state.list = state.list.filter((c) => c._id !== action.payload);
+        state.list = state.list.filter((c) => (c.id || c._id) !== action.payload);
       });
   },
 });

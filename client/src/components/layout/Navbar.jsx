@@ -88,22 +88,15 @@ export default function Navbar() {
     { label: 'Job Alerts & Blog', path: '/blog' },
   ];
 
-  const userLinks =
-    user?.role === 'parent'
-      ? [
-          { icon: HiUserGroup, label: 'Parent Portal', path: '/parent' },
-          { icon: HiChat, label: 'Messages', path: '/messages' },
-          { icon: HiCog, label: 'Settings', path: '/settings' },
-        ]
-      : [
-          { icon: HiUser, label: 'Dashboard', path: '/dashboard' },
-          { icon: HiBookOpen, label: 'My Courses', path: '/my-courses' },
-          { icon: HiClipboardList, label: 'My Tests', path: '/my-test-attempts' },
-          { icon: HiVideoCamera, label: 'Live Classes', path: '/live-classes' },
-          { icon: HiHeart, label: 'Wishlist', path: '/wishlist' },
-          { icon: HiShoppingBag, label: 'My Orders', path: '/orders' },
-          { icon: HiCog, label: 'Settings', path: '/settings' },
-        ];
+  const userLinks = [
+    { icon: HiUser, label: 'Dashboard', path: '/dashboard' },
+    { icon: HiBookOpen, label: 'My Courses', path: '/my-courses' },
+    { icon: HiClipboardList, label: 'My Tests', path: '/my-test-attempts' },
+    { icon: HiVideoCamera, label: 'Live Classes', path: '/live-classes' },
+    { icon: HiHeart, label: 'Wishlist', path: '/wishlist' },
+    { icon: HiShoppingBag, label: 'My Orders', path: '/orders' },
+    { icon: HiCog, label: 'Settings', path: '/settings' },
+  ];
 
   if (user?.role === 'teacher') {
     userLinks.splice(1, 0, { icon: HiChartBar, label: 'Teacher Dashboard', path: '/teacher' });
@@ -116,13 +109,12 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-8">
-              <Link to="/" className="flex items-center gap-2.5">
-                <div className="h-10 w-10 bg-navy-950 dark:bg-navy-800 rounded flex items-center justify-center border-l-2 border-accent-500 shadow-sm">
+              <Link to="/" className="inline-flex items-center gap-2.5">
+                <div className="h-10 w-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm">
                   <HiAcademicCap className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold font-display tracking-tight uppercase">
-                  <span className="text-gray-900 dark:text-white">Civics</span>
-                  <span className="text-blue-600 dark:text-blue-400">Edu</span>
+                <span className="text-2xl font-bold font-display text-dark-900 dark:text-white">
+                  Civics<span className="text-primary-600">Hub</span>
                 </span>
               </Link>
 

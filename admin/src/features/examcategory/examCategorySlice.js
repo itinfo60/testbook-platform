@@ -6,7 +6,8 @@ export const fetchExamCategories = createAsyncThunk(
   'examCategories/fetchAll',
   async (params, { rejectWithValue }) => {
     try {
-      const res = await examCategoriesAPI.getAll(params);
+      // Always scope to type:'exam' so the Exams section never shows plain categories
+      const res = await examCategoriesAPI.getAll({ type: 'exam', ...params });
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data);
@@ -30,8 +31,9 @@ export const createExamCategory = createAsyncThunk(
   'examCategories/create',
   async (data, { rejectWithValue }) => {
     try {
-      const res = await examCategoriesAPI.create(data);
-      toast.success('Exam category created');
+      // Always create as type:'exam'
+      const res = await examCategoriesAPI.create({ type: 'exam', ...data });
+      toast.success('Exam created');
       return res.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data);
@@ -44,7 +46,7 @@ export const updateExamCategory = createAsyncThunk(
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const res = await examCategoriesAPI.update(id, data);
-      toast.success('Exam category updated');
+      toast.success('Exam updated');
       return res.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data);
@@ -57,7 +59,7 @@ export const deleteExamCategory = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       await examCategoriesAPI.delete(id);
-      toast.success('Exam category deleted');
+      toast.success('Exam deleted');
       return id;
     } catch (err) {
       return rejectWithValue(err.response?.data);
@@ -80,9 +82,14 @@ const examCategorySlice = createSlice({
       })
       .addCase(fetchExamCategories.fulfilled, (state, action) => {
         state.loading = false;
-        const data = action.payload.data;
-        state.list = data?.categories || (Array.isArray(data) ? data : []);
-        state.pagination = action.payload.pagination || null;
+        const payload = action.payload;
+        // admin/list: ApiResponse.paginated → { data: [...], pagination }
+        // public GET /categories: { data: { categories, allCategories } }
+        const data = payload.data;
+        state.list = Array.isArray(data)
+          ? data
+          : data?.docs || data?.categories || (Array.isArray(data) ? data : []);
+        state.pagination = payload.pagination || null;
       })
       .addCase(fetchExamCategories.rejected, (state, action) => {
         state.loading = false;
@@ -95,7 +102,7 @@ const examCategorySlice = createSlice({
         state.list.unshift(action.payload);
       })
       .addCase(deleteExamCategory.fulfilled, (state, action) => {
-        state.list = state.list.filter((c) => c._id !== action.payload);
+        state.list = state.list.filter((c) => (c.id || c._id) !== action.payload);
       });
   },
 });

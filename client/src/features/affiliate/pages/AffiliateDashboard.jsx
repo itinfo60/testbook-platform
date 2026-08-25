@@ -167,7 +167,7 @@ export default function AffiliateDashboard() {
             </thead>
             <tbody className="divide-y divide-slate-800">
               {records.map((r) => (
-                <tr key={r._id}>
+                <tr key={r.id || r._id}>
                   <td className="px-4 py-3 text-slate-300 text-sm">{r.referred?.name || '—'}</td>
                   <td className="px-4 py-3 text-slate-400 text-sm">
                     {new Date(r.createdAt).toLocaleDateString()}

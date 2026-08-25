@@ -1,23 +1,41 @@
-import { Model } from 'mongoose';
 import { TenantRepository } from '../../core/tenant.repository.js';
-import { IUserBadge } from './badge.dto.js';
-import UserBadge from './userBadge.model.js';
+import prisma from '../../config/prisma.js';
 
-export class UserBadgeRepository extends TenantRepository<IUserBadge> {
-  constructor(model: Model<IUserBadge> = UserBadge) {
-    super(model);
+export class UserBadgeRepository extends TenantRepository<any> {
+  constructor(model = prisma.userBadge) {
+    super(model as any);
   }
 
   async paginateUserBadges(
     filter: any,
     options: any
-  ): Promise<{ docs: IUserBadge[]; total: number; pagination: any }> {
+  ): Promise<{ docs: any[]; total: number; pagination: any }> {
     const scopedFilter = this.getScopedFilter(filter);
-    const result = await (this.model as any).paginate(scopedFilter, options);
+
+    // We will do a manual prisma pagination since we don't have mongoose-paginate-v2
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [docs, total] = await Promise.all([
+      prisma.userBadge.findMany({
+        where: scopedFilter,
+        skip,
+        take: limit,
+        include: { badgeObj: true }, // Assuming relation name
+      }),
+      prisma.userBadge.count({ where: scopedFilter }),
+    ]);
+
     return {
-      docs: result.docs,
-      total: result.pagination.total,
-      pagination: result.pagination,
+      docs,
+      total,
+      pagination: {
+        total,
+        limit,
+        page,
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 }

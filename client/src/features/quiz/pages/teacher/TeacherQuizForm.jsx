@@ -14,6 +14,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { createQuiz, updateQuiz } from '@/features/quiz/quizSlice';
 import { courseAPI, quizAPI } from '@/services/api';
+import { getUnifiedExams } from '@/services/categories';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
@@ -73,7 +74,7 @@ export default function TeacherQuizForm() {
   useEffect(() => {
     Promise.all([
       courseAPI.getTeacherCourses().catch(() => ({ data: { data: [] } })),
-      getUnifiedExamCategories(),
+      getUnifiedExams(),
     ]).then(([courseRes, catList]) => {
       const cData = courseRes.data?.data;
       setCourses(Array.isArray(cData) ? cData : cData?.courses || []);
@@ -298,7 +299,7 @@ export default function TeacherQuizForm() {
                 >
                   <option value="">-- Select Course --</option>
                   {courses.map((c) => (
-                    <option key={c._id} value={c._id}>
+                    <option key={c.id || c._id} value={c.id || c._id}>
                       {c.title}
                     </option>
                   ))}
@@ -316,7 +317,7 @@ export default function TeacherQuizForm() {
                 >
                   <option value="">-- All Exams / General --</option>
                   {categories.map((c) => (
-                    <option key={c._id} value={c._id}>
+                    <option key={c.id || c._id} value={c.id || c._id}>
                       {c.name}
                     </option>
                   ))}

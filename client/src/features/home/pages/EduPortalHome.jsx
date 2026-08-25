@@ -41,11 +41,11 @@ import CuratedArticles from '@/components/home/v3/CuratedArticles';
 import PerformancePreview from '@/components/home/v3/PerformancePreview';
 import FinalCTA from '@/components/home/v2/FinalCTA';
 
-export default function CivicsEduHome() {
+export default function CivicsHubHome() {
   return (
     <div className="min-h-screen bg-[#faf9f6] font-sans selection:bg-accent-500/30">
       <SeoHead
-        title="CivicsEdu — Your Exam Is the Goal. We Build the Journey."
+        title="CivicsHub — Your Exam Is the Goal. We Build the Journey."
         description="Learn the right things. Practice the right questions. Measure your progress. Improve until you're ready for RAS, RPSC, Assistant Professor, and Political Science."
       />
 

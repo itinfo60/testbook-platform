@@ -157,14 +157,14 @@ export function setupApiMocks({ mockGet, mockPost, mockPut, mockPatch, mockDelet
             data: { user: mockUsers.student, tokens: { accessToken: mockAuthTokens.student } },
           },
         });
-      if (email === 'teacher@testbook.com')
+      if (email === 'teacher@civicshub.com')
         return Promise.resolve({
           data: {
             success: true,
             data: { user: mockUsers.teacher, tokens: { accessToken: mockAuthTokens.teacher } },
           },
         });
-      if (email === 'admin@testbook.com')
+      if (email === 'admin@civicshub.com')
         return Promise.resolve({
           data: {
             success: true,

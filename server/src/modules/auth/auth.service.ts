@@ -1,16 +1,25 @@
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
+import * as jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import config from '../../config/index.js';
 import redis from '../../config/redis.js';
 import { AuthRepository } from './auth.repository.js';
 import { RegisterInput, LoginInput, UpdateProfileInput } from './auth.validation.js';
-import { IUser, AuthResponseDto } from './auth.dto.ts';
+import { AuthResponseDto, IUser } from './auth.dto.js';
 import { ApiError } from '../../core/api-error.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 import { transactionalEmailQueue } from '../../queues/index.js';
-import User from '../user/user.model.js';
+import prisma from '../../config/prisma.js';
+import {
+  hashPassword,
+  generateEmailVerificationToken,
+  generateAccessToken,
+  generateRefreshToken,
+  comparePassword,
+  generateResetToken,
+  sanitizeUser,
+} from '../user/user.utils.js';
 
 const LOCKOUT_PREFIX = 'lockout:';
 const LOCKOUT_ATTEMPTS = 5;
@@ -71,21 +80,24 @@ export class AuthService {
       throw ApiError.conflict('Email is already registered');
     }
 
+    const hashedPassword = await hashPassword(password);
+    const {
+      token: verifyToken,
+      hashedToken: emailVerificationToken,
+      expire: emailVerificationExpire,
+    } = generateEmailVerificationToken();
+
     // Create user in the appropriate tenant context
     const user = await runWithTenant(tenantId, tenantId === null, () =>
       this.authRepository.create({
         name,
         email,
-        password,
+        password: hashedPassword,
         role: actualRole,
         tenantId: tenantId ? tenantId : undefined,
+        emailVerificationToken,
+        emailVerificationExpire,
       })
-    );
-
-    // Generate email verification token
-    const verifyToken = user.generateEmailVerificationToken();
-    await runWithTenant(tenantId, tenantId === null, () =>
-      user.save({ validateBeforeSave: false })
     );
 
     // Queue verification email
@@ -94,28 +106,31 @@ export class AuthService {
       data: { user, token: verifyToken },
     });
 
-    const accessToken = user.generateAccessToken();
-    const rawRefreshToken = user.generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken(user);
 
     // Store hashed refresh token
-    user.refreshTokens.push({
+    const newRefreshToken = {
       token: hashToken(rawRefreshToken),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       device: userAgent,
-    });
-    await runWithTenant(tenantId, tenantId === null, () =>
-      user.save({ validateBeforeSave: false })
+    };
+
+    const updatedRefreshTokens = ((user.refreshTokens as any[]) || []).concat(newRefreshToken);
+
+    const updatedUser = await runWithTenant(tenantId, tenantId === null, () =>
+      this.authRepository.updateById(user.id, { refreshTokens: updatedRefreshTokens })
     );
 
     return {
       user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        id: updatedUser!.id,
+        name: updatedUser!.name,
+        email: updatedUser!.email,
+        role: updatedUser!.role,
         tenantId: tenantId,
-        avatar: user.avatar,
-        mfaEnabled: user.mfaEnabled,
+        avatar: updatedUser!.avatar as any,
+        mfaEnabled: updatedUser!.mfaEnabled,
       },
       tokens: {
         accessToken,
@@ -151,26 +166,17 @@ export class AuthService {
       throw ApiError.badRequest(`Please login using ${user.authProvider}`);
     }
 
-    // ── Tenant isolation check ────────────────────────────────────────────
-    // super_admin has no tenant — always allowed.
-    // For all other roles:
-    //   a) If a tenantId was resolved from the request (subdomain / header) →
-    //      verify it matches the user's own tenantId.
-    //   b) If NO tenantId was resolved (plain localhost / direct API) →
-    //      allow login using the user's own stored tenantId as the context.
-    //      This prevents the bootstrap chicken-and-egg problem.
     if (user.role !== 'super_admin') {
       const userTenantId = user.tenantId ? user.tenantId.toString() : null;
 
       if (tenantId) {
-        // A tenant was detected from the request — enforce it matches the user's tenant
         if (userTenantId && userTenantId !== tenantId) {
           throw ApiError.unauthorized('Invalid email or password');
         }
       }
     }
 
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await comparePassword(password, user.password || null);
     if (!isPasswordValid) {
       const attempts = (lockoutData?.attempts || 0) + 1;
       await redis.set(lockoutKey, { attempts }, LOCKOUT_TTL);
@@ -182,41 +188,41 @@ export class AuthService {
 
     // MFA Enforcement Check
     if (user.mfaEnabled) {
-      return { requiresMfa: true, userId: user._id.toString() };
+      return { requiresMfa: true, userId: user.id };
     }
 
-    const accessToken = user.generateAccessToken();
-    const rawRefreshToken = user.generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken(user);
 
     // Rotate refresh tokens
-    user.refreshTokens = user.refreshTokens.filter((t) => t.expiresAt > new Date());
-    user.refreshTokens.push({
+    let currentTokens = (user.refreshTokens as any[]) || [];
+    currentTokens = currentTokens.filter((t) => new Date(t.expiresAt) > new Date());
+    currentTokens.push({
       token: hashToken(rawRefreshToken),
       expiresAt: new Date(Date.now() + (input.rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000),
       device: userAgent,
     });
-    user.lastActiveAt = new Date();
 
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      this.authRepository.updateById(user.id, {
+        refreshTokens: currentTokens,
+        lastActiveAt: new Date(),
+      })
     );
 
     // Cache user object in Redis
-    const userToCache = user.toObject();
-    delete userToCache.password;
-    delete userToCache.refreshTokens;
-    delete userToCache.mfaSecret;
+    const userToCache = sanitizeUser(user);
 
-    await redis.set(`user_${user._id}`, userToCache, 300);
+    await redis.set(`user_${user.id}`, userToCache, 300);
 
     return {
       user: {
-        id: user._id.toString(),
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
         tenantId: user.tenantId ? user.tenantId.toString() : null,
-        avatar: user.avatar,
+        avatar: user.avatar as any,
         mfaEnabled: user.mfaEnabled,
       },
       tokens: {
@@ -249,29 +255,32 @@ export class AuthService {
       throw ApiError.unauthorized('Invalid MFA token');
     }
 
-    const accessToken = user.generateAccessToken();
-    const rawRefreshToken = user.generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken(user);
 
-    user.refreshTokens = user.refreshTokens.filter((t) => t.expiresAt > new Date());
-    user.refreshTokens.push({
+    let currentTokens = (user.refreshTokens as any[]) || [];
+    currentTokens = currentTokens.filter((t) => new Date(t.expiresAt) > new Date());
+    currentTokens.push({
       token: hashToken(rawRefreshToken),
       expiresAt: new Date(Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000),
       device: userAgent,
     });
-    user.lastActiveAt = new Date();
 
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      this.authRepository.updateById(user.id, {
+        refreshTokens: currentTokens,
+        lastActiveAt: new Date(),
+      })
     );
 
     return {
       user: {
-        id: user._id.toString(),
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
         tenantId: user.tenantId ? user.tenantId.toString() : null,
-        avatar: user.avatar,
+        avatar: user.avatar as any,
         mfaEnabled: user.mfaEnabled,
       },
       tokens: {
@@ -292,11 +301,15 @@ export class AuthService {
     const hashedToken = hashToken(rawToken);
 
     // Lookup user globally with matching refresh token
-    const user = await runWithTenant(null, true, () =>
-      User.findOne({
-        refreshTokens: { $elemMatch: { token: hashedToken } },
-      }).select('+refreshTokens')
+    const users = await runWithTenant(
+      null,
+      true,
+      () =>
+        prisma.$queryRaw<
+          any[]
+        >`SELECT * FROM "User" WHERE refresh_tokens::jsonb @> ${JSON.stringify([{ token: hashedToken }])}::jsonb LIMIT 1`
     );
+    const user = users && users.length > 0 ? users[0] : null;
 
     if (!user) {
       // Re-use detection: Verify token structure, if valid but token doesn't exist, clear all tokens!
@@ -304,7 +317,7 @@ export class AuthService {
         const decoded = jwt.verify(rawToken, config.jwt.secret!) as { id: string };
         if (decoded && decoded.id) {
           await runWithTenant(null, true, () =>
-            User.findByIdAndUpdate(decoded.id, { $set: { refreshTokens: [] } })
+            this.authRepository.updateById(decoded.id, { refreshTokens: [] })
           );
           await redis.del(`user_${decoded.id}`);
         }
@@ -315,30 +328,32 @@ export class AuthService {
     }
 
     // Check expiration
-    const foundToken = user.refreshTokens.find((t) => t.token === hashedToken);
-    if (!foundToken || foundToken.expiresAt < new Date()) {
-      user.refreshTokens = user.refreshTokens.filter((t) => t.token !== hashedToken);
-      await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-        user.save({ validateBeforeSave: false })
+    const refreshTokens = (user.refresh_tokens || []) as any[];
+    const foundToken = refreshTokens.find((t) => t.token === hashedToken);
+
+    if (!foundToken || new Date(foundToken.expiresAt) < new Date()) {
+      const filtered = refreshTokens.filter((t) => t.token !== hashedToken);
+      await runWithTenant(user.tenant_id ? user.tenant_id.toString() : null, !user.tenant_id, () =>
+        this.authRepository.updateById(user.id, { refreshTokens: filtered })
       );
       throw ApiError.unauthorized('Invalid or expired refresh token');
     }
 
     // Rotate: filter out old token
-    user.refreshTokens = user.refreshTokens.filter((t) => t.token !== hashedToken);
+    let currentTokens = refreshTokens.filter((t) => t.token !== hashedToken);
 
     // Generate new family member
-    const newAccessToken = user.generateAccessToken();
-    const newRawRefreshToken = user.generateRefreshToken();
+    const newAccessToken = generateAccessToken({ id: user.id, role: user.role, email: user.email });
+    const newRawRefreshToken = generateRefreshToken({ id: user.id });
 
-    user.refreshTokens.push({
+    currentTokens.push({
       token: hashToken(newRawRefreshToken),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       device: userAgent,
     });
 
-    await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+    await runWithTenant(user.tenant_id ? user.tenant_id.toString() : null, !user.tenant_id, () =>
+      this.authRepository.updateById(user.id, { refreshTokens: currentTokens })
     );
 
     return { accessToken: newAccessToken, newRefreshToken: newRawRefreshToken };
@@ -351,11 +366,14 @@ export class AuthService {
   ): Promise<void> {
     if (rawRefreshToken) {
       const hashedRefresh = hashToken(rawRefreshToken);
-      await runWithTenant(null, true, () =>
-        User.findByIdAndUpdate(userId, {
-          $pull: { refreshTokens: { token: hashedRefresh } },
-        })
-      );
+      await runWithTenant(null, true, async () => {
+        const user = await this.authRepository.findById(userId);
+        if (user) {
+          const currentTokens = (user.refreshTokens as any[]) || [];
+          const filtered = currentTokens.filter((t) => t.token !== hashedRefresh);
+          await this.authRepository.updateById(userId, { refreshTokens: filtered });
+        }
+      });
     }
 
     if (accessToken) {
@@ -383,8 +401,14 @@ export class AuthService {
       }
     }
 
-    const resetToken = user.generateResetToken();
-    await runWithTenant(null, true, () => user.save({ validateBeforeSave: false }));
+    const { resetToken, hashedToken, expire } = generateResetToken();
+
+    await runWithTenant(null, true, () =>
+      this.authRepository.updateById(user.id, {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpire: expire,
+      })
+    );
 
     await transactionalEmailQueue.add('send', {
       type: 'reset_password',
@@ -403,15 +427,18 @@ export class AuthService {
       throw ApiError.badRequest('Invalid or expired reset token');
     }
 
-    user.password = password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    user.refreshTokens = []; // Clear all active sessions
+    const hashedPassword = await hashPassword(password);
+
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save()
+      this.authRepository.updateById(user.id, {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpire: null,
+        refreshTokens: [],
+      })
     );
 
-    await redis.del(`user_${user._id}`);
+    await redis.del(`user_${user.id}`);
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -425,14 +452,15 @@ export class AuthService {
       throw ApiError.badRequest('Invalid or expired verification token');
     }
 
-    user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpire = undefined;
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      this.authRepository.updateById(user.id, {
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpire: null,
+      })
     );
 
-    await redis.del(`user_${user._id}`);
+    await redis.del(`user_${user.id}`);
   }
 
   async getMe(userId: string): Promise<IUser> {
@@ -447,10 +475,7 @@ export class AuthService {
       throw ApiError.notFound('User not found');
     }
 
-    const userObj = user.toObject();
-    delete userObj.password;
-    delete userObj.refreshTokens;
-    delete userObj.mfaSecret;
+    const userObj = sanitizeUser(user);
 
     await redis.set(`user_${userId}`, userObj, 300);
     return user as IUser;
@@ -474,31 +499,35 @@ export class AuthService {
     input: { currentPassword: string; newPassword: string },
     userAgent: string
   ): Promise<{ accessToken: string; newRefreshToken: string }> {
-    const user = await runWithTenant(null, true, () => User.findById(userId).select('+password'));
+    const user = await runWithTenant(null, true, () => this.authRepository.findById(userId));
 
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    const isMatch = await user.comparePassword(input.currentPassword);
+    const isMatch = await comparePassword(input.currentPassword, user.password || null);
     if (!isMatch) {
       throw ApiError.badRequest('Current password is incorrect');
     }
 
-    user.password = input.newPassword;
-    user.refreshTokens = []; // Log out all other devices
+    const hashedPassword = await hashPassword(input.newPassword);
 
-    const accessToken = user.generateAccessToken();
-    const rawRefreshToken = user.generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken(user);
 
-    user.refreshTokens.push({
-      token: hashToken(rawRefreshToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      device: userAgent,
-    });
+    const currentTokens = [
+      {
+        token: hashToken(rawRefreshToken),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        device: userAgent,
+      },
+    ];
 
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save()
+      this.authRepository.updateById(user.id, {
+        password: hashedPassword,
+        refreshTokens: currentTokens,
+      })
     );
 
     await redis.del(`user_${userId}`);
@@ -507,18 +536,17 @@ export class AuthService {
   }
 
   async setupMfa(userId: string): Promise<{ qrCode: string; secret: string }> {
-    const user = await runWithTenant(null, true, () => User.findById(userId));
+    const user = await runWithTenant(null, true, () => this.authRepository.findById(userId));
 
     if (!user) throw ApiError.notFound('User not found');
 
     const secret = speakeasy.generateSecret({
-      name: `TestBook (${user.email})`,
+      name: `CivicsHub (${user.email})`,
       length: 20,
     });
 
-    user.mfaSecret = secret.base32;
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      this.authRepository.updateById(user.id, { mfaSecret: secret.base32 })
     );
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
@@ -527,7 +555,7 @@ export class AuthService {
   }
 
   async enableMfa(userId: string, token: string): Promise<{ backupCodes: string[] }> {
-    const user = await runWithTenant(null, true, () => User.findById(userId).select('+mfaSecret'));
+    const user = await runWithTenant(null, true, () => this.authRepository.findByIdWithMfa(userId));
 
     if (!user || !user.mfaSecret) {
       throw ApiError.badRequest('MFA setup required first');
@@ -545,11 +573,12 @@ export class AuthService {
     }
 
     const backupCodes = Array.from({ length: 8 }, () => crypto.randomBytes(4).toString('hex'));
-    user.mfaEnabled = true;
-    user.mfaBackupCodes = backupCodes.map((c) => hashToken(c));
 
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      this.authRepository.updateById(user.id, {
+        mfaEnabled: true,
+        mfaBackupCodes: backupCodes.map((c) => hashToken(c)),
+      })
     );
 
     await redis.del(`user_${userId}`);
@@ -558,7 +587,7 @@ export class AuthService {
   }
 
   async disableMfa(userId: string, token: string): Promise<void> {
-    const user = await runWithTenant(null, true, () => User.findById(userId).select('+mfaSecret'));
+    const user = await runWithTenant(null, true, () => this.authRepository.findByIdWithMfa(userId));
 
     if (!user) throw ApiError.notFound('User not found');
     if (!user.mfaEnabled || !user.mfaSecret) throw ApiError.badRequest('MFA is not enabled');
@@ -572,12 +601,12 @@ export class AuthService {
 
     if (!verified) throw ApiError.unauthorized('Invalid authenticator code');
 
-    user.mfaEnabled = false;
-    user.mfaSecret = undefined;
-    user.mfaBackupCodes = [];
-
     await runWithTenant(user.tenantId ? user.tenantId.toString() : null, !user.tenantId, () =>
-      user.save({ validateBeforeSave: false })
+      this.authRepository.updateById(user.id, {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaBackupCodes: [],
+      })
     );
 
     await redis.del(`user_${userId}`);

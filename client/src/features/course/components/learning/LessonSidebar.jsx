@@ -14,10 +14,19 @@ const typeIcon = (type, cls) => {
   return <HiDocument className={cls} />;
 };
 
-const formatDuration = (secs) => {
-  if (!secs) return '';
-  const m = Math.floor(secs / 60);
-  return m > 0 ? `${m}m` : `${secs}s`;
+// `text` lessons are reading material — call them Notes, not "Text"
+const typeLabel = (type) => {
+  if (type === 'video') return 'Video';
+  if (type === 'quiz') return 'Quiz';
+  return 'Notes';
+};
+
+// Lesson durations are authored in MINUTES (see the course builder form)
+const formatDuration = (mins) => {
+  if (!mins) return '';
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}`.trim() : `${m}m`;
 };
 
 export default function LessonSidebar({
@@ -27,6 +36,7 @@ export default function LessonSidebar({
   onSelectLesson,
   totalCompleted,
   totalLessons,
+  isEnrolled = false,
 }) {
   const [collapsed, setCollapsed] = useState({});
 
@@ -87,6 +97,8 @@ export default function LessonSidebar({
                 sectionLessons.map((lesson, li) => {
                   const isActive = lesson._id === currentLessonId;
                   const isDone = completedLessonIds.includes(lesson._id);
+                  // Free lessons are the demo classes — open to everyone.
+                  const isLocked = (!isEnrolled && !lesson.isFree) || !!lesson.dripLocked;
 
                   return (
                     <button
@@ -109,6 +121,8 @@ export default function LessonSidebar({
                       >
                         {isDone ? (
                           <HiCheck className="h-3.5 w-3.5 text-secondary-500" />
+                        ) : isLocked ? (
+                          <HiLockClosed className="h-3.5 w-3.5 text-dark-400" />
                         ) : (
                           typeIcon(
                             lesson.type,
@@ -129,15 +143,23 @@ export default function LessonSidebar({
                           {lesson.title}
                         </p>
                         <div className="flex items-center gap-1.5 mt-0.5 text-xs text-dark-400">
-                          <span className="capitalize">{lesson.type}</span>
+                          <span>{typeLabel(lesson.type)}</span>
                           {lesson.duration > 0 && (
                             <>
                               <span>·</span>
                               <span>{formatDuration(lesson.duration)}</span>
                             </>
                           )}
-                          {lesson.isFree && (
+                          {lesson.isFree && !isEnrolled && (
+                            <span className="text-secondary-500 font-medium">Demo</span>
+                          )}
+                          {lesson.isFree && isEnrolled && (
                             <span className="text-secondary-500 font-medium">Free</span>
+                          )}
+                          {isLocked && (
+                            <span className="text-dark-400 font-medium">
+                              {lesson.dripLocked ? 'Scheduled' : 'Locked'}
+                            </span>
                           )}
                         </div>
                       </div>

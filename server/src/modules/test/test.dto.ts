@@ -1,13 +1,11 @@
-import { Types, Document } from 'mongoose';
-
 export interface IOption {
-  _id?: Types.ObjectId;
+  id?: string;
   text: string;
   isCorrect: boolean;
 }
 
 export interface IQuestion {
-  _id: Types.ObjectId;
+  id: string;
   question: string;
   type: 'mcq' | 'msq' | 'true_false' | 'fill_blank' | 'subjective';
   options?: IOption[];
@@ -21,29 +19,29 @@ export interface IQuestion {
   order: number;
 }
 
-export interface ITest extends Document {
-  _id: Types.ObjectId;
-  tenantId: Types.ObjectId;
+export interface ITest {
+  id: string;
+  tenantId: string;
   title: string;
   slug: string;
   description: string;
   instructions: string;
-  teacher: Types.ObjectId;
-  category: Types.ObjectId;
-  testSeries?: Types.ObjectId;
+  teacherId: string;
+  categoryId: string;
+  testSeriesId?: string;
   testNumber?: number;
-  questions: IQuestion[];
+  questions: any; // Prisma Json type
   duration: number; // in minutes
   totalMarks: number;
   passingMarks: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  testType?: 'full_length' | 'subject_wise' | 'topic_wise' | 'pyq';
+  difficulty: string;
+  testType?: string;
   questionsCount: number;
   maxAttempts: number; // 0 = unlimited
   totalAttempts: number;
   averageScore: number;
   passRate: number;
-  status: 'draft' | 'published' | 'archived';
+  status: string;
   isPublished: boolean;
   isFeatured: boolean;
   isFree: boolean;
@@ -58,7 +56,7 @@ export interface ITest extends Document {
 }
 
 export interface IAttemptAnswer {
-  questionId: Types.ObjectId;
+  questionId: string;
   selectedOptions?: number[];
   textAnswer?: string;
   isCorrect: boolean;
@@ -67,23 +65,23 @@ export interface IAttemptAnswer {
 }
 
 export interface IPaletteItem {
-  questionId: Types.ObjectId;
+  questionId: string;
   status: 'visited' | 'skipped' | 'flagged' | 'answered';
 }
 
-export interface ITestAttempt extends Document {
-  _id: Types.ObjectId;
-  tenantId: Types.ObjectId;
-  user: Types.ObjectId;
-  test: Types.ObjectId;
-  answers: IAttemptAnswer[];
-  palette: IPaletteItem[];
+export interface ITestAttempt {
+  id: string;
+  tenantId: string;
+  userId: string;
+  testId: string;
+  answers: any; // Prisma Json
+  palette: any; // Prisma Json
   score: number;
   totalMarks: number;
   percentage: number;
   isPassed: boolean;
-  status: 'in_progress' | 'completed' | 'timed_out' | 'abandoned';
-  gradingStatus: 'auto_graded' | 'pending_manual' | 'manually_graded';
+  status: string;
+  gradingStatus: string;
   startedAt: Date;
   completedAt?: Date;
   timeTaken: number; // total seconds
@@ -91,19 +89,21 @@ export interface ITestAttempt extends Document {
   windowViolations: number;
   createdAt: Date;
   updatedAt: Date;
-  calculateScore(): this;
 }
 
 export interface ICreateTestDto {
   title: string;
   description?: string;
   instructions?: string;
-  category: string;
-  questions: Omit<IQuestion, '_id'>[];
+  categoryId: string;
+  testSeriesId?: string;
+  sectionTag?: string;
+  subjectTag?: string;
+  questions: Omit<IQuestion, 'id'>[];
   duration: number;
   totalMarks: number;
-  passingMarks: number;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  passingMarks?: number;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'easy' | 'medium' | 'hard';
   maxAttempts?: number;
   isFree?: boolean;
   price?: number;

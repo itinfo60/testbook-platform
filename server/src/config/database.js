@@ -1,5 +1,4 @@
-import mongoose from 'mongoose';
-import config from './index.js';
+import prisma from './prisma.js';
 import logger from '../utils/logger.js';
 
 class Database {
@@ -8,48 +7,34 @@ class Database {
     this.maxRetries = 5;
     this.retryDelay = 5000;
     this.isConnected = false;
-
-    mongoose.set('strictQuery', false);
-
-    mongoose.connection.on('connected', () => {
-      this.isConnected = true;
-      this.retryCount = 0;
-      logger.info('📦 MongoDB connected successfully');
-    });
-
-    mongoose.connection.on('error', (err) => {
-      this.isConnected = false;
-      logger.error('MongoDB connection error:', err.message);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      this.isConnected = false;
-      logger.warn('MongoDB disconnected');
-      if (config.env !== 'test') this._reconnect();
-    });
   }
 
   async connect() {
     try {
-      // Event listeners are in the constructor
-
-
-      await mongoose.connect(config.mongoose.url, config.mongoose.options);
-      return mongoose.connection;
+      await prisma.$connect();
+      // Test query to verify active connection
+      await prisma.$queryRaw`SELECT 1`;
+      this.isConnected = true;
+      this.retryCount = 0;
+      logger.info('📦 PostgreSQL (Prisma) connected successfully');
+      return prisma;
     } catch (error) {
-      logger.error('MongoDB initial connection failed:', error.message);
+      this.isConnected = false;
+      logger.error('PostgreSQL initial connection failed:', error.message);
       return this._reconnect();
     }
   }
 
   async _reconnect() {
     if (this.retryCount >= this.maxRetries) {
-      logger.error(`MongoDB: Max retries (${this.maxRetries}) reached. Exiting.`);
+      logger.error(`PostgreSQL: Max retries (${this.maxRetries}) reached. Exiting.`);
       process.exit(1);
     }
 
     this.retryCount++;
-    logger.info(`MongoDB: Retry ${this.retryCount}/${this.maxRetries} in ${this.retryDelay / 1000}s...`);
+    logger.info(
+      `PostgreSQL: Retry ${this.retryCount}/${this.maxRetries} in ${this.retryDelay / 1000}s...`
+    );
 
     await new Promise((resolve) => setTimeout(resolve, this.retryDelay));
     return this.connect();
@@ -57,20 +42,27 @@ class Database {
 
   async disconnect() {
     if (this.isConnected) {
-      await mongoose.disconnect();
+      await prisma.$disconnect();
       this.isConnected = false;
-      logger.info('MongoDB disconnected gracefully');
+      logger.info('PostgreSQL (Prisma) disconnected gracefully');
     }
   }
 
-  getStatus() {
-    const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-    return {
-      status: states[mongoose.connection.readyState] || 'unknown',
-      host: mongoose.connection.host,
-      name: mongoose.connection.name,
-    };
+  async getStatus() {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return {
+        status: 'connected',
+        provider: 'postgresql',
+      };
+    } catch {
+      return {
+        status: 'disconnected',
+        provider: 'postgresql',
+      };
+    }
   }
 }
 
-export default new Database();
+export const db = new Database();
+export default db;

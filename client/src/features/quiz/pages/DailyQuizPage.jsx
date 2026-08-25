@@ -270,7 +270,7 @@ export default function DailyQuizPage() {
 
               return (
                 <div
-                  key={quiz._id}
+                  key={quiz.id || quiz._id}
                   className="bg-white dark:bg-dark-900 p-6 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-600 transition-all flex flex-col justify-between group"
                 >
                   <div>
@@ -373,7 +373,7 @@ export default function DailyQuizPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {dailyTests.slice(0, 4).map((t) => (
                   <div
-                    key={t._id}
+                    key={t.id || t._id}
                     className="p-4 rounded-2xl bg-slate-50 dark:bg-dark-800/60 border border-slate-200/60 dark:border-dark-700 flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0">

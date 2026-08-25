@@ -1,5 +1,5 @@
+import prisma from '../../config/prisma.js';
 import { Request, Response } from 'express';
-import SupportTicket from './supportTicket.model.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import { CustomRequest } from '../auth/auth.controller.js';
@@ -7,19 +7,21 @@ import { CustomRequest } from '../auth/auth.controller.js';
 export const createTicket = catchAsync(async (req: CustomRequest, res: Response) => {
   const { name, email, subject, message, priority } = req.body;
 
-  const ticket = await SupportTicket.create({
-    name,
-    email,
-    subject,
-    message,
-    priority: priority || 'medium',
-    user: req.userId || null,
-    tenantId: req.tenantId || null,
+  const ticket = await prisma.supportTicket.create({
+    data: {
+      name,
+      email,
+      subject,
+      message,
+      priority: priority || 'medium',
+      user: req.userId || null,
+      tenantId: req.tenantId || null,
+    },
   });
 
   return ApiResponse.created(
     res,
-    { ticket, ticketId: `EDU-${ticket._id.toString().slice(-6).toUpperCase()}` },
+    { ticket, ticketId: `EDU-${ticket.id.toString().slice(-6).toUpperCase()}` },
     'Support ticket created successfully'
   );
 });
@@ -35,8 +37,13 @@ export const getTickets = catchAsync(async (req: CustomRequest, res: Response) =
   }
 
   const [tickets, total] = await Promise.all([
-    SupportTicket.find(filter).sort('-createdAt').skip(skip).limit(limit).lean(),
-    SupportTicket.countDocuments(filter),
+    prisma.supportTicket.findMany({
+      where: filter,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.supportTicket.count({ where: filter }),
   ]);
 
   return ApiResponse.paginated(res, {

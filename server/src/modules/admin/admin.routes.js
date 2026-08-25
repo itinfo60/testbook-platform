@@ -24,6 +24,7 @@ router.delete('/quizzes/:id', adminController.adminDeleteQuiz);
 
 // Tests
 router.get('/tests', adminController.adminGetTests);
+router.get('/tests/:id', adminController.adminGetTestById);
 router.delete('/tests/:id', adminController.adminDeleteTest);
 
 // Reviews
@@ -32,9 +33,10 @@ router.delete('/reviews/:id', adminController.adminDeleteReview);
 router.post('/reviews/bulk-delete', adminController.adminBulkDeleteReviews);
 router.patch('/reviews/:id/toggle-approval', adminController.adminToggleReviewApproval);
 
-// Revenue
+// Revenue & Payments
 router.get('/revenue', adminController.getRevenue);
 router.get('/revenue/monthly', adminController.getMonthlyRevenue);
+router.get('/payments', adminController.getPayments);
 
 // Enrollments
 router.get('/enrollments', adminController.adminGetEnrollments);
@@ -43,6 +45,10 @@ router.get('/enrollments/export', adminController.adminExportEnrollments);
 
 // Teachers
 router.get('/teachers', adminController.getTeachers);
+router.get('/teachers/:id', adminController.getTeacherById);
+router.post('/teachers', adminController.createTeacher);
+router.put('/teachers/:id', adminController.updateTeacher);
+router.delete('/teachers/:id', adminController.deleteTeacher);
 router.patch('/teachers/:id/verify', adminController.verifyTeacher);
 
 // Announcements

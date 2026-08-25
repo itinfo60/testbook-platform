@@ -30,7 +30,7 @@ export default function ExamsCatalog() {
       try {
         setLoading(true);
         const [catRes, courseRes] = await Promise.all([
-          api.get('/categories'),
+          api.get('/categories', { params: { type: 'exam' } }),
           api
             .get('/courses', { params: { limit: 8, isPublished: true } })
             .catch(() => ({ data: { data: [] } })),
@@ -75,37 +75,25 @@ export default function ExamsCatalog() {
     }
   }, [location.search, location.state]);
 
-  // Extract all subcategory exam items from categories
-  const allExamItems = categories.flatMap((cat) => {
-    if (cat.subcategories && cat.subcategories.length > 0) {
-      return cat.subcategories.map((sub) => ({ ...sub, parentCategory: cat }));
-    }
-    return [{ ...cat, parentCategory: cat }];
-  });
-
-  const filteredExams = allExamItems.filter((exam) => {
-    const matchesSearch =
+  // Use the categories list directly — the API already returns all exam records flat.
+  // No need to flatten subcategories; each exam is its own item.
+  const filteredExams = categories.filter((exam) => {
+    return (
       !search ||
       exam.name?.toLowerCase().includes(search.toLowerCase()) ||
-      exam.description?.toLowerCase().includes(search.toLowerCase());
-    return matchesSearch;
+      exam.description?.toLowerCase().includes(search.toLowerCase())
+    );
   });
 
-  // Categorize by Parent Category Slug or Subcategory Slugs
+  // Group by slug patterns (client-side classification until tags/groups are added)
   const rajasthanExams = filteredExams.filter((exam) => {
-    const pSlug = exam.parentCategory?.slug || '';
     const slug = exam.slug || '';
+    const name = exam.name?.toLowerCase() || '';
     return (
-      pSlug === 'rajasthan-exams' ||
-      [
-        'ras',
-        'rpsc-eo-ro',
-        'rpsc-si',
-        'rpsc-1st-2nd-grade',
-        'rajasthan-cet',
-        'patwari',
-        'vdo',
-      ].some((s) => slug.includes(s))
+      name.includes('rajasthan') ||
+      ['ras', 'rpsc', 'rsmssb', 'patwari', 'vdo', 'rajasthan-cet'].some(
+        (s) => slug.includes(s) || name.includes(s)
+      )
     );
   });
 
@@ -293,7 +281,7 @@ export default function ExamsCatalog() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {featuredCourses.map((course) => (
-                <CourseCard key={course._id} course={course} />
+                <CourseCard key={course.id || course._id} course={course} />
               ))}
             </div>
           </section>

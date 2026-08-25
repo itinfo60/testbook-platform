@@ -40,7 +40,8 @@ function SkeletonCard() {
 
 export default function CuratedExams() {
   const { categories, loading } = useExamCategories();
-  const displayed = categories.filter((c) => !c.parent).slice(0, 6);
+  // Show all exams — both top-level groups and leaf exams. Limit to 6 for the home section.
+  const displayed = categories.slice(0, 6);
 
   return (
     <section className="py-20 bg-[#faf9f6]">

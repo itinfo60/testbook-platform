@@ -44,7 +44,7 @@ const testSlice = createSlice({
         state.error = action.payload?.message;
       })
       .addCase(deleteTest.fulfilled, (state, action) => {
-        state.list = state.list.filter((t) => t._id !== action.payload);
+        state.list = state.list.filter((t) => (t.id || t._id) !== action.payload);
       });
   },
 });

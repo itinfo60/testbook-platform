@@ -20,7 +20,7 @@ describe('Platform Settings Module API', () => {
     await User.create({
       _id: mockAdminId,
       name: 'Super Admin',
-      email: 'admin@testbook.com',
+      email: 'admin@civicshub.com',
       password: 'Password123!',
       role: 'super_admin',
       isEmailVerified: true,
@@ -29,20 +29,20 @@ describe('Platform Settings Module API', () => {
     await User.create({
       _id: mockStudentId,
       name: 'Student User',
-      email: 'student@testbook.com',
+      email: 'student@civicshub.com',
       password: 'Password123!',
       role: 'student',
       isEmailVerified: true,
     });
 
     adminToken = jwt.sign(
-      { id: mockAdminId, email: 'admin@testbook.com', role: 'super_admin' },
+      { id: mockAdminId, email: 'admin@civicshub.com', role: 'super_admin' },
       config.jwt.secret,
       { expiresIn: '1h' }
     );
 
     studentToken = jwt.sign(
-      { id: mockStudentId, email: 'student@testbook.com', role: 'student' },
+      { id: mockStudentId, email: 'student@civicshub.com', role: 'student' },
       config.jwt.secret,
       { expiresIn: '1h' }
     );
@@ -53,7 +53,7 @@ describe('Platform Settings Module API', () => {
     if (res.status !== 200) console.log('ERROR BODY:', res.status, res.body);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.siteName).toBe('Testbook Platform');
+    expect(res.body.data.siteName).toBe('CivicsHub Platform');
     expect(res.body.data.allowMockPayments).toBe(true);
   });
 
@@ -62,14 +62,14 @@ describe('Platform Settings Module API', () => {
       .put('/api/v1/settings/admin')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        siteName: 'Updated Testbook Portal',
-        supportEmail: 'contact@testbook.com',
+        siteName: 'Updated CivicsHub Portal',
+        supportEmail: 'contact@civicshub.com',
         maintenanceMode: false,
       });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.siteName).toBe('Updated Testbook Portal');
+    expect(res.body.data.siteName).toBe('Updated CivicsHub Portal');
   });
 
   it('PUT /api/v1/settings/admin rejects non-admin users with 403', async () => {

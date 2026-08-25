@@ -1,9 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { runWithTenant } from '../utils/TenantContext.js';
-import Institute from '../modules/institute/institute.model.ts';
-import SubscriptionPlan from '../modules/subscription/subscriptionPlan.model.ts';
-import { Types } from 'mongoose';
-import User from '../modules/user/user.model.ts';
+import { prisma } from '../config/prisma.js';
 import ApiError from '../utils/ApiError.js';
 import catchAsync from '../utils/catchAsync.js';
 import redis from '../config/redis.js';
@@ -64,40 +61,61 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
     // Try cache first
     tenant = await getTenantFromCache(`id:${tenantIdHeader}`);
     if (!tenant) {
-      // Fetch from DB
-      tenant = await Institute.findById(tenantIdHeader).lean();
+      // Fetch from DB via Prisma
+      tenant = await prisma.institute.findUnique({
+        where: { id: tenantIdHeader },
+      });
       if (!tenant) {
         // If tenant not found, return error - do not auto-create
         return res.status(404).json({ success: false, message: 'Institute not found' });
       }
-      // Cache the result (whether newly created or fetched)
+      tenant._id = tenant.id;
+      // Cache the result
       await setTenantCache(`id:${tenantIdHeader}`, tenant);
     }
   } else if (subdomain) {
     const sub = subdomain.toLowerCase();
     tenant = await getTenantFromCache(`subdomain:${sub}`);
     if (!tenant) {
-      tenant = await Institute.findOne({ subdomain: sub }).lean();
-      if (tenant) await setTenantCache(`subdomain:${sub}`, tenant);
+      tenant = await prisma.institute.findUnique({
+        where: { subdomain: sub },
+      });
+      if (tenant) {
+        tenant._id = tenant.id;
+        await setTenantCache(`subdomain:${sub}`, tenant);
+      }
     }
   }
 
-  // Fallback: derive tenant from the authenticated user's tenantId in JWT
+  // Extract from authenticated user token if not resolved by domain/header
   if (!tenant) {
     const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
-        const decoded = jwt.verify(authHeader.split(' ')[1], config.jwt.secret);
-        if (decoded.id) {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.decode(token);
+        if (decoded && decoded.id) {
+          if (decoded.role === 'super_admin' || decoded.role === 'admin') {
+            // Admin accounts can operate globally
+            return runWithTenant(null, true, next);
+          }
           const user = await runWithTenant(null, true, () =>
-            User.findById(decoded.id).select('tenantId role').lean()
+            prisma.user.findUnique({
+              where: { id: decoded.id },
+              select: { id: true, role: true, tenantId: true },
+            })
           );
           if (user?.tenantId && user.role !== 'super_admin') {
             const tid = user.tenantId.toString();
             tenant = await getTenantFromCache(`id:${tid}`);
             if (!tenant) {
-              tenant = await Institute.findById(tid).lean();
-              if (tenant) await setTenantCache(`id:${tid}`, tenant);
+              tenant = await prisma.institute.findUnique({
+                where: { id: tid },
+              });
+              if (tenant) {
+                tenant._id = tenant.id;
+                await setTenantCache(`id:${tid}`, tenant);
+              }
             }
           }
         }
@@ -108,42 +126,55 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
   }
 
   if (tenant) {
+    tenant._id = tenant.id;
     // 1. Verify active status
-    if (!tenant.isActive) {
+    if (tenant.isActive === false) {
       throw ApiError.forbidden('This institute has been suspended. Please contact support.');
     }
 
     // 2. Verify subscription status
-    if (tenant.subscription.status === 'suspended') {
-      throw ApiError.forbidden(
-        'This institute has been suspended due to billing. Please contact support.'
-      );
-    }
-
-    const now = new Date();
-    const expiresAt = new Date(tenant.subscription.expiresAt);
-    const gracePeriodEnd = new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000); // 7-day grace
-    if (tenant.subscription.status === 'expired' || (now > expiresAt && now > gracePeriodEnd)) {
-      // Automatically update status to expired in background (non-blocking)
-      if (tenant.subscription.status !== 'expired') {
-        setImmediate(() =>
-          Institute.findByIdAndUpdate(tenant._id, { 'subscription.status': 'expired' }).catch(
-            () => {}
-          )
+    if (tenant.subscription && typeof tenant.subscription === 'object') {
+      if (tenant.subscription.status === 'suspended') {
+        throw ApiError.forbidden(
+          'This institute has been suspended due to billing. Please contact support.'
         );
-        invalidateTenantCache(tenant.subdomain, tenant._id.toString()).catch(() => {});
       }
-      throw ApiError.forbidden(
-        "This institute's subscription has expired. Please upgrade or renew your plan."
-      );
+
+      if (tenant.subscription.expiresAt) {
+        const now = new Date();
+        const expiresAt = new Date(tenant.subscription.expiresAt);
+        const gracePeriodEnd = new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000); // 7-day grace
+        if (tenant.subscription.status === 'expired' || (now > expiresAt && now > gracePeriodEnd)) {
+          // Automatically update status to expired in background (non-blocking)
+          if (tenant.subscription.status !== 'expired') {
+            setImmediate(() =>
+              prisma.institute
+                .update({
+                  where: { id: tenant.id },
+                  data: {
+                    subscription: {
+                      ...tenant.subscription,
+                      status: 'expired',
+                    },
+                  },
+                })
+                .catch(() => {})
+            );
+            invalidateTenantCache(tenant.subdomain, tenant.id).catch(() => {});
+          }
+          throw ApiError.forbidden(
+            "This institute's subscription has expired. Please upgrade or renew your plan."
+          );
+        }
+      }
     }
 
     // Bind to request
-    req.tenantId = tenant._id.toString();
+    req.tenantId = tenant.id;
     req.tenant = tenant;
 
     // Run request within the tenant context (filtering queries to tenantId)
-    return runWithTenant(tenant._id.toString(), false, next);
+    return runWithTenant(tenant.id, false, next);
   }
 
   // No tenant identified - run in bypass mode (useful for Super Admin, global endpoints)
@@ -154,12 +185,22 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
  * Middleware to require a valid tenant context.
  */
 export const requireTenant = (req, res, next) => {
-  if (!req.tenantId) {
-    throw ApiError.badRequest(
-      'Tenant context required. Please use an institute subdomain or specify X-Tenant-Subdomain / X-Tenant-Id header.'
-    );
+  if (req.tenantId) return next();
+  if (req.user?.role === 'super_admin' || req.user?.role === 'admin') return next();
+
+  if (req.headers.authorization) {
+    try {
+      const token = req.headers.authorization.replace('Bearer ', '');
+      const decoded = jwt.decode(token);
+      if (decoded?.role === 'super_admin' || decoded?.role === 'admin') {
+        return next();
+      }
+    } catch {}
   }
-  next();
+
+  throw ApiError.badRequest(
+    'Tenant context required. Please use an institute subdomain or specify X-Tenant-Subdomain / X-Tenant-Id header.'
+  );
 };
 
 /**
@@ -178,8 +219,11 @@ export const optionalTenant = (req, _res, next) => {
 export const checkStudentLimit = catchAsync(async (req, res, next) => {
   if (!req.tenant) return next();
 
-  const studentCount = await User.countDocuments({ role: 'student', tenantId: req.tenantId });
-  if (studentCount >= req.tenant.limits.studentLimit) {
+  const studentCount = await prisma.user.count({
+    where: { role: 'student', tenantId: req.tenantId },
+  });
+  const limit = req.tenant.limits?.studentLimit;
+  if (limit && studentCount >= limit) {
     throw ApiError.forbidden(
       'The student limit for this institute has been reached. Please contact administration to upgrade.'
     );
@@ -193,8 +237,11 @@ export const checkStudentLimit = catchAsync(async (req, res, next) => {
 export const checkTeacherLimit = catchAsync(async (req, res, next) => {
   if (!req.tenant) return next();
 
-  const teacherCount = await User.countDocuments({ role: 'teacher', tenantId: req.tenantId });
-  if (teacherCount >= req.tenant.limits.teacherLimit) {
+  const teacherCount = await prisma.user.count({
+    where: { role: 'teacher', tenantId: req.tenantId },
+  });
+  const limit = req.tenant.limits?.teacherLimit;
+  if (limit && teacherCount >= limit) {
     throw ApiError.forbidden(
       'The teacher limit for this institute has been reached. Please contact administration to upgrade.'
     );

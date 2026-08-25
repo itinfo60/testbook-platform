@@ -13,6 +13,7 @@ import RatingStars from '@/components/common/RatingStars';
 export default function CourseCard({ course }) {
   const {
     _id,
+    id,
     slug,
     title,
     thumbnail,
@@ -51,7 +52,7 @@ export default function CourseCard({ course }) {
 
   return (
     <Link
-      to={`/courses/${slug || _id}`}
+      to={`/courses/${slug || id || _id}`}
       className="group bg-white dark:bg-dark-900 rounded-[20px] border border-dark-200 dark:border-dark-800 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative"
     >
       {/* Thumbnail */}

@@ -1,45 +1,54 @@
-import Wishlist from './wishlist.model.js';
 import ApiResponse from '../../utils/ApiResponse.js';
-import ApiError from '../../utils/ApiError.js';
 import catchAsync from '../../utils/catchAsync.js';
-import { buildPaginationQuery } from '../../utils/pagination.js';
+import redis from '../../config/redis.js';
+import prisma from '../../config/prisma.js';
 
 export const getWishlist = catchAsync(async (req, res) => {
-  const pagination = buildPaginationQuery(req.query);
+  const userId = req.user.id;
+  const courseIds = (await redis.get(`wishlist:${userId}`)) || [];
 
-  const result = await Wishlist.paginate({ user: req.userId }, {
-    ...pagination,
-    populate: {
-      path: 'course',
-      select: 'title slug thumbnail price discountPrice averageRating enrollmentCount teacher',
-      populate: { path: 'teacher', select: 'name avatar' },
-    },
-    sort: '-createdAt',
+  if (courseIds.length === 0) {
+    return ApiResponse.paginated(res, { docs: [], page: 1, limit: 10, total: 0 });
+  }
+
+  // Fetch actual course details from DB
+  const courses = await prisma.course.findMany({
+    where: { id: { in: courseIds } },
+    select: { id: true, title: true, slug: true, price: true, thumbnail: true, rating: true },
   });
 
-  ApiResponse.paginated(res, {
-    docs: result.docs,
-    page: result.pagination.page,
-    limit: result.pagination.limit,
-    total: result.pagination.total,
-  });
+  const docs = courses.map((course) => ({
+    id: course.id,
+    courseId: course.id,
+    course,
+  }));
+
+  ApiResponse.paginated(res, { docs, page: 1, limit: 10, total: docs.length });
 });
 
 export const toggleWishlist = catchAsync(async (req, res) => {
+  const userId = req.user.id;
   const { courseId } = req.body;
+  if (!courseId) return ApiResponse.badRequest(res, 'Course ID is required');
 
-  const existing = await Wishlist.findOne({ user: req.userId, course: courseId });
+  const key = `wishlist:${userId}`;
+  let courseIds = (await redis.get(key)) || [];
 
-  if (existing) {
-    await Wishlist.findByIdAndDelete(existing._id);
+  const index = courseIds.indexOf(courseId);
+  if (index !== -1) {
+    courseIds.splice(index, 1);
+    await redis.set(key, courseIds, 60 * 60 * 24 * 30);
     return ApiResponse.ok(res, { isWishlisted: false }, 'Removed from wishlist');
+  } else {
+    courseIds.push(courseId);
+    await redis.set(key, courseIds, 60 * 60 * 24 * 30);
+    return ApiResponse.ok(res, { isWishlisted: true }, 'Added to wishlist');
   }
-
-  await Wishlist.create({ user: req.userId, course: courseId });
-  ApiResponse.created(res, { isWishlisted: true }, 'Added to wishlist');
 });
 
 export const checkWishlist = catchAsync(async (req, res) => {
-  const exists = await Wishlist.findOne({ user: req.userId, course: req.params.courseId });
-  ApiResponse.ok(res, { isWishlisted: !!exists });
+  const userId = req.user.id;
+  const { courseId } = req.params;
+  const courseIds = (await redis.get(`wishlist:${userId}`)) || [];
+  ApiResponse.ok(res, { isWishlisted: courseIds.includes(courseId) });
 });

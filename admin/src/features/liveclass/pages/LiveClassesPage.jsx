@@ -80,11 +80,11 @@ export default function LiveClassesPage() {
 
   const handleOpenModal = (cls = null) => {
     if (cls) {
-      setEditId(cls._id);
+      setEditId(cls.id || cls._id);
       setFormData({
         title: cls.title || '',
         description: cls.description || '',
-        courseId: cls.course?._id || cls.course || '',
+        courseId: cls.course?.id || cls.course?._id || cls.course || '',
         scheduledAt: cls.scheduledAt ? new Date(cls.scheduledAt).toISOString().slice(0, 16) : '',
         durationMinutes: cls.durationMinutes || 60,
         meetingUrl: cls.meetingUrl || '',
@@ -212,7 +212,7 @@ export default function LiveClassesPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {classes.map((cls) => (
                 <tr
-                  key={cls._id}
+                  key={cls.id || cls._id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
                   <td className="px-4 py-3">
@@ -262,7 +262,7 @@ export default function LiveClassesPage() {
                       </button>
                       {cls.status !== 'cancelled' && cls.status !== 'ended' && (
                         <button
-                          onClick={() => setCancelTarget(cls._id)}
+                          onClick={() => setCancelTarget(cls.id || cls._id)}
                           className="p-1 text-gray-500 hover:text-red-600"
                           title="Cancel Class"
                         >
@@ -343,7 +343,7 @@ export default function LiveClassesPage() {
             >
               <option value="">Select Course (Optional)</option>
               {courses.map((c) => (
-                <option key={c._id} value={c._id}>
+                <option key={c.id || c._id} value={c.id || c._id}>
                   {c.title}
                 </option>
               ))}

@@ -1,6 +1,13 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiBell, HiCheck, HiInformationCircle, HiExclamation, HiGift, HiCheckCircle } from 'react-icons/hi';
+import {
+  HiBell,
+  HiCheck,
+  HiInformationCircle,
+  HiExclamation,
+  HiGift,
+  HiCheckCircle,
+} from 'react-icons/hi';
 import { fetchNotifications, markAsRead } from '@/features/notification/notificationSlice';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { formatDistanceToNow } from 'date-fns';
@@ -23,7 +30,7 @@ const typeColors = {
 
 export default function NotificationsPage() {
   const dispatch = useDispatch();
-  const { notifications, loading, unreadCount } = useSelector(state => state.notifications);
+  const { notifications, loading, unreadCount } = useSelector((state) => state.notifications);
 
   useEffect(() => {
     dispatch(fetchNotifications());
@@ -34,13 +41,15 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllRead = () => {
-    notifications.filter(n => !n.read && !n.isRead).forEach(n => dispatch(markAsRead(n._id)));
+    notifications
+      .filter((n) => !n.read && !n.isRead)
+      .forEach((n) => dispatch(markAsRead(n.id || n._id)));
   };
 
   if (loading) return <LoadingSpinner />;
 
-  const unread = notifications.filter(n => !n.read && !n.isRead);
-  const read = notifications.filter(n => n.read || n.isRead);
+  const unread = notifications.filter((n) => !n.read && !n.isRead);
+  const read = notifications.filter((n) => n.read || n.isRead);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -48,9 +57,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="section-title">Notifications</h1>
-          {unreadCount > 0 && (
-            <p className="text-sm text-dark-500 mt-0.5">{unreadCount} unread</p>
-          )}
+          {unreadCount > 0 && <p className="text-sm text-dark-500 mt-0.5">{unreadCount} unread</p>}
         </div>
         {unread.length > 0 && (
           <button
@@ -66,21 +73,27 @@ export default function NotificationsPage() {
       {notifications.length === 0 ? (
         <div className="card p-16 text-center">
           <HiBell className="h-16 w-16 text-dark-200 dark:text-dark-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">All caught up!</h2>
-          <p className="text-dark-400 text-sm">No notifications yet. We'll let you know when something happens.</p>
+          <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">
+            All caught up!
+          </h2>
+          <p className="text-dark-400 text-sm">
+            No notifications yet. We'll let you know when something happens.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
           {/* Unread */}
           {unread.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-2 px-1">New</p>
+              <p className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-2 px-1">
+                New
+              </p>
               <div className="space-y-1">
-                {unread.map(notif => (
+                {unread.map((notif) => (
                   <NotificationItem
-                    key={notif._id}
+                    key={notif.id || notif._id}
                     notif={notif}
-                    onMarkRead={() => handleMarkRead(notif._id)}
+                    onMarkRead={() => handleMarkRead(notif.id || notif._id)}
                   />
                 ))}
               </div>
@@ -91,11 +104,13 @@ export default function NotificationsPage() {
           {read.length > 0 && (
             <div className={unread.length > 0 ? 'mt-6' : ''}>
               {unread.length > 0 && (
-                <p className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-2 px-1">Earlier</p>
+                <p className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-2 px-1">
+                  Earlier
+                </p>
               )}
               <div className="space-y-1">
-                {read.map(notif => (
-                  <NotificationItem key={notif._id} notif={notif} />
+                {read.map((notif) => (
+                  <NotificationItem key={notif.id || notif._id} notif={notif} />
                 ))}
               </div>
             </div>
@@ -112,13 +127,19 @@ function NotificationItem({ notif, onMarkRead }) {
   const colorClass = typeColors[notif.type] || typeColors.default;
 
   return (
-    <div className={`card flex gap-4 p-4 transition-all ${isUnread ? 'border-l-4 border-l-primary-500 bg-primary-50/30 dark:bg-primary-950/10' : ''}`}>
-      <div className={`flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center ${colorClass}`}>
+    <div
+      className={`card flex gap-4 p-4 transition-all ${isUnread ? 'border-l-4 border-l-primary-500 bg-primary-50/30 dark:bg-primary-950/10' : ''}`}
+    >
+      <div
+        className={`flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center ${colorClass}`}
+      >
         <Icon className="h-5 w-5" />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-sm ${isUnread ? 'font-semibold text-dark-900 dark:text-white' : 'text-dark-700 dark:text-dark-300'}`}>
+        <p
+          className={`text-sm ${isUnread ? 'font-semibold text-dark-900 dark:text-white' : 'text-dark-700 dark:text-dark-300'}`}
+        >
           {notif.title || notif.message}
         </p>
         {notif.message && notif.title && (

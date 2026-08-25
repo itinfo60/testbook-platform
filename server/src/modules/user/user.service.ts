@@ -3,6 +3,7 @@ import { IUser } from '../auth/auth.dto.js';
 import { AdminCreateUserInput, AdminUpdateUserInput, UserQueryInput } from './user.validation.js';
 import { ApiError } from '../../core/api-error.js';
 import redis from '../../config/redis.js';
+import prisma from '../../config/prisma.js';
 import { runWithTenant } from '../../core/tenant.context.js';
 
 export class UserService {
@@ -16,12 +17,85 @@ export class UserService {
     return this.userRepository.paginateUsers(query);
   }
 
-  async getUserById(id: string): Promise<IUser> {
-    const user = await this.userRepository.findById(id);
+  async getUserById(id: string): Promise<any> {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        isEmailVerified: true,
+        avatar: true,
+        bio: true,
+        phone: true,
+        teacherProfile: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
     if (!user) {
       throw ApiError.notFound('User not found');
     }
-    return user;
+
+    const [enrollments, testAttempts, quizAttempts, payments] = await Promise.all([
+      prisma.enrollment.findMany({
+        where: { userId: user.id },
+        include: {
+          course: {
+            select: { id: true, title: true, slug: true, thumbnail: true, price: true },
+          },
+        },
+        orderBy: { enrolledAt: 'desc' },
+      }),
+      prisma.testAttempt.findMany({
+        where: { userId: user.id },
+        include: {
+          test: {
+            select: { id: true, title: true, totalMarks: true, duration: true },
+          },
+        },
+        orderBy: { startedAt: 'desc' },
+      }),
+      prisma.quizAttempt.findMany({
+        where: { userId: user.id },
+        include: {
+          quiz: {
+            select: { id: true, title: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.payment.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const totalSpent = payments
+      .filter((p) => p.status === 'completed')
+      .reduce((acc, p) => acc + p.amount, 0);
+    const completedCoursesCount = enrollments.filter(
+      (e) => e.status === 'completed' || e.progressPercentage >= 100
+    ).length;
+
+    const stats = {
+      totalEnrolled: enrollments.length,
+      completedCourses: completedCoursesCount,
+      testsAttempted: testAttempts.length,
+      quizzesAttempted: quizAttempts.length,
+      totalSpent,
+    };
+
+    return {
+      ...user,
+      enrollments,
+      testAttempts,
+      quizAttempts,
+      payments,
+      stats,
+    };
   }
 
   async createUser(input: AdminCreateUserInput, tenantId: string | null): Promise<IUser> {

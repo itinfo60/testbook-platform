@@ -1,22 +1,20 @@
-import { Document, Types } from 'mongoose';
-
-export interface INote extends Document {
-  _id: Types.ObjectId;
-  user: Types.ObjectId;
-  course: Types.ObjectId;
-  lesson?: Types.ObjectId;
+export interface INote {
+  id: string;
+  user: string;
+  course: string;
+  lesson?: string;
   content: string;
   timestamp: number;
   color: string;
   isPinned: boolean;
-  tenantId: Types.ObjectId;
+  tenantId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface ICreateNoteInput {
-  content: string;
   lessonId?: string;
+  content: string;
   timestamp?: number;
   color?: string;
 }

@@ -1,8 +1,7 @@
 import { Worker } from 'bullmq';
 import { queueConnection } from '../queues/index.js';
 import { notificationQueue, transactionalEmailQueue } from '../queues/index.js';
-import Enrollment from '../modules/enrollment/enrollment.model.js';
-import User from '../modules/user/user.model.js';
+import prisma from '../config/prisma.js';
 import logger from '../utils/logger.js';
 import { sendLiveClassReminder } from '../utils/whatsapp.js';
 
@@ -22,24 +21,15 @@ export const reminderWorker = new Worker(
     } = job.data;
 
     if (type === 'liveclass') {
-      const enrollments = await Enrollment.find({ course: courseId, status: 'active' })
-        .select('user')
-        .populate('user', 'phone')
-        .lean();
+      const enrollments = await prisma.enrollment.findMany({
+        where: { courseId, status: 'active' },
+        select: { userId: true, user: { select: { phone: true, id: true } } },
+      });
 
-      const userIds = enrollments.map((e) => e.user?._id?.toString() || e.user?.toString());
-
-      // Fetch user phone numbers for WhatsApp
-      const users = await User.find({ _id: { $in: userIds } })
-        .select('phone _id')
-        .lean();
-      const phoneMap = {};
-      for (const u of users) {
-        if (u.phone) phoneMap[u._id.toString()] = u.phone;
-      }
+      const userIds = enrollments.map((e) => e.userId);
 
       for (const enrollment of enrollments) {
-        const userId = enrollment.user?._id?.toString() || enrollment.user?.toString();
+        const userId = enrollment.userId;
 
         await notificationQueue.add('send', {
           type: 'liveclass_reminder',
@@ -56,7 +46,7 @@ export const reminderWorker = new Worker(
         });
 
         // WhatsApp notification (non-blocking, fails silently if not configured)
-        const phone = phoneMap[userId];
+        const phone = enrollment.user?.phone;
         if (phone) {
           sendLiveClassReminder(phone, title, scheduledAt).catch((err) =>
             logger.warn(`WhatsApp reminder failed for user ${userId}: ${err.message}`)
@@ -67,18 +57,19 @@ export const reminderWorker = new Worker(
       logger.info(`Reminder sent for live class ${liveClassId} to ${userIds.length} students`);
     } else if (type === 'announcement') {
       const roles = targetRoles || ['student', 'teacher'];
-      const targetUsers = await User.find({
-        role: { $in: roles },
-        isActive: true,
-        tenantId,
-      })
-        .select('_id name email')
-        .lean();
+      const targetUsers = await prisma.user.findMany({
+        where: {
+          role: { in: roles },
+          isActive: true,
+          tenantId,
+        },
+        select: { id: true, name: true, email: true },
+      });
 
       for (const user of targetUsers) {
         await notificationQueue.add('send', {
           type: 'announcement',
-          userId: user._id,
+          userId: user.id,
           tenantId,
           title,
           message,

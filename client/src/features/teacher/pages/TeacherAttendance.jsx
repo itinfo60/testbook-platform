@@ -140,7 +140,7 @@ export default function TeacherAttendance() {
           >
             <option value="">-- Choose Course --</option>
             {courses.map((c) => (
-              <option key={c._id} value={c._id}>
+              <option key={c.id || c._id} value={c.id || c._id}>
                 {c.title}
               </option>
             ))}
@@ -198,7 +198,10 @@ export default function TeacherAttendance() {
               {students.map((s) => {
                 const rec = records[s._id] || { status: 'present', remarks: '' };
                 return (
-                  <div key={s._id} className="p-4 flex flex-col md:flex-row md:items-center gap-4">
+                  <div
+                    key={s.id || s._id}
+                    className="p-4 flex flex-col md:flex-row md:items-center gap-4"
+                  >
                     <div className="flex-1 flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-bold text-primary-700">
                         {s.name?.charAt(0) || '?'}

@@ -10,7 +10,7 @@ export default function CategoryForm() {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const isEdit = !!id;
+  const isEdit = Boolean(id && id !== 'undefined');
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({ name: '', description: '', icon: '' });

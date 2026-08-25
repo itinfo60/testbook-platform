@@ -329,7 +329,7 @@ export default function JobAlertList() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {jobs.map((job) => (
-                <JobCard key={job._id} job={job} />
+                <JobCard key={job.id || job._id} job={job} />
               ))}
             </div>
           </>

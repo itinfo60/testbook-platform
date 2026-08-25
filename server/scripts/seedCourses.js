@@ -13,8 +13,13 @@ import Quiz from '../src/modules/quiz/quiz.model.js';
 import Discussion from '../src/modules/discussion/discussion.model.js';
 import Note from '../src/modules/note/note.model.js';
 
-const slugify = str =>
-  str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
+const slugify = (str) =>
+  str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') +
+  '-' +
+  Date.now();
 
 // ---------------------------------------------------------------------------
 // COURSE DATA
@@ -24,12 +29,17 @@ const coursesData = [
   // ─── 1. Complete JavaScript Course ────────────────────────────────────────
   {
     title: 'Complete JavaScript Course 2024',
-    description: 'Master JavaScript from the ground up. Learn variables, functions, closures, async/await, DOM manipulation, ES6+ features, and build real-world projects. Perfect for beginners and those looking to solidify their JS foundation.',
+    description:
+      'Master JavaScript from the ground up. Learn variables, functions, closures, async/await, DOM manipulation, ES6+ features, and build real-world projects. Perfect for beginners and those looking to solidify their JS foundation.',
     shortDescription: 'Master modern JavaScript from zero to hero with hands-on projects.',
     level: 'beginner',
     categorySlug: 'web-development',
     tags: ['javascript', 'es6', 'web development', 'programming'],
-    requirements: ['Basic HTML & CSS knowledge', 'A computer with internet access', 'No prior JavaScript experience needed'],
+    requirements: [
+      'Basic HTML & CSS knowledge',
+      'A computer with internet access',
+      'No prior JavaScript experience needed',
+    ],
     whatYouLearn: [
       'Core JavaScript concepts — variables, types, functions, scope',
       'ES6+ features: arrow functions, destructuring, spread, modules',
@@ -38,7 +48,10 @@ const coursesData = [
       'Object-Oriented Programming with classes',
       'Error handling and debugging techniques',
     ],
-    thumbnail: { url: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800', publicId: 'js-course' },
+    thumbnail: {
+      url: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800',
+      publicId: 'js-course',
+    },
     sections: [
       {
         title: 'Getting Started with JavaScript',
@@ -50,10 +63,19 @@ const coursesData = [
             videoUrl: 'https://www.youtube.com/embed/W6NZfCO5SIk',
             duration: 780,
             isFree: true,
-            content: 'Welcome to the Complete JavaScript Course! In this video, we cover what you will learn, how the course is structured, and how to get the most out of it.',
+            content:
+              'Welcome to the Complete JavaScript Course! In this video, we cover what you will learn, how the course is structured, and how to get the most out of it.',
             resources: [
-              { title: 'Course Slides - Introduction', url: 'https://example.com/js-intro-slides.pdf', type: 'pdf' },
-              { title: 'JavaScript MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript', type: 'link' },
+              {
+                title: 'Course Slides - Introduction',
+                url: 'https://example.com/js-intro-slides.pdf',
+                type: 'pdf',
+              },
+              {
+                title: 'JavaScript MDN Docs',
+                url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript',
+                type: 'link',
+              },
             ],
           },
           {
@@ -62,9 +84,14 @@ const coursesData = [
             videoUrl: 'https://www.youtube.com/embed/hdI2bqOjy3c',
             duration: 540,
             isFree: true,
-            content: 'Install VS Code, Node.js, and configure useful extensions like Prettier and ESLint.',
+            content:
+              'Install VS Code, Node.js, and configure useful extensions like Prettier and ESLint.',
             resources: [
-              { title: 'VS Code Setup Guide', url: 'https://example.com/vscode-setup.pdf', type: 'pdf' },
+              {
+                title: 'VS Code Setup Guide',
+                url: 'https://example.com/vscode-setup.pdf',
+                type: 'pdf',
+              },
               { title: 'Node.js Download', url: 'https://nodejs.org', type: 'link' },
             ],
           },
@@ -74,9 +101,14 @@ const coursesData = [
             videoUrl: 'https://www.youtube.com/embed/9emXNzqCKyg',
             duration: 1200,
             isFree: false,
-            content: 'Deep dive into var, let, const — when to use each, primitive vs reference types, and all JS operators.',
+            content:
+              'Deep dive into var, let, const — when to use each, primitive vs reference types, and all JS operators.',
             resources: [
-              { title: 'Variables Cheat Sheet', url: 'https://example.com/js-variables.pdf', type: 'pdf' },
+              {
+                title: 'Variables Cheat Sheet',
+                url: 'https://example.com/js-variables.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -114,7 +146,11 @@ const coursesData = [
 ### Practice Exercise
 Create variables for your name, age, and whether you are a student. Log them to the console.`,
             resources: [
-              { title: 'Section 1 Practice Exercises', url: 'https://example.com/js-s1-exercises.pdf', type: 'pdf' },
+              {
+                title: 'Section 1 Practice Exercises',
+                url: 'https://example.com/js-s1-exercises.pdf',
+                type: 'pdf',
+              },
             ],
           },
         ],
@@ -129,9 +165,14 @@ Create variables for your name, age, and whether you are a student. Log them to 
             videoUrl: 'https://www.youtube.com/embed/gigtS_5KOqo',
             duration: 900,
             isFree: false,
-            content: 'Understand the difference between function declarations, expressions, and arrow functions. When to use each.',
+            content:
+              'Understand the difference between function declarations, expressions, and arrow functions. When to use each.',
             resources: [
-              { title: 'Functions Reference Guide', url: 'https://example.com/js-functions.pdf', type: 'pdf' },
+              {
+                title: 'Functions Reference Guide',
+                url: 'https://example.com/js-functions.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -140,7 +181,8 @@ Create variables for your name, age, and whether you are a student. Log them to 
             videoUrl: 'https://www.youtube.com/embed/lW_erSjyMeM',
             duration: 1080,
             isFree: false,
-            content: 'How JavaScript looks up variables — global scope, function scope, block scope, and the tricky temporal dead zone.',
+            content:
+              'How JavaScript looks up variables — global scope, function scope, block scope, and the tricky temporal dead zone.',
             resources: [],
           },
           {
@@ -149,9 +191,14 @@ Create variables for your name, age, and whether you are a student. Log them to 
             videoUrl: 'https://www.youtube.com/embed/vKJpN5FAeF4',
             duration: 960,
             isFree: false,
-            content: 'Closures are one of JavaScript\'s most powerful features. See how inner functions remember their outer scope.',
+            content:
+              "Closures are one of JavaScript's most powerful features. See how inner functions remember their outer scope.",
             resources: [
-              { title: 'Closure Patterns Cheat Sheet', url: 'https://example.com/closures.pdf', type: 'pdf' },
+              {
+                title: 'Closure Patterns Cheat Sheet',
+                url: 'https://example.com/closures.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -195,14 +242,19 @@ counter.value();     // 2
 2. **Memoization** — cache expensive computations
 3. **Partial application** — pre-fill function arguments`,
             resources: [
-              { title: 'Scope & Closure Exercises', url: 'https://example.com/closure-exercises.pdf', type: 'pdf' },
+              {
+                title: 'Scope & Closure Exercises',
+                url: 'https://example.com/closure-exercises.pdf',
+                type: 'pdf',
+              },
             ],
           },
         ],
       },
       {
         title: 'Asynchronous JavaScript',
-        description: 'Callbacks, Promises, and async/await — handle async operations the right way.',
+        description:
+          'Callbacks, Promises, and async/await — handle async operations the right way.',
         lessons: [
           {
             title: 'The Event Loop Explained',
@@ -210,9 +262,14 @@ counter.value();     // 2
             videoUrl: 'https://www.youtube.com/embed/8aGhZQkoFbQ',
             duration: 1620,
             isFree: false,
-            content: 'Philip Roberts\' famous talk — understand exactly how the JavaScript event loop works under the hood.',
+            content:
+              "Philip Roberts' famous talk — understand exactly how the JavaScript event loop works under the hood.",
             resources: [
-              { title: 'Event Loop Diagram', url: 'https://example.com/event-loop.pdf', type: 'pdf' },
+              {
+                title: 'Event Loop Diagram',
+                url: 'https://example.com/event-loop.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -221,10 +278,19 @@ counter.value();     // 2
             videoUrl: 'https://www.youtube.com/embed/DHvZLI7Db8E',
             duration: 1440,
             isFree: false,
-            content: 'Move from callback hell to clean async code with Promises and the async/await syntax.',
+            content:
+              'Move from callback hell to clean async code with Promises and the async/await syntax.',
             resources: [
-              { title: 'Async Patterns Cheat Sheet', url: 'https://example.com/async-patterns.pdf', type: 'pdf' },
-              { title: 'Promise MDN Reference', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise', type: 'link' },
+              {
+                title: 'Async Patterns Cheat Sheet',
+                url: 'https://example.com/async-patterns.pdf',
+                type: 'pdf',
+              },
+              {
+                title: 'Promise MDN Reference',
+                url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise',
+                type: 'link',
+              },
             ],
           },
           {
@@ -233,9 +299,14 @@ counter.value();     // 2
             videoUrl: 'https://www.youtube.com/embed/cuEtnrL9-H0',
             duration: 1080,
             isFree: false,
-            content: 'Use the Fetch API to make HTTP requests, handle responses, and deal with errors properly.',
+            content:
+              'Use the Fetch API to make HTTP requests, handle responses, and deal with errors properly.',
             resources: [
-              { title: 'REST API Project Starter', url: 'https://example.com/fetch-project.zip', type: 'doc' },
+              {
+                title: 'REST API Project Starter',
+                url: 'https://example.com/fetch-project.zip',
+                type: 'doc',
+              },
             ],
           },
           {
@@ -254,7 +325,8 @@ counter.value();     // 2
   // ─── 2. React.js Masterclass ────────────────────────────────────────────────
   {
     title: 'React.js Masterclass — Build Modern UIs',
-    description: 'Learn React from scratch and build production-ready applications. Covers hooks, state management with Redux Toolkit, React Router, performance optimization, and testing. Includes 3 full project builds.',
+    description:
+      'Learn React from scratch and build production-ready applications. Covers hooks, state management with Redux Toolkit, React Router, performance optimization, and testing. Includes 3 full project builds.',
     shortDescription: 'Build professional React apps with hooks, Redux, and React Router.',
     level: 'intermediate',
     categorySlug: 'web-development',
@@ -268,7 +340,10 @@ counter.value();     // 2
       'Performance optimization techniques',
       'Build 3 complete projects from scratch',
     ],
-    thumbnail: { url: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800', publicId: 'react-course' },
+    thumbnail: {
+      url: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800',
+      publicId: 'react-course',
+    },
     sections: [
       {
         title: 'React Fundamentals',
@@ -280,10 +355,15 @@ counter.value();     // 2
             videoUrl: 'https://www.youtube.com/embed/Tn6-PIqc4UM',
             duration: 660,
             isFree: true,
-            content: 'Understand the virtual DOM, component model, and why React has become the dominant UI library.',
+            content:
+              'Understand the virtual DOM, component model, and why React has become the dominant UI library.',
             resources: [
               { title: 'React Official Docs', url: 'https://react.dev', type: 'link' },
-              { title: 'React Cheat Sheet', url: 'https://example.com/react-cheatsheet.pdf', type: 'pdf' },
+              {
+                title: 'React Cheat Sheet',
+                url: 'https://example.com/react-cheatsheet.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -292,7 +372,8 @@ counter.value();     // 2
             videoUrl: 'https://www.youtube.com/embed/7fPXI_MnBOY',
             duration: 840,
             isFree: true,
-            content: 'How JSX compiles to React.createElement calls, rules of JSX, and common pitfalls.',
+            content:
+              'How JSX compiles to React.createElement calls, rules of JSX, and common pitfalls.',
             resources: [],
           },
           {
@@ -301,9 +382,14 @@ counter.value();     // 2
             videoUrl: 'https://www.youtube.com/embed/35lXWvCuM8o',
             duration: 1320,
             isFree: false,
-            content: 'Build functional components, pass data via props, and manage local state with useState.',
+            content:
+              'Build functional components, pass data via props, and manage local state with useState.',
             resources: [
-              { title: 'Components Exercise Files', url: 'https://example.com/react-components.zip', type: 'doc' },
+              {
+                title: 'Components Exercise Files',
+                url: 'https://example.com/react-components.zip',
+                type: 'doc',
+              },
             ],
           },
           {
@@ -348,7 +434,11 @@ setCount(prev => prev + 1);
 3. All tags must be self-closing or have a closing tag
 4. JavaScript expressions go inside \`{}\``,
             resources: [
-              { title: 'React Fundamentals PDF', url: 'https://example.com/react-fundamentals.pdf', type: 'pdf' },
+              {
+                title: 'React Fundamentals PDF',
+                url: 'https://example.com/react-fundamentals.pdf',
+                type: 'pdf',
+              },
             ],
           },
         ],
@@ -363,9 +453,14 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/0ZJgIjIuY7U',
             duration: 1500,
             isFree: false,
-            content: 'Data fetching, subscriptions, timers — useEffect handles all side effects. Learn the dependency array, cleanup functions, and common mistakes.',
+            content:
+              'Data fetching, subscriptions, timers — useEffect handles all side effects. Learn the dependency array, cleanup functions, and common mistakes.',
             resources: [
-              { title: 'useEffect Patterns Guide', url: 'https://example.com/useeffect.pdf', type: 'pdf' },
+              {
+                title: 'useEffect Patterns Guide',
+                url: 'https://example.com/useeffect.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -383,9 +478,14 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/t2ypzz6gJm0',
             duration: 1260,
             isFree: false,
-            content: 'Access DOM elements with useRef, persist values without re-renders, and extract reusable logic into custom hooks.',
+            content:
+              'Access DOM elements with useRef, persist values without re-renders, and extract reusable logic into custom hooks.',
             resources: [
-              { title: 'Custom Hooks Collection', url: 'https://example.com/custom-hooks.pdf', type: 'pdf' },
+              {
+                title: 'Custom Hooks Collection',
+                url: 'https://example.com/custom-hooks.pdf',
+                type: 'pdf',
+              },
               { title: 'usehooks.com', url: 'https://usehooks.com', type: 'link' },
             ],
           },
@@ -409,7 +509,8 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/CVpUuw9XSjY',
             duration: 720,
             isFree: false,
-            content: 'Understand the problems Redux solves, when it\'s overkill, and why Redux Toolkit makes it ergonomic.',
+            content:
+              "Understand the problems Redux solves, when it's overkill, and why Redux Toolkit makes it ergonomic.",
             resources: [
               { title: 'Redux Toolkit Docs', url: 'https://redux-toolkit.js.org', type: 'link' },
             ],
@@ -420,10 +521,19 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/9zySeP5vH9c',
             duration: 1680,
             isFree: false,
-            content: 'Build a complete cart feature using createSlice, access state with useSelector, and dispatch actions with useDispatch.',
+            content:
+              'Build a complete cart feature using createSlice, access state with useSelector, and dispatch actions with useDispatch.',
             resources: [
-              { title: 'Redux Project Starter', url: 'https://example.com/redux-starter.zip', type: 'doc' },
-              { title: 'Redux Toolkit Cheat Sheet', url: 'https://example.com/redux-cheatsheet.pdf', type: 'pdf' },
+              {
+                title: 'Redux Project Starter',
+                url: 'https://example.com/redux-starter.zip',
+                type: 'doc',
+              },
+              {
+                title: 'Redux Toolkit Cheat Sheet',
+                url: 'https://example.com/redux-cheatsheet.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -432,9 +542,14 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/93CR_yURoII',
             duration: 1440,
             isFree: false,
-            content: 'Fetch data from APIs with createAsyncThunk and handle loading/error/success states cleanly.',
+            content:
+              'Fetch data from APIs with createAsyncThunk and handle loading/error/success states cleanly.',
             resources: [
-              { title: 'Async Thunk Patterns', url: 'https://example.com/async-thunk.pdf', type: 'pdf' },
+              {
+                title: 'Async Thunk Patterns',
+                url: 'https://example.com/async-thunk.pdf',
+                type: 'pdf',
+              },
             ],
           },
         ],
@@ -445,12 +560,17 @@ setCount(prev => prev + 1);
   // ─── 3. Python for Data Science ─────────────────────────────────────────────
   {
     title: 'Python for Data Science & Machine Learning',
-    description: 'Go from Python basics to building ML models. Learn NumPy, Pandas, Matplotlib, Scikit-learn, and build 5 end-to-end data science projects including a house price predictor and image classifier.',
+    description:
+      'Go from Python basics to building ML models. Learn NumPy, Pandas, Matplotlib, Scikit-learn, and build 5 end-to-end data science projects including a house price predictor and image classifier.',
     shortDescription: 'From Python basics to real ML projects with NumPy, Pandas & Scikit-learn.',
     level: 'intermediate',
     categorySlug: 'data-science',
     tags: ['python', 'data science', 'machine learning', 'pandas', 'numpy'],
-    requirements: ['Basic programming knowledge in any language', 'Python installed (3.8+)', 'No ML experience required'],
+    requirements: [
+      'Basic programming knowledge in any language',
+      'Python installed (3.8+)',
+      'No ML experience required',
+    ],
     whatYouLearn: [
       'Python for data manipulation and analysis',
       'NumPy arrays and vectorized operations',
@@ -459,7 +579,10 @@ setCount(prev => prev + 1);
       'Machine learning with Scikit-learn',
       'Build and deploy 5 ML projects',
     ],
-    thumbnail: { url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800', publicId: 'python-ds-course' },
+    thumbnail: {
+      url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800',
+      publicId: 'python-ds-course',
+    },
     sections: [
       {
         title: 'Python Foundations for Data Science',
@@ -471,10 +594,19 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/_uQrJ0TkZlc',
             duration: 14400,
             isFree: true,
-            content: 'A rapid but thorough introduction to Python — variables, data structures, functions, and file I/O specifically for data science use.',
+            content:
+              'A rapid but thorough introduction to Python — variables, data structures, functions, and file I/O specifically for data science use.',
             resources: [
-              { title: 'Python DS Cheat Sheet', url: 'https://example.com/python-ds-cheatsheet.pdf', type: 'pdf' },
-              { title: 'Python.org Official Docs', url: 'https://docs.python.org/3/', type: 'link' },
+              {
+                title: 'Python DS Cheat Sheet',
+                url: 'https://example.com/python-ds-cheatsheet.pdf',
+                type: 'pdf',
+              },
+              {
+                title: 'Python.org Official Docs',
+                url: 'https://docs.python.org/3/',
+                type: 'link',
+              },
             ],
           },
           {
@@ -483,9 +615,14 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/inN8seMm7UI',
             duration: 840,
             isFree: true,
-            content: 'Set up your data science workspace — Jupyter locally and Google Colab for cloud notebooks (free GPU!).',
+            content:
+              'Set up your data science workspace — Jupyter locally and Google Colab for cloud notebooks (free GPU!).',
             resources: [
-              { title: 'Jupyter Shortcuts Guide', url: 'https://example.com/jupyter-shortcuts.pdf', type: 'pdf' },
+              {
+                title: 'Jupyter Shortcuts Guide',
+                url: 'https://example.com/jupyter-shortcuts.pdf',
+                type: 'pdf',
+              },
               { title: 'Google Colab', url: 'https://colab.research.google.com', type: 'link' },
             ],
           },
@@ -495,10 +632,19 @@ setCount(prev => prev + 1);
             videoUrl: 'https://www.youtube.com/embed/GB9ByFAIAH4',
             duration: 3600,
             isFree: false,
-            content: 'Create and manipulate n-dimensional arrays, perform vectorized math, and understand broadcasting rules.',
+            content:
+              'Create and manipulate n-dimensional arrays, perform vectorized math, and understand broadcasting rules.',
             resources: [
-              { title: 'NumPy Exercises Notebook', url: 'https://example.com/numpy-exercises.ipynb', type: 'doc' },
-              { title: 'NumPy Cheat Sheet', url: 'https://example.com/numpy-cheatsheet.pdf', type: 'pdf' },
+              {
+                title: 'NumPy Exercises Notebook',
+                url: 'https://example.com/numpy-exercises.ipynb',
+                type: 'doc',
+              },
+              {
+                title: 'NumPy Cheat Sheet',
+                url: 'https://example.com/numpy-cheatsheet.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -549,7 +695,11 @@ np.std(arr)      # 1.41
 | \`np.reshape()\` | Change array shape |
 | \`np.dot()\` | Matrix multiplication |`,
             resources: [
-              { title: 'Full NumPy Reference PDF', url: 'https://example.com/numpy-reference.pdf', type: 'pdf' },
+              {
+                title: 'Full NumPy Reference PDF',
+                url: 'https://example.com/numpy-reference.pdf',
+                type: 'pdf',
+              },
             ],
           },
         ],
@@ -564,10 +714,19 @@ np.std(arr)      # 1.41
             videoUrl: 'https://www.youtube.com/embed/vmEHCJofslg',
             duration: 3900,
             isFree: false,
-            content: 'Load CSVs, inspect DataFrames, select & filter data, handle missing values, and aggregate with groupby.',
+            content:
+              'Load CSVs, inspect DataFrames, select & filter data, handle missing values, and aggregate with groupby.',
             resources: [
-              { title: 'Pandas Cheat Sheet', url: 'https://example.com/pandas-cheatsheet.pdf', type: 'pdf' },
-              { title: 'Sample Datasets', url: 'https://example.com/sample-datasets.zip', type: 'doc' },
+              {
+                title: 'Pandas Cheat Sheet',
+                url: 'https://example.com/pandas-cheatsheet.pdf',
+                type: 'pdf',
+              },
+              {
+                title: 'Sample Datasets',
+                url: 'https://example.com/sample-datasets.zip',
+                type: 'doc',
+              },
             ],
           },
           {
@@ -576,9 +735,14 @@ np.std(arr)      # 1.41
             videoUrl: 'https://www.youtube.com/embed/bDhvCp3_lYw',
             duration: 2700,
             isFree: false,
-            content: 'Handle nulls, duplicates, outliers, encode categoricals, and engineer new features from raw data.',
+            content:
+              'Handle nulls, duplicates, outliers, encode categoricals, and engineer new features from raw data.',
             resources: [
-              { title: 'Data Cleaning Checklist', url: 'https://example.com/data-cleaning.pdf', type: 'pdf' },
+              {
+                title: 'Data Cleaning Checklist',
+                url: 'https://example.com/data-cleaning.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -587,9 +751,14 @@ np.std(arr)      # 1.41
             videoUrl: 'https://www.youtube.com/embed/xi0vhXFPegw',
             duration: 2400,
             isFree: false,
-            content: 'Systematic EDA workflow: distributions, correlations, and visualizations with Matplotlib and Seaborn.',
+            content:
+              'Systematic EDA workflow: distributions, correlations, and visualizations with Matplotlib and Seaborn.',
             resources: [
-              { title: 'EDA Project Notebook', url: 'https://example.com/eda-project.ipynb', type: 'doc' },
+              {
+                title: 'EDA Project Notebook',
+                url: 'https://example.com/eda-project.ipynb',
+                type: 'doc',
+              },
             ],
           },
           {
@@ -612,9 +781,14 @@ np.std(arr)      # 1.41
             videoUrl: 'https://www.youtube.com/embed/ukzFI9rgwfU',
             duration: 1200,
             isFree: false,
-            content: 'Understand train/test splits, overfitting, bias-variance tradeoff, and the Scikit-learn API.',
+            content:
+              'Understand train/test splits, overfitting, bias-variance tradeoff, and the Scikit-learn API.',
             resources: [
-              { title: 'ML Concepts Slides', url: 'https://example.com/ml-concepts.pdf', type: 'pdf' },
+              {
+                title: 'ML Concepts Slides',
+                url: 'https://example.com/ml-concepts.pdf',
+                type: 'pdf',
+              },
             ],
           },
           {
@@ -623,9 +797,14 @@ np.std(arr)      # 1.41
             videoUrl: 'https://www.youtube.com/embed/VmbA0pi2cRQ',
             duration: 2100,
             isFree: false,
-            content: 'Fit linear models for regression, logistic regression for binary classification, evaluate with metrics.',
+            content:
+              'Fit linear models for regression, logistic regression for binary classification, evaluate with metrics.',
             resources: [
-              { title: 'Regression Project Files', url: 'https://example.com/regression-project.zip', type: 'doc' },
+              {
+                title: 'Regression Project Files',
+                url: 'https://example.com/regression-project.zip',
+                type: 'doc',
+              },
             ],
           },
           {
@@ -634,9 +813,14 @@ np.std(arr)      # 1.41
             videoUrl: 'https://www.youtube.com/embed/v6VJ2RO66Ag',
             duration: 1800,
             isFree: false,
-            content: 'Ensemble methods — how random forests improve on decision trees through bagging and feature randomness.',
+            content:
+              'Ensemble methods — how random forests improve on decision trees through bagging and feature randomness.',
             resources: [
-              { title: 'Random Forest Cheat Sheet', url: 'https://example.com/random-forest.pdf', type: 'pdf' },
+              {
+                title: 'Random Forest Cheat Sheet',
+                url: 'https://example.com/random-forest.pdf',
+                type: 'pdf',
+              },
             ],
           },
         ],
@@ -663,7 +847,8 @@ const quizzesByCourse = {
             { text: 'They are identical in modern JavaScript', isCorrect: false },
             { text: 'var does not exist in ES6', isCorrect: false },
           ],
-          explanation: 'let is block-scoped (limited to the nearest {}), while var is function-scoped.',
+          explanation:
+            'let is block-scoped (limited to the nearest {}), while var is function-scoped.',
         },
         {
           question: 'What does typeof [] return?',
@@ -673,7 +858,8 @@ const quizzesByCourse = {
             { text: '"list"', isCorrect: false },
             { text: '"undefined"', isCorrect: false },
           ],
-          explanation: 'Arrays in JavaScript are objects, so typeof [] returns "object". Use Array.isArray() to check for arrays.',
+          explanation:
+            'Arrays in JavaScript are objects, so typeof [] returns "object". Use Array.isArray() to check for arrays.',
         },
         {
           question: 'Which of these creates a constant that cannot be reassigned?',
@@ -683,7 +869,8 @@ const quizzesByCourse = {
             { text: 'const x = 5', isCorrect: true },
             { text: 'final x = 5', isCorrect: false },
           ],
-          explanation: 'const prevents reassignment. Note: const objects/arrays can still be mutated.',
+          explanation:
+            'const prevents reassignment. Note: const objects/arrays can still be mutated.',
         },
         {
           question: 'What is the output of 2 + "3"?',
@@ -693,7 +880,8 @@ const quizzesByCourse = {
             { text: 'NaN', isCorrect: false },
             { text: 'TypeError', isCorrect: false },
           ],
-          explanation: 'When a number and string are added, JS coerces the number to a string and concatenates.',
+          explanation:
+            'When a number and string are added, JS coerces the number to a string and concatenates.',
         },
       ],
     },
@@ -709,17 +897,20 @@ const quizzesByCourse = {
             { text: 'A way to end a loop early', isCorrect: false },
             { text: 'A method to import modules', isCorrect: false },
           ],
-          explanation: 'A closure is a function that retains access to its outer scope even after the outer function has returned.',
+          explanation:
+            'A closure is a function that retains access to its outer scope even after the outer function has returned.',
         },
         {
-          question: 'What will the following output? const fn = () => { let x = 10; return () => x; }; console.log(fn()());',
+          question:
+            'What will the following output? const fn = () => { let x = 10; return () => x; }; console.log(fn()());',
           options: [
             { text: 'undefined', isCorrect: false },
             { text: 'ReferenceError', isCorrect: false },
             { text: '10', isCorrect: true },
             { text: 'null', isCorrect: false },
           ],
-          explanation: 'The inner arrow function closes over x from the outer function, returning 10.',
+          explanation:
+            'The inner arrow function closes over x from the outer function, returning 10.',
         },
         {
           question: 'Which scope is created by a pair of {} inside an if statement (with let)?',
@@ -729,7 +920,8 @@ const quizzesByCourse = {
             { text: 'Block scope', isCorrect: true },
             { text: 'Module scope', isCorrect: false },
           ],
-          explanation: 'let and const respect block scope — variables declared inside {} are not accessible outside.',
+          explanation:
+            'let and const respect block scope — variables declared inside {} are not accessible outside.',
         },
       ],
     },
@@ -747,7 +939,8 @@ const quizzesByCourse = {
             { text: 'Once after the initial mount', isCorrect: true },
             { text: 'Once before the component mounts', isCorrect: false },
           ],
-          explanation: 'An empty array means the effect has no dependencies, so it only runs once after the initial render.',
+          explanation:
+            'An empty array means the effect has no dependencies, so it only runs once after the initial render.',
         },
         {
           question: 'What does useCallback memoize?',
@@ -757,7 +950,8 @@ const quizzesByCourse = {
             { text: 'A component render', isCorrect: false },
             { text: 'An API response', isCorrect: false },
           ],
-          explanation: 'useCallback returns a memoized function that only changes if one of its dependencies changes.',
+          explanation:
+            'useCallback returns a memoized function that only changes if one of its dependencies changes.',
         },
         {
           question: 'How do you persist a value between renders WITHOUT causing a re-render?',
@@ -767,7 +961,8 @@ const quizzesByCourse = {
             { text: 'useRef', isCorrect: true },
             { text: 'useMemo', isCorrect: false },
           ],
-          explanation: 'useRef returns a mutable ref object whose .current property does not trigger re-renders when changed.',
+          explanation:
+            'useRef returns a mutable ref object whose .current property does not trigger re-renders when changed.',
         },
       ],
     },
@@ -785,7 +980,8 @@ const quizzesByCourse = {
             { text: 'np.linspace()', isCorrect: true },
             { text: 'np.even()', isCorrect: false },
           ],
-          explanation: 'np.linspace(start, stop, num) creates num evenly spaced values between start and stop.',
+          explanation:
+            'np.linspace(start, stop, num) creates num evenly spaced values between start and stop.',
         },
         {
           question: 'What does df.dropna() do in Pandas?',
@@ -795,7 +991,8 @@ const quizzesByCourse = {
             { text: 'Fills missing values with zero', isCorrect: false },
             { text: 'Counts missing values', isCorrect: false },
           ],
-          explanation: 'dropna() removes rows (or columns) that contain at least one NaN/null value.',
+          explanation:
+            'dropna() removes rows (or columns) that contain at least one NaN/null value.',
         },
         {
           question: 'Which Pandas method gives you descriptive statistics?',
@@ -805,17 +1002,22 @@ const quizzesByCourse = {
             { text: 'df.describe()', isCorrect: true },
             { text: 'df.summary()', isCorrect: false },
           ],
-          explanation: 'df.describe() returns count, mean, std, min, quartiles, and max for all numeric columns.',
+          explanation:
+            'df.describe() returns count, mean, std, min, quartiles, and max for all numeric columns.',
         },
         {
           question: 'What is overfitting in ML?',
           options: [
             { text: 'Model performs poorly on both training and test data', isCorrect: false },
-            { text: 'Model performs well on training data but poorly on unseen data', isCorrect: true },
+            {
+              text: 'Model performs well on training data but poorly on unseen data',
+              isCorrect: true,
+            },
             { text: 'Model is too simple to learn patterns', isCorrect: false },
             { text: 'Model training takes too long', isCorrect: false },
           ],
-          explanation: 'Overfitting means the model memorizes training data instead of learning general patterns.',
+          explanation:
+            'Overfitting means the model memorizes training data instead of learning general patterns.',
         },
       ],
     },
@@ -830,55 +1032,87 @@ const discussionsByCourse = {
   'Complete JavaScript Course 2024': [
     {
       title: 'Why does typeof null return "object"?',
-      content: 'I\'m confused about this behavior. In the lecture it was mentioned that null is a primitive, but typeof null returns "object". Is this a bug in JavaScript? Will it ever be fixed?',
+      content:
+        'I\'m confused about this behavior. In the lecture it was mentioned that null is a primitive, but typeof null returns "object". Is this a bug in JavaScript? Will it ever be fixed?',
       tags: ['typeof', 'null', 'primitives'],
       isPinned: false,
       replies: [
-        { content: 'Great question! This is actually a historical bug from the very first version of JavaScript. The typeof operator checks a type tag stored in the value\'s binary representation. null was given the tag 0000, which is the same as objects. Since fixing it would break existing code, it has never been corrected — a famous example of backwards compatibility preventing fixes.' },
-        { content: 'To safely check for null, always use === null: \n\nif (value === null) { ... }\n\nOr to check for both null and undefined: if (value == null) { ... }' },
+        {
+          content:
+            "Great question! This is actually a historical bug from the very first version of JavaScript. The typeof operator checks a type tag stored in the value's binary representation. null was given the tag 0000, which is the same as objects. Since fixing it would break existing code, it has never been corrected — a famous example of backwards compatibility preventing fixes.",
+        },
+        {
+          content:
+            'To safely check for null, always use === null: \n\nif (value === null) { ... }\n\nOr to check for both null and undefined: if (value == null) { ... }',
+        },
       ],
     },
     {
       title: 'Best way to handle async errors in production?',
-      content: 'I\'ve been using try/catch with async/await, but I\'ve seen people use .catch() on Promises. What\'s the recommended pattern for production apps?',
+      content:
+        "I've been using try/catch with async/await, but I've seen people use .catch() on Promises. What's the recommended pattern for production apps?",
       tags: ['async', 'error handling', 'promises'],
       isPinned: true,
       replies: [
-        { content: 'Both are valid! The key is consistency. For async/await, wrapping every await in try/catch gets verbose. A common pattern is a helper: const safeAsync = async (fn) => { try { return [await fn(), null]; } catch (e) { return [null, e]; } }. Then: const [data, err] = await safeAsync(() => fetchUser(id));' },
-        { content: 'Another popular approach is to use a global error boundary at the top level and let errors propagate up. In Node.js, always listen for process.on("unhandledRejection") to catch any missed promise rejections.' },
+        {
+          content:
+            'Both are valid! The key is consistency. For async/await, wrapping every await in try/catch gets verbose. A common pattern is a helper: const safeAsync = async (fn) => { try { return [await fn(), null]; } catch (e) { return [null, e]; } }. Then: const [data, err] = await safeAsync(() => fetchUser(id));',
+        },
+        {
+          content:
+            'Another popular approach is to use a global error boundary at the top level and let errors propagate up. In Node.js, always listen for process.on("unhandledRejection") to catch any missed promise rejections.',
+        },
       ],
     },
   ],
   'React.js Masterclass — Build Modern UIs': [
     {
       title: 'useEffect vs useLayoutEffect — when to use which?',
-      content: 'I understand that useEffect runs after the paint and useLayoutEffect runs before. But when exactly should I reach for useLayoutEffect? Are there performance implications?',
+      content:
+        'I understand that useEffect runs after the paint and useLayoutEffect runs before. But when exactly should I reach for useLayoutEffect? Are there performance implications?',
       tags: ['useEffect', 'useLayoutEffect', 'hooks', 'performance'],
       isPinned: false,
       replies: [
-        { content: 'Use useLayoutEffect only when you need to read or mutate the DOM synchronously before the browser paints — for example, measuring an element\'s size or position to avoid a flash. For everything else (data fetching, subscriptions, logging), stick with useEffect. useLayoutEffect blocks painting, so overusing it hurts perceived performance.' },
+        {
+          content:
+            "Use useLayoutEffect only when you need to read or mutate the DOM synchronously before the browser paints — for example, measuring an element's size or position to avoid a flash. For everything else (data fetching, subscriptions, logging), stick with useEffect. useLayoutEffect blocks painting, so overusing it hurts perceived performance.",
+        },
       ],
     },
     {
       title: 'Should I use Redux or React Context for global state?',
-      content: 'My app has user authentication and a shopping cart. Is this a good use case for Redux? Or is React Context enough?',
+      content:
+        'My app has user authentication and a shopping cart. Is this a good use case for Redux? Or is React Context enough?',
       tags: ['redux', 'context', 'state management'],
       isPinned: true,
       replies: [
-        { content: 'Great question! For auth state (user object, token), Context is often enough since it doesn\'t update frequently. For a shopping cart that updates often (add/remove items, quantity changes), Redux Toolkit is better because it avoids the re-render performance issues that Context has with high-frequency updates.' },
-        { content: 'My rule of thumb: Context for low-frequency global state (theme, locale, auth). Redux for frequently updated state, complex state logic, or when you need time-travel debugging.' },
+        {
+          content:
+            "Great question! For auth state (user object, token), Context is often enough since it doesn't update frequently. For a shopping cart that updates often (add/remove items, quantity changes), Redux Toolkit is better because it avoids the re-render performance issues that Context has with high-frequency updates.",
+        },
+        {
+          content:
+            'My rule of thumb: Context for low-frequency global state (theme, locale, auth). Redux for frequently updated state, complex state logic, or when you need time-travel debugging.',
+        },
       ],
     },
   ],
   'Python for Data Science & Machine Learning': [
     {
       title: 'When to use Pandas vs NumPy?',
-      content: 'I\'m confused about when I should use a NumPy array vs a Pandas DataFrame. They seem to overlap a lot. Can someone explain the distinction?',
+      content:
+        "I'm confused about when I should use a NumPy array vs a Pandas DataFrame. They seem to overlap a lot. Can someone explain the distinction?",
       tags: ['pandas', 'numpy', 'data structures'],
       isPinned: false,
       replies: [
-        { content: 'Think of it this way: NumPy is optimized for **homogeneous numerical computation** — matrices, linear algebra, vectorized math. Pandas is built ON TOP of NumPy and adds labeled axes, mixed data types, SQL-like operations (groupby, merge, pivot), and time series handling. For raw matrix math, use NumPy. For tabular data with column names, use Pandas.' },
-        { content: 'Practical guide: If your data is a CSV with column headers, use Pandas. If you\'re doing matrix multiplication for a neural network, use NumPy (or PyTorch/TensorFlow tensors). You\'ll often convert between them with df.values or np.array(df).' },
+        {
+          content:
+            'Think of it this way: NumPy is optimized for **homogeneous numerical computation** — matrices, linear algebra, vectorized math. Pandas is built ON TOP of NumPy and adds labeled axes, mixed data types, SQL-like operations (groupby, merge, pivot), and time series handling. For raw matrix math, use NumPy. For tabular data with column names, use Pandas.',
+        },
+        {
+          content:
+            "Practical guide: If your data is a CSV with column headers, use Pandas. If you're doing matrix multiplication for a neural network, use NumPy (or PyTorch/TensorFlow tensors). You'll often convert between them with df.values or np.array(df).",
+        },
       ],
     },
   ],
@@ -890,18 +1124,50 @@ const discussionsByCourse = {
 
 const notesByCourse = {
   'Complete JavaScript Course 2024': [
-    { content: 'Remember: const does not make objects immutable! You can still add/change properties. Use Object.freeze() for true immutability.', timestamp: 342 },
-    { content: 'Closure tip: every time a function is called, a new closure scope is created. This is why factory functions work!', timestamp: 1205 },
-    { content: 'The event loop: Call Stack → Web APIs → Callback Queue → Call Stack. Microtasks (Promises) always run before macrotasks (setTimeout).', timestamp: 890 },
+    {
+      content:
+        'Remember: const does not make objects immutable! You can still add/change properties. Use Object.freeze() for true immutability.',
+      timestamp: 342,
+    },
+    {
+      content:
+        'Closure tip: every time a function is called, a new closure scope is created. This is why factory functions work!',
+      timestamp: 1205,
+    },
+    {
+      content:
+        'The event loop: Call Stack → Web APIs → Callback Queue → Call Stack. Microtasks (Promises) always run before macrotasks (setTimeout).',
+      timestamp: 890,
+    },
   ],
   'React.js Masterclass — Build Modern UIs': [
-    { content: 'Key insight: React re-renders a component when its STATE or PROPS change. Avoid putting everything in state — derived values should just be variables.', timestamp: 420 },
-    { content: 'useEffect cleanup function runs BEFORE the next effect runs AND when the component unmounts. Always clean up subscriptions and timers!', timestamp: 1100 },
+    {
+      content:
+        'Key insight: React re-renders a component when its STATE or PROPS change. Avoid putting everything in state — derived values should just be variables.',
+      timestamp: 420,
+    },
+    {
+      content:
+        'useEffect cleanup function runs BEFORE the next effect runs AND when the component unmounts. Always clean up subscriptions and timers!',
+      timestamp: 1100,
+    },
   ],
   'Python for Data Science & Machine Learning': [
-    { content: 'df.info() shows data types and non-null counts. Always run this first on a new dataset to understand what you\'re working with.', timestamp: 660 },
-    { content: 'Remember: iloc uses integer positions, loc uses labels. Easy to confuse — iloc is like indexing a Python list.', timestamp: 1560 },
-    { content: 'Cross-validation > single train/test split. Always use at least 5-fold CV when comparing models.', timestamp: 2100 },
+    {
+      content:
+        "df.info() shows data types and non-null counts. Always run this first on a new dataset to understand what you're working with.",
+      timestamp: 660,
+    },
+    {
+      content:
+        'Remember: iloc uses integer positions, loc uses labels. Easy to confuse — iloc is like indexing a Python list.',
+      timestamp: 1560,
+    },
+    {
+      content:
+        'Cross-validation > single train/test split. Always use at least 5-fold CV when comparing models.',
+      timestamp: 2100,
+    },
   ],
 };
 
@@ -916,11 +1182,16 @@ const seedCourses = async () => {
 
     const teacher = await User.findOne({ role: 'teacher' });
     const student = await User.findOne({ role: 'student' });
-    if (!teacher) { console.error('❌ No teacher found. Run: npm run seed first'); process.exit(1); }
+    if (!teacher) {
+      console.error('❌ No teacher found. Run: npm run seed first');
+      process.exit(1);
+    }
 
     const categories = await ExamCategory.find({});
     const catMap = {};
-    categories.forEach(c => { catMap[c.slug] = c._id; });
+    categories.forEach((c) => {
+      catMap[c.slug] = c._id;
+    });
 
     // Clear existing course content
     await Course.deleteMany({});
@@ -952,7 +1223,9 @@ const seedCourses = async () => {
       const lessonCount = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
       const durationMin = Math.round(course.totalDuration / 60);
       console.log(`✅ Course: "${course.title}"`);
-      console.log(`   Sections: ${course.sections.length} | Lessons: ${lessonCount} | Duration: ~${durationMin} min`);
+      console.log(
+        `   Sections: ${course.sections.length} | Lessons: ${lessonCount} | Duration: ~${durationMin} min`
+      );
     }
 
     // ── Quizzes ───────────────────────────────────────────────────────────────
@@ -991,7 +1264,7 @@ const seedCourses = async () => {
           content: dData.content,
           tags: dData.tags,
           isPinned: dData.isPinned,
-          replies: dData.replies.map(r => ({
+          replies: dData.replies.map((r) => ({
             user: teacher._id,
             content: r.content,
             createdAt: new Date(),
@@ -1030,8 +1303,8 @@ const seedCourses = async () => {
     console.log(`💬 Discussions: ${totalDiscussions}`);
     console.log(`📓 Notes:       ${totalNotes}`);
     console.log('\nLogin to explore:');
-    console.log('   Teacher: teacher@testbook.com / Teacher@123456');
-    console.log('   Student: student@testbook.com / Student@123456');
+    console.log('   Teacher: teacher@civicshub.com / Teacher@123456');
+    console.log('   Student: student@civicshub.com / Student@123456');
 
     process.exit(0);
   } catch (err) {

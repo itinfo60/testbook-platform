@@ -89,15 +89,26 @@ const courseSlice = createSlice({
         state.selected = action.payload;
       })
       .addCase(deleteCourse.fulfilled, (state, action) => {
-        state.list = state.list.filter((c) => c._id !== action.payload);
+        state.list = state.list.filter((c) => (c.id || c._id) !== action.payload);
       })
       .addCase(togglePublish.fulfilled, (state, action) => {
-        const idx = state.list.findIndex((c) => c._id === action.payload._id);
-        if (idx >= 0) state.list[idx] = action.payload;
+        const payloadId =
+          action.payload?.course?.id ||
+          action.payload?.course?._id ||
+          action.payload?.id ||
+          action.payload?._id;
+        const updatedCourse = action.payload?.course || action.payload;
+        const idx = state.list.findIndex((c) => (c.id || c._id) === payloadId);
+        if (idx >= 0) state.list[idx] = { ...state.list[idx], ...updatedCourse };
       })
       .addCase(toggleFeatured.fulfilled, (state, action) => {
-        const idx = state.list.findIndex((c) => c._id === action.payload._id);
-        if (idx >= 0) state.list[idx] = action.payload;
+        const payloadId = action.payload?.id || action.payload?._id || action.meta?.arg;
+        const idx = state.list.findIndex((c) => (c.id || c._id) === payloadId);
+        if (idx >= 0)
+          state.list[idx] = {
+            ...state.list[idx],
+            isFeatured: action.payload?.isFeatured ?? !state.list[idx].isFeatured,
+          };
       });
   },
 });

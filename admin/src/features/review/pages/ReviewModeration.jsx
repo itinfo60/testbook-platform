@@ -182,31 +182,36 @@ export default function ReviewModeration() {
         searchPlaceholder="Search reviews..."
         emptyMessage="No reviews found"
         emptyIcon={Star}
-        actions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => setViewReview(row)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="View full review"
-            >
-              <Eye className="w-4 h-4 text-blue-600" />
-            </button>
-            <button
-              onClick={() => dispatch(toggleReviewApproval(row._id))}
-              className={`px-2 py-1 rounded text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-700 ${row.isApproved ? 'text-amber-600' : 'text-emerald-600'}`}
-              title={row.isApproved ? 'Unapprove' : 'Approve'}
-            >
-              {row.isApproved ? 'Unapprove' : 'Approve'}
-            </button>
-            <button
-              onClick={() => setDeleteTarget(row._id)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </button>
-          </div>
-        )}
+        actions={(row) => {
+          const rowId = row.id || row._id;
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => setViewReview(row)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 transition-colors"
+                title="View Full Student Review Feedback"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => dispatch(toggleReviewApproval(rowId))}
+                className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${row.isApproved ? 'text-emerald-600' : 'text-amber-600'}`}
+                title={row.isApproved ? 'Unapprove / Hide Review' : 'Approve & Publish Review'}
+              >
+                <CheckCircle
+                  className={`w-4 h-4 ${row.isApproved ? 'text-emerald-600' : 'text-gray-400'}`}
+                />
+              </button>
+              <button
+                onClick={() => setDeleteTarget(rowId)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 transition-colors"
+                title="Delete Student Review"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        }}
       />
 
       <ConfirmDialog

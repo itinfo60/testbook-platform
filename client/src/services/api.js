@@ -164,17 +164,6 @@ export const authAPI = {
   checkEmail: (email) => api.get('/auth/check-email', { params: { email } }),
 };
 
-export const parentAPI = {
-  generateAccessCode: () => api.post('/parent/generate-code'),
-  linkStudent: (data) => api.post('/parent/link', data),
-  getLinkedStudents: () => api.get('/parent/students'),
-  getStudentProgress: (studentId) => api.get(`/parent/students/${studentId}/progress`),
-  getTeachers: (studentId) => api.get(`/parent/messages/teachers/${studentId}`),
-  getThreadMessages: (threadId) => api.get(`/parent/messages/thread/${threadId}`),
-  getActiveThreads: () => api.get('/parent/messages/threads'),
-  sendMessage: (data) => api.post('/parent/messages', data),
-};
-
 export const attendanceAPI = {
   getAttendance: (courseId, date) =>
     api.get(`/attendance/course/${courseId}`, { params: { date } }),
@@ -232,6 +221,7 @@ export const testAPI = {
 
 export const testSeriesAPI = {
   getAll: (params) => api.get('/test-series', { params }),
+  getMySeriesList: () => api.get('/test-series/teacher/my-series'),
   getBySlug: (slug) => api.get(`/test-series/${slug}`),
   create: (data) => api.post('/test-series', data),
   update: (id, data) => api.put(`/test-series/${id}`, data),
@@ -318,7 +308,11 @@ export const libraryAPI = {
 };
 
 export const examCategoryAPI = {
-  getAll: () => api.get('/categories'),
+  // Pass { type: 'exam' } or { type: 'category' } to scope the result.
+  // Omitting type returns both (legacy behaviour).
+  getAll: (params) => api.get('/categories', { params }),
+  getExams: () => api.get('/categories', { params: { type: 'exam' } }),
+  getCategories: () => api.get('/categories', { params: { type: 'category' } }),
 };
 
 export const subscriptionAPI = {

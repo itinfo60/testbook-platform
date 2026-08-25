@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   HiArrowLeft,
@@ -52,11 +52,21 @@ function ResourceItem({ resource }) {
 
 export default function CourseLearning() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedLessonId = searchParams.get('lesson');
   const dispatch = useDispatch();
-  const { currentCourse: course, loading } = useSelector((state) => state.courses);
+  const {
+    currentCourse: course,
+    currentCourseIsEnrolled: isEnrolled,
+    loading,
+  } = useSelector((state) => state.courses);
   const { currentProgress } = useSelector((state) => state.enrollments);
   const { notes } = useSelector((state) => state.notes);
   const { discussions } = useSelector((state) => state.discussions);
+
+  // Use the real MongoDB ObjectId for enrollment/progress APIs once course loads
+  // The URL `id` may be a slug; APIs that touch enrollments require the ObjectId
+  const courseId = course?._id?.toString() || id;
 
   const [currentLesson, setCurrentLesson] = useState(null);
   const [currentSection, setCurrentSection] = useState(null);
@@ -74,23 +84,44 @@ export default function CourseLearning() {
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
-    dispatch(fetchProgress(id));
-    dispatch(fetchNotes(id));
-    dispatch(fetchDiscussions({ courseId: id }));
   }, [dispatch, id]);
 
-  // Auto-select first lesson once course loads
+  // Once course loads with real _id, fetch enrollment-dependent data
   useEffect(() => {
-    if (course && !currentLesson) {
-      const sections = course.sections || [];
-      const firstSection = sections[0];
-      const firstLesson = firstSection?.lessons?.[0];
-      if (firstLesson) {
-        setCurrentLesson(firstLesson);
-        setCurrentSection(firstSection);
+    if (!course?._id) return;
+    const resolvedId = course._id.toString();
+    // Progress only exists for an active enrollment — skip it for previewers
+    // so we don't fire a request that is guaranteed to 404.
+    if (isEnrolled) dispatch(fetchProgress(resolvedId));
+    dispatch(fetchNotes(resolvedId));
+    dispatch(fetchDiscussions({ courseId: resolvedId }));
+  }, [dispatch, course?._id, isEnrolled]);
+
+  // Auto-select the opening lesson once the course loads.
+  // For a visitor who has not purchased, land on the first demo (free) lesson
+  // so they get something playable instead of a paywall.
+  useEffect(() => {
+    if (!course || currentLesson) return;
+
+    const sections = course.sections || [];
+    const pick = (predicate) => {
+      for (const section of sections) {
+        const lesson = (section.lessons || []).find(predicate);
+        if (lesson) return { lesson, section };
       }
+      return null;
+    };
+
+    const target =
+      // A ?lesson=<id> deep link wins (used by the curriculum's demo links)
+      (requestedLessonId && pick((l) => String(l._id) === String(requestedLessonId))) ||
+      (isEnrolled ? pick(() => true) : pick((l) => l.isFree) || pick(() => true));
+
+    if (target) {
+      setCurrentLesson(target.lesson);
+      setCurrentSection(target.section);
     }
-  }, [course, currentLesson]);
+  }, [course, currentLesson, isEnrolled, requestedLessonId]);
 
   const handleLessonSelect = useCallback((lesson, section) => {
     setCurrentLesson(lesson);
@@ -118,7 +149,7 @@ export default function CourseLearning() {
         const initialWatchTime = progressRecord?.watchTime || 0;
 
         enrollmentAPI
-          .updateProgress(id, {
+          .updateProgress(courseId, {
             sectionId: currentSection?._id,
             lessonId: currentLesson?._id,
             watchTime: initialWatchTime + sessionWatchTime.current,
@@ -130,7 +161,7 @@ export default function CourseLearning() {
         lastHeartbeatTime.current = sessionWatchTime.current;
       }
     },
-    [id, currentSection, currentLesson, currentProgress]
+    [courseId, currentSection, currentLesson, currentProgress]
   );
 
   const handleLessonComplete = useCallback(
@@ -140,7 +171,7 @@ export default function CourseLearning() {
       try {
         await dispatch(
           completeLesson({
-            courseId: id,
+            courseId: courseId,
             lessonId: currentLesson._id,
             sectionId: currentSection?._id,
             completed: targetCompletedState,
@@ -155,7 +186,7 @@ export default function CourseLearning() {
         setCompleting(false);
       }
     },
-    [dispatch, id, currentLesson, currentSection, completing]
+    [dispatch, courseId, currentLesson, currentSection, completing]
   );
 
   const handleVideoComplete = useCallback(async () => {
@@ -173,7 +204,7 @@ export default function CourseLearning() {
     e.preventDefault();
     if (!noteText.trim()) return;
     const noteData = {
-      course: id,
+      course: courseId,
       content: noteText,
       lessonId: currentLesson?._id,
     };
@@ -198,10 +229,12 @@ export default function CourseLearning() {
   const handleAddDiscussion = async (e) => {
     e.preventDefault();
     if (!discussionText.trim()) return;
+    // Don't derive a separate title from content — it just causes duplicate
+    // text in the UI for short messages. Let the server use content as the title.
     await dispatch(
       createDiscussion({
-        course: id,
-        title: discussionText.slice(0, 50) + (discussionText.length > 50 ? '...' : ''),
+        course: courseId,
+        title: '', // server falls back to content when title is empty
         content: discussionText,
         lessonId: currentLesson?._id,
       })
@@ -275,22 +308,61 @@ export default function CourseLearning() {
     return idx < flatLessons.length - 1;
   };
 
-  const tabs = [{ key: 'content', label: 'Description' }];
-  if (currentLesson?.resources?.length > 0) {
+  // Mirrors the lock rule in LessonContent: free lessons are the open demos.
+  const currentLessonLocked =
+    !!currentLesson && ((!isEnrolled && !currentLesson.isFree) || !!currentLesson.dripLocked);
+
+  // Only count attachments the viewer can actually open — the API strips
+  // resource urls for locked lessons.
+  const availableResources = currentLessonLocked
+    ? []
+    : (currentLesson?.resources || []).filter((r) => r.url);
+
+  // Only show tabs that make sense for the viewer's access level.
+  // A non-enrolled user seeing the "Premium Course Material" paywall has no
+  // description, resources, quizzes or discussions to interact with — hiding
+  // those tabs removes both the confusion and the risk of serving protected
+  // content through the Description/Discussion panels.
+  const tabs = [];
+
+  if (!currentLessonLocked) {
+    tabs.push({ key: 'content', label: 'Description' });
+  }
+
+  if (!currentLessonLocked && availableResources.length > 0) {
     tabs.push({
       key: 'resources',
       label: 'Attachments & Notes',
-      count: currentLesson.resources.length,
+      count: availableResources.length,
     });
   }
-  if (currentSection?.lessons?.filter((l) => l.type === 'quiz')?.length > 0) {
+
+  // Quizzes are section-level — only show when the viewer has full access
+  // (enrolled, or the current lesson happens to be a free demo that's in a
+  // section that also contains quizzes).
+  if (
+    isEnrolled &&
+    !currentLessonLocked &&
+    currentSection?.lessons?.filter((l) => l.type === 'quiz')?.length > 0
+  ) {
     tabs.push({
       key: 'quizzes',
       label: 'Tests & Quizzes',
       count: currentSection.lessons.filter((l) => l.type === 'quiz').length,
     });
   }
-  tabs.push({ key: 'discussions', label: 'Doubt & Discussion', count: discussions.length });
+
+  // Discussions require an enrollment — questions only make sense for people
+  // who are actually taking the course.
+  if (isEnrolled) {
+    tabs.push({ key: 'discussions', label: 'Doubt & Discussion', count: discussions.length });
+  }
+
+  // After building the tab list, make sure the active tab is still in it.
+  // This matters when a user switches from a demo lesson (which has tabs) to a
+  // locked lesson (which does not) without the active tab being reset.
+  const validTabKeys = new Set(tabs.map((t) => t.key));
+  const safeActiveTab = validTabKeys.has(activeTab) ? activeTab : (tabs[0]?.key ?? 'content');
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-950 flex flex-col">
@@ -319,7 +391,16 @@ export default function CourseLearning() {
 
         <div className="flex items-center gap-4 flex-shrink-0">
           <div className="hidden sm:flex items-center gap-3 pr-4 border-r border-slate-200 dark:border-dark-800">
-            {currentLesson && (
+            {/* Progress tracking needs an active enrollment — offer to enroll instead */}
+            {!isEnrolled && (
+              <Link
+                to={`/courses/${course?.slug || id}`}
+                className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-4 rounded-lg shadow-sm transition-all text-xs"
+              >
+                Enroll to Unlock All Lessons
+              </Link>
+            )}
+            {currentLesson && isEnrolled && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleLessonComplete(!isCurrentCompleted)}
@@ -401,6 +482,7 @@ export default function CourseLearning() {
                 onSelectLesson={handleLessonSelect}
                 totalCompleted={totalCompleted}
                 totalLessons={totalLessons}
+                isEnrolled={isEnrolled}
               />
             </div>
           </div>
@@ -420,174 +502,192 @@ export default function CourseLearning() {
             onProgress={handleVideoProgress}
             onVideoComplete={handleVideoComplete}
             onNext={hasNext() ? goToNext : null}
+            isEnrolled={isEnrolled}
+            courseSlug={course?.slug || id}
           />
 
-          {/* Tabs below */}
-          <div className="mt-6 sm:mt-8">
-            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-4" />
+          {/* Tabs below — only shown when the viewer has access to content */}
+          {tabs.length > 0 && (
+            <div className="mt-6 sm:mt-8">
+              <Tabs
+                tabs={tabs}
+                activeTab={safeActiveTab}
+                onChange={(key) => validTabKeys.has(key) && setActiveTab(key)}
+                className="mb-4"
+              />
 
-            {activeTab === 'content' && currentLesson && (
-              <div className="card p-4 sm:p-6">
-                <h3 className="font-semibold text-dark-900 dark:text-white mb-1 text-sm sm:text-base">
-                  {currentLesson.title}
-                </h3>
-                {currentSection && (
-                  <p className="text-xs text-primary-500 mb-3">{currentSection.title}</p>
-                )}
-                <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed mb-4">
-                  {currentLesson.content || 'No additional description for this lesson.'}
-                </p>
-
-                {currentLesson.type === 'quiz' && (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 border-t border-slate-200 dark:border-dark-800">
-                    {currentLesson.quizId && (
-                      <Link
-                        to={`/quiz/${currentLesson.quizId}`}
-                        className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all inline-flex items-center justify-center gap-2 text-sm"
-                      >
-                        Start Lesson Quiz <HiArrowRight className="h-4 w-4" />
-                      </Link>
-                    )}
-                    {currentLesson.testSeriesSlug && (
-                      <Link
-                        to={`/test-series/${currentLesson.testSeriesSlug}`}
-                        className="bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-6 rounded-xl transition-all inline-flex items-center justify-center gap-2 text-sm"
-                      >
-                        View Full Test Series
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'resources' && (
-              <div className="card p-4 sm:p-6">
-                <h3 className="font-semibold text-dark-900 dark:text-white mb-4 text-sm sm:text-base flex items-center gap-2">
-                  <span className="text-lg">📎</span> Lesson Attachments & Notes
-                </h3>
-                {currentLesson?.resources?.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {currentLesson.resources.map((r, i) => (
-                      <ResourceItem key={r._id || i} resource={r} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-dark-400 text-sm italic">
-                    No resources attached to this lesson.
+              {safeActiveTab === 'content' && currentLesson && (
+                <div className="card p-4 sm:p-6">
+                  <h3 className="font-semibold text-dark-900 dark:text-white mb-1 text-sm sm:text-base">
+                    {currentLesson.title}
+                  </h3>
+                  {currentSection && (
+                    <p className="text-xs text-primary-500 mb-3">{currentSection.title}</p>
+                  )}
+                  <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed mb-4">
+                    {currentLesson.content || 'No additional description for this lesson.'}
                   </p>
-                )}
-              </div>
-            )}
 
-            {activeTab === 'quizzes' && (
-              <div className="card p-4 sm:p-6">
-                <h3 className="font-semibold text-dark-900 dark:text-white mb-4 text-sm sm:text-base flex items-center gap-2">
-                  <span className="text-lg">📝</span> Tests & Quizzes for {currentSection?.title}
-                </h3>
-                {currentSection?.lessons?.filter((l) => l.type === 'quiz').length > 0 ? (
-                  <div className="flex flex-col gap-3">
-                    {currentSection.lessons
-                      .filter((l) => l.type === 'quiz')
-                      .map((quizLesson) => (
-                        <div
-                          key={quizLesson._id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-dark-800 hover:border-amber-400 dark:hover:border-amber-600 transition-colors gap-4"
+                  {currentLesson.type === 'quiz' && (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 border-t border-slate-200 dark:border-dark-800">
+                      {currentLesson.quizId && (
+                        <Link
+                          to={`/quiz/${currentLesson.quizId}`}
+                          className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all inline-flex items-center justify-center gap-2 text-sm"
                         >
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-bold text-dark-800 dark:text-dark-200">
-                                {quizLesson.title}
-                              </h4>
-                            </div>
-                            <p className="text-sm text-dark-500 line-clamp-1">
-                              {quizLesson.content || 'Assessment Quiz'}
-                            </p>
-                          </div>
-                          {quizLesson.quizId ? (
-                            <Link
-                              to={`/quiz/${quizLesson.quizId}`}
-                              className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap block sm:inline-block text-center"
-                            >
-                              Take Quiz
-                            </Link>
-                          ) : (
-                            <button
-                              onClick={() => handleLessonSelect(quizLesson, currentSection)}
-                              className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap"
-                            >
-                              View Details
-                            </button>
-                          )}
-                        </div>
+                          Start Lesson Quiz <HiArrowRight className="h-4 w-4" />
+                        </Link>
+                      )}
+                      {currentLesson.testSeriesSlug && (
+                        <Link
+                          to={`/test-series/${currentLesson.testSeriesSlug}`}
+                          className="bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-6 rounded-xl transition-all inline-flex items-center justify-center gap-2 text-sm"
+                        >
+                          View Full Test Series
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {safeActiveTab === 'resources' && (
+                <div className="card p-4 sm:p-6">
+                  <h3 className="font-semibold text-dark-900 dark:text-white mb-4 text-sm sm:text-base flex items-center gap-2">
+                    <span className="text-lg">📎</span> Lesson Attachments & Notes
+                  </h3>
+                  {availableResources.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {availableResources.map((r, i) => (
+                        <ResourceItem key={r._id || i} resource={r} />
                       ))}
-                  </div>
-                ) : (
-                  <p className="text-dark-400 text-sm italic">
-                    No assessments available in this unit.
-                  </p>
-                )}
-              </div>
-            )}
+                    </div>
+                  ) : (
+                    <p className="text-dark-400 text-sm italic">
+                      No resources attached to this lesson.
+                    </p>
+                  )}
+                </div>
+              )}
 
-            {activeTab === 'discussions' && (
-              <div className="space-y-4">
-                <form onSubmit={handleAddDiscussion} className="card p-4">
-                  <textarea
-                    value={discussionText}
-                    onChange={(e) => setDiscussionText(e.target.value)}
-                    placeholder="Ask a question or start a discussion..."
-                    className="input-field mb-3 min-h-[90px] resize-none"
-                  />
-                  <button type="submit" className="btn-primary text-sm">
-                    Post
-                  </button>
-                </form>
-
-                {discussions.length === 0 ? (
-                  <div className="text-center py-8 text-dark-400">
-                    <div className="text-3xl mb-2">💬</div>
-                    <p className="text-sm">No discussions yet. Start one!</p>
-                  </div>
-                ) : (
-                  discussions.map((d) => (
-                    <div key={d._id} className="card p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-sm font-bold text-primary-600 dark:text-primary-400 flex-shrink-0">
-                          {d.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-dark-900 dark:text-white">
-                              {d.user?.name || 'User'}
-                            </span>
-                            <span className="text-xs text-dark-400">
-                              {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}
-                            </span>
-                          </div>
-                          <p className="text-sm text-dark-600 dark:text-dark-400 mt-1 break-words">
-                            {d.content}
-                          </p>
-                          {d.replies?.length > 0 && (
-                            <div className="mt-3 pl-3 sm:pl-4 border-l-2 border-dark-100 dark:border-dark-700 space-y-2">
-                              {d.replies.map((r, ri) => (
-                                <div key={ri} className="text-sm">
-                                  <span className="font-medium text-dark-700 dark:text-dark-300">
-                                    {r.user?.name || 'User'}:{' '}
-                                  </span>
-                                  <span className="text-dark-500 break-words">{r.content}</span>
-                                </div>
-                              ))}
+              {safeActiveTab === 'quizzes' && (
+                <div className="card p-4 sm:p-6">
+                  <h3 className="font-semibold text-dark-900 dark:text-white mb-4 text-sm sm:text-base flex items-center gap-2">
+                    <span className="text-lg">📝</span> Tests & Quizzes for {currentSection?.title}
+                  </h3>
+                  {currentSection?.lessons?.filter((l) => l.type === 'quiz').length > 0 ? (
+                    <div className="flex flex-col gap-3">
+                      {currentSection.lessons
+                        .filter((l) => l.type === 'quiz')
+                        .map((quizLesson) => (
+                          <div
+                            key={quizLesson.id || quizLesson._id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-dark-800 hover:border-amber-400 dark:hover:border-amber-600 transition-colors gap-4"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-bold text-dark-800 dark:text-dark-200">
+                                  {quizLesson.title}
+                                </h4>
+                              </div>
+                              <p className="text-sm text-dark-500 line-clamp-1">
+                                {quizLesson.content || 'Assessment Quiz'}
+                              </p>
                             </div>
-                          )}
+                            {quizLesson.quizId ? (
+                              <Link
+                                to={`/quiz/${quizLesson.quizId}`}
+                                className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap block sm:inline-block text-center"
+                              >
+                                Take Quiz
+                              </Link>
+                            ) : (
+                              <button
+                                onClick={() => handleLessonSelect(quizLesson, currentSection)}
+                                className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap"
+                              >
+                                View Details
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-dark-400 text-sm italic">
+                      No assessments available in this unit.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {safeActiveTab === 'discussions' && (
+                <div className="space-y-4">
+                  <form onSubmit={handleAddDiscussion} className="card p-4">
+                    <textarea
+                      value={discussionText}
+                      onChange={(e) => setDiscussionText(e.target.value)}
+                      placeholder="Ask a question or start a discussion..."
+                      className="input-field mb-3 min-h-[90px] resize-none"
+                    />
+                    <button type="submit" className="btn-primary text-sm">
+                      Post
+                    </button>
+                  </form>
+
+                  {discussions.length === 0 ? (
+                    <div className="text-center py-8 text-dark-400">
+                      <div className="text-3xl mb-2">💬</div>
+                      <p className="text-sm">No discussions yet. Start one!</p>
+                    </div>
+                  ) : (
+                    discussions.map((d) => (
+                      <div key={d.id || d._id} className="card p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-sm font-bold text-primary-600 dark:text-primary-400 flex-shrink-0">
+                            {d.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-dark-900 dark:text-white">
+                                {d.user?.name || 'User'}
+                              </span>
+                              <span className="text-xs text-dark-400">
+                                {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}
+                              </span>
+                            </div>
+                            {/* Only show title as a bold heading when it's not just the
+                              first line of content (the form auto-derives title from the
+                              same textarea, so they're identical for short messages). */}
+                            {d.title &&
+                              d.title.trim() !== d.content?.trim()?.slice(0, d.title.length) && (
+                                <p className="text-sm font-semibold text-dark-800 dark:text-dark-200 mt-1">
+                                  {d.title}
+                                </p>
+                              )}
+                            <p className="text-sm text-dark-600 dark:text-dark-400 mt-1 break-words">
+                              {d.content}
+                            </p>
+                            {d.replies?.length > 0 && (
+                              <div className="mt-3 pl-3 sm:pl-4 border-l-2 border-dark-100 dark:border-dark-700 space-y-2">
+                                {d.replies.map((r, ri) => (
+                                  <div key={ri} className="text-sm">
+                                    <span className="font-medium text-dark-700 dark:text-dark-300">
+                                      {r.user?.name || 'User'}:{' '}
+                                    </span>
+                                    <span className="text-dark-500 break-words">{r.content}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Desktop Sidebar */}
@@ -599,6 +699,7 @@ export default function CourseLearning() {
             onSelectLesson={handleLessonSelect}
             totalCompleted={totalCompleted}
             totalLessons={totalLessons}
+            isEnrolled={isEnrolled}
           />
         </div>
       </div>

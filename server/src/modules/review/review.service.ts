@@ -1,12 +1,10 @@
-import mongoose from 'mongoose';
 import { ReviewRepository } from './review.repository.js';
-import Review from './review.model.js';
-import Enrollment from '../enrollment/enrollment.model.js';
 import { ICreateReviewInput, IUpdateReviewInput, IReview } from './review.dto.js';
 import { ApiError } from '../../core/api-error.js';
 import redis from '../../config/redis.js';
 import { getTenantId } from '../../core/tenant.context.js';
 import { buildPaginationQuery } from '../../utils/pagination.js';
+import prisma from '../../config/prisma.js';
 
 export class ReviewService {
   private readonly reviewRepository: ReviewRepository;
@@ -19,91 +17,119 @@ export class ReviewService {
     courseId: string,
     query: any
   ): Promise<{
-    docs: IReview[];
+    docs: any[];
     page: number;
     limit: number;
     total: number;
     distribution: any[];
   }> {
     const pagination = buildPaginationQuery(query);
-    const filter: any = { course: courseId, isApproved: true };
-    if (query.rating) filter.rating = parseInt(query.rating, 10);
 
-    const result = await (Review as any).paginate(filter, {
-      ...pagination,
-      populate: { path: 'user', select: 'name avatar' },
-      sort: query.sort === 'helpful' ? '-helpfulCount' : '-createdAt',
-    });
+    let resolvedId = courseId;
+    if (
+      courseId.includes('-') &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courseId)
+    ) {
+      const course = await prisma.course.findFirst({
+        where: { slug: courseId },
+        select: { id: true },
+      });
+      if (!course) throw ApiError.badRequest(`Invalid course: ${courseId}`);
+      resolvedId = course.id;
+    }
 
-    const distribution = await Review.aggregate([
-      { $match: { course: new mongoose.Types.ObjectId(courseId), isApproved: true } },
-      { $group: { _id: '$rating', count: { $sum: 1 } } },
-      { $sort: { _id: -1 } },
+    const where: any = { courseId: resolvedId, isApproved: true };
+    if (query.rating) where.rating = parseInt(query.rating, 10);
+
+    const [total, docs] = await Promise.all([
+      prisma.review.count({ where }),
+      prisma.review.findMany({
+        where,
+        include: { user: { select: { name: true, avatar: true } } },
+        orderBy: query.sort === 'helpful' ? { rating: 'desc' } : { createdAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
     ]);
 
+    const distGroups = await prisma.review.groupBy({
+      by: ['rating'],
+      where: { courseId: resolvedId, isApproved: true },
+      _count: { rating: true },
+      orderBy: { rating: 'desc' },
+    });
+
+    const distribution = distGroups.map((d) => ({ _id: d.rating, count: d._count.rating }));
+
     return {
-      docs: result.docs,
-      page: result.pagination.page,
-      limit: result.pagination.limit,
-      total: result.pagination.total,
+      docs,
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
       distribution,
     };
   }
 
-  async createReview(userId: string, body: ICreateReviewInput): Promise<IReview> {
-    const { course, rating, comment } = body;
+  async createReview(userId: string, body: ICreateReviewInput): Promise<any> {
+    const { course: courseId, rating, comment } = body;
 
-    // Check if user is enrolled
-    const enrollment = await Enrollment.findOne({
-      user: userId,
-      course,
-      status: { $in: ['active', 'completed'] },
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId,
+        courseId,
+        status: { in: ['active', 'completed'] },
+      },
     });
 
     if (!enrollment) {
       throw ApiError.forbidden('You must be enrolled to review this course');
     }
 
-    // Check if already reviewed
-    const existing = await this.reviewRepository.findOne({ user: userId, course });
+    const existing = await this.reviewRepository.findOne({ userId, courseId });
     if (existing) {
       throw ApiError.conflict('You have already reviewed this course');
     }
 
-    const review = await this.reviewRepository.create({
-      user: userId,
-      course,
-      rating,
-      comment,
+    const review = await prisma.review.create({
+      data: {
+        userId,
+        courseId,
+        rating,
+        comment,
+      },
+      include: { user: { select: { name: true, avatar: true } } },
     });
 
-    await review.populate('user', 'name avatar');
-
-    // Invalidate course cache key pattern (e.g. tenant:${tenantId}:course:*)
     const tenantId = getTenantId();
     await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');
 
     return review;
   }
 
-  async updateReview(id: string, userId: string, body: IUpdateReviewInput): Promise<IReview> {
-    const review = await this.reviewRepository.findOne({ _id: id, user: userId });
+  async updateReview(id: string, userId: string, body: IUpdateReviewInput): Promise<any> {
+    const review = await this.reviewRepository.findOne({ id, userId });
     if (!review) {
       throw ApiError.notFound('Review not found');
     }
 
-    if (body.rating !== undefined) review.rating = body.rating;
-    if (body.comment !== undefined) review.comment = body.comment;
-    await review.save();
+    const updateData: any = {};
+    if (body.rating !== undefined) updateData.rating = body.rating;
+    if (body.comment !== undefined) updateData.comment = body.comment;
+
+    const updatedReview = await prisma.review.update({
+      where: { id },
+      data: updateData,
+      include: { user: { select: { name: true, avatar: true } } },
+    });
 
     const tenantId = getTenantId();
     await redis.delPattern(tenantId ? `tenant:${tenantId}:course:*` : 'course:*');
 
-    return review;
+    return updatedReview;
   }
 
   async deleteReview(id: string, userId: string): Promise<void> {
-    const review = await this.reviewRepository.findOne({ _id: id, user: userId });
+    const review = await this.reviewRepository.findOne({ id, userId });
     if (!review) {
       throw ApiError.notFound('Review not found');
     }

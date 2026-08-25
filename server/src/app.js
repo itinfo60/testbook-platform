@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import path from 'path';
 import crypto from 'crypto';
@@ -14,6 +13,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 
 import config from './config/index.js';
+import { prisma } from './config/prisma.js';
 import logger from './utils/logger.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { notFoundHandler, errorConverter, errorHandler } from './middleware/errorHandler.js';
@@ -65,7 +65,6 @@ import apiKeyRoutes from './modules/apikey/apikey.routes.js';
 import uploadRoutes from './modules/upload/upload.routes.js';
 import libraryRoutes from './modules/library/library.routes.js';
 import affiliateRoutes from './modules/affiliate/affiliate.routes.js';
-import parentRoutes from './modules/parent/parent.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import settingsRoutes from './modules/admin/settings.routes.js';
@@ -160,7 +159,6 @@ app.use(
   })
 );
 
-app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // ===== PARSING MIDDLEWARE =====
@@ -222,7 +220,7 @@ app.use(`${API_PREFIX}/settings`, optionalTenant, settingsRoutes);
 
 // Private routes — require a resolved tenant
 app.use(`${API_PREFIX}/enrollments`, requireTenant, enrollmentRoutes);
-app.use(`${API_PREFIX}/quizzes`, requireTenant, quizRoutes);
+app.use(`${API_PREFIX}/quizzes`, optionalTenant, quizRoutes);
 app.use(`${API_PREFIX}/admin/users`, userRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/payments`, requireTenant, paymentRoutes);
@@ -241,7 +239,6 @@ app.use(`${API_PREFIX}/gdpr`, requireTenant, gdprRoutes);
 app.use(`${API_PREFIX}/api-keys`, requireTenant, apiKeyRoutes);
 app.use(`${API_PREFIX}/library`, optionalTenant, libraryRoutes);
 app.use(`${API_PREFIX}/affiliate`, requireTenant, affiliateRoutes);
-app.use(`${API_PREFIX}/parent`, requireTenant, parentRoutes);
 app.use(`${API_PREFIX}/attendance`, requireTenant, attendanceRoutes);
 app.use(`${API_PREFIX}/uploads`, requireTenant, uploadRoutes);
 app.use(`${API_PREFIX}/search`, optionalTenant, searchRoutes);
@@ -254,7 +251,7 @@ app.use(`${API_PREFIX}`, auditLog);
 app.get(`${API_PREFIX}`, (req, res) => {
   res.json({
     success: true,
-    message: 'TestBook API v1',
+    message: 'CivicsHub API v1',
     version: '2.0.0',
     docs: `${API_PREFIX}/docs`,
     endpoints: {
@@ -283,27 +280,28 @@ app.get(`${API_PREFIX}`, (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
   try {
     const BASE_URL = process.env.CLIENT_URL || 'https://edurportal.in';
-    // Import models dynamically to avoid circular deps
-    const Course = require('./models/course.model').default || require('./models/course.model');
-    const Blog = require('./models/blog.model').default || require('./models/blog.model');
-    const ExamCategory =
-      require('./models/examCategory.model').default || require('./models/examCategory.model');
 
     const [courses, blogs, exams] = await Promise.all([
-      Course.find({ isPublished: true })
-        .select('_id updatedAt')
-        .lean()
-        .limit(200)
+      prisma.course
+        .findMany({
+          where: { isPublished: true },
+          select: { id: true, slug: true, updatedAt: true },
+          take: 200,
+        })
         .catch(() => []),
-      Blog.find({ status: 'published' })
-        .select('slug updatedAt')
-        .lean()
-        .limit(200)
+      prisma.blog
+        .findMany({
+          where: { status: 'published' },
+          select: { id: true, slug: true, updatedAt: true },
+          take: 200,
+        })
         .catch(() => []),
-      ExamCategory.find({ isActive: true })
-        .select('slug updatedAt')
-        .lean()
-        .limit(50)
+      prisma.category
+        .findMany({
+          where: { isActive: true },
+          select: { id: true, slug: true, updatedAt: true },
+          take: 50,
+        })
         .catch(() => []),
     ]);
 
@@ -331,7 +329,7 @@ app.get('/sitemap.xml', async (req, res) => {
       ...staticUrls.map(toUrl),
       ...exams.map((e) =>
         toUrl({
-          loc: `/exams/${e.slug || e._id}`,
+          loc: `/exams/${e.slug || e.id}`,
           priority: '0.8',
           changefreq: 'weekly',
           lastmod: e.updatedAt,
@@ -339,7 +337,7 @@ app.get('/sitemap.xml', async (req, res) => {
       ),
       ...courses.map((c) =>
         toUrl({
-          loc: `/courses/${c._id}`,
+          loc: `/courses/${c.slug || c.id}`,
           priority: '0.7',
           changefreq: 'weekly',
           lastmod: c.updatedAt,
@@ -347,7 +345,7 @@ app.get('/sitemap.xml', async (req, res) => {
       ),
       ...blogs.map((b) =>
         toUrl({
-          loc: `/blog/${b.slug}`,
+          loc: `/blog/${b.slug || b.id}`,
           priority: '0.7',
           changefreq: 'monthly',
           lastmod: b.updatedAt,
@@ -381,7 +379,7 @@ if (config.env === 'production') {
   app.get('/', (req, res) => {
     res.status(200).json({
       success: true,
-      message: '🚀 TestBook API Server v2.0.0',
+      message: '🚀 CivicsHub API Server v2.0.0',
       status: 'running',
       environment: config.env,
       endpoints: { api: '/api/v1', health: '/health' },

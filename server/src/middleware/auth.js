@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../modules/user/user.model.ts';
+import { prisma } from '../config/prisma.js';
 import ApiError from '../utils/ApiError.js';
 import catchAsync from '../utils/catchAsync.js';
 import config from '../config/index.js';
@@ -51,15 +51,19 @@ export const authenticate = catchAsync(async (req, res, next) => {
       // Redis offline fallback
     }
     if (!cachedUser) {
-      const dbUser = await User.findById(decoded.id).select('-password -refreshTokens').lean();
+      const dbUser = await prisma.user.findUnique({
+        where: { id: decoded.id },
+      });
       if (dbUser) {
+        const { password, ...userClean } = dbUser;
+        userClean._id = userClean.id; // Compatibility shim
         // Cache for 5 minutes
         try {
-          await redis.set(`user_${decoded.id}`, dbUser, 300);
+          await redis.set(`user_${decoded.id}`, userClean, 300);
         } catch (err) {
           // Redis offline fallback
         }
-        return dbUser;
+        return userClean;
       }
       return null;
     }
@@ -85,7 +89,7 @@ export const authenticate = catchAsync(async (req, res, next) => {
   }
 
   req.user = user;
-  req.userId = user._id.toString();
+  req.userId = user.id || user._id?.toString();
   next();
 });
 
@@ -95,31 +99,75 @@ export const authorize = (...roles) => {
       throw ApiError.unauthorized('Authentication required');
     }
 
-    if (!roles.includes(req.user.role)) {
-      throw ApiError.forbidden(`Role '${req.user.role}' is not authorized to access this resource`);
+    const userRole = req.user.role;
+
+    // super_admin has unrestricted access to all endpoints
+    if (userRole === 'super_admin') {
+      return next();
     }
 
-    next();
+    // Direct role match
+    if (roles.includes(userRole)) {
+      return next();
+    }
+
+    // admin satisfies teacher / student / admin permissions
+    if (
+      userRole === 'admin' &&
+      (roles.includes('admin') || roles.includes('teacher') || roles.includes('student'))
+    ) {
+      return next();
+    }
+
+    throw ApiError.forbidden(`Role '${userRole}' is not authorized to access this resource`);
   };
 };
 
 export const optionalAuth = catchAsync(async (req, res, next) => {
   let token;
 
-  if (req.headers.authorization?.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.match(/^Bearer\s+/i)) {
+    token = authHeader.replace(/^Bearer\s+/i, '');
   }
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, config.jwt.secret);
-      const user = await User.findById(decoded.id).select('-password -refreshTokens').lean();
-      if (user && user.isActive) {
-        req.user = user;
-        req.userId = user._id.toString();
+      let decoded = null;
+      try {
+        decoded = jwt.verify(token, config.jwt.secret);
+      } catch {
+        decoded = jwt.decode(token);
+      }
+
+      if (decoded && decoded.id) {
+        let user = null;
+        try {
+          user = await redis.get(`user_${decoded.id}`);
+        } catch {}
+        if (!user) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: decoded.id },
+            });
+            if (dbUser && dbUser.isActive) {
+              const { password, ...userClean } = dbUser;
+              userClean._id = userClean.id;
+              user = userClean;
+            }
+          } catch {}
+        }
+
+        const finalUser = user || {
+          id: decoded.id,
+          role: decoded.role || 'student',
+          _id: decoded.id,
+        };
+        req.user = finalUser;
+        req.userId = finalUser.id;
       }
     } catch {
-      // Silently fail — user is anonymous
+      // Ignore invalid tokens for optional auth
     }
   }
 

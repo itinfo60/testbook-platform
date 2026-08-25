@@ -53,8 +53,8 @@ export default function MyCourses() {
 
             return (
               <Link
-                key={enrollment._id}
-                to={`/courses/${course._id}/learn`}
+                key={enrollment.id || enrollment._id}
+                to={`/courses/${course.slug || course._id}/learn`}
                 className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden group flex flex-col relative"
               >
                 <div className="h-48 bg-slate-100 dark:bg-dark-800 overflow-hidden relative">

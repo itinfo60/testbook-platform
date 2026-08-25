@@ -1,6 +1,6 @@
 # 🛡️ Enterprise Admin Panel
 
-Modern, enterprise-grade admin dashboard for the Testbook learning platform.
+Modern, enterprise-grade admin dashboard for the CivicsHub learning platform.
 
 ## Features
 
@@ -41,3 +41,4 @@ npm run dev
 
 # Build for production
 npm run build
+```

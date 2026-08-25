@@ -13,7 +13,7 @@ export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(50),
   email: z.string().email('Please enter a valid email').lowercase().trim(),
   password: passwordSchema,
-  role: z.enum(['student', 'teacher', 'parent']).default('student'),
+  role: z.enum(['student', 'teacher']).default('student'),
 });
 
 export const loginSchema = z.object({

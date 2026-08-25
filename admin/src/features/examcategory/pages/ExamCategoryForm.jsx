@@ -7,14 +7,15 @@ import {
   createExamCategory,
   updateExamCategory,
   fetchExamCategoryById,
-  fetchExamCategories,
   clearSelected,
 } from '@/features/examcategory/examCategorySlice';
+import { fetchCategories } from '@/features/category/categorySlice';
 
 const INITIAL_FORM = {
   name: '',
   description: '',
   icon: '',
+  order: 0,
   isActive: true,
   parent: '',
   conductingBody: '',
@@ -31,15 +32,17 @@ export default function ExamCategoryForm() {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { selected, loading, list: allCategories } = useSelector((s) => s.examCategories);
-  const isEdit = !!id;
+  const { selected, loading } = useSelector((s) => s.examCategories);
+  // An exam nests under a CATEGORY, so the parent dropdown lists categories.
+  const { list: allCategories } = useSelector((s) => s.categories);
+  const isEdit = Boolean(id && id !== 'undefined');
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [activeTab, setActiveTab] = useState('basic');
 
   useEffect(() => {
-    // Load all categories so we can populate parent dropdown
-    dispatch(fetchExamCategories({ page: 1, limit: 200 }));
+    // Load categories to populate the "Exam Category" parent dropdown
+    dispatch(fetchCategories({ page: 1, limit: 200 }));
     if (isEdit) dispatch(fetchExamCategoryById(id));
     return () => dispatch(clearSelected());
   }, [dispatch, id, isEdit]);
@@ -50,8 +53,10 @@ export default function ExamCategoryForm() {
         name: selected.name || '',
         description: selected.description || '',
         icon: selected.icon || '',
+        order: selected.order || 0,
         isActive: selected.isActive !== false,
-        parent: selected.parent?._id || selected.parent || '',
+        parent:
+          selected.parentId || selected.parent?._id || selected.parent?.id || selected.parent || '',
         conductingBody: selected.conductingBody || '',
         officialWebsite: selected.officialWebsite || '',
         latestStatus: selected.latestStatus || '',
@@ -66,7 +71,12 @@ export default function ExamCategoryForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...form, parent: form.parent || null };
+    const parentVal = form.parent && form.parent.trim() ? form.parent.trim() : null;
+    const payload = {
+      ...form,
+      parent: parentVal,
+      parentId: parentVal,
+    };
     const action = isEdit ? updateExamCategory({ id, data: payload }) : createExamCategory(payload);
     const result = await dispatch(action);
     if (!result.error) navigate('/exam-categories');
@@ -87,8 +97,11 @@ export default function ExamCategoryForm() {
     setForm({ ...form, importantDates: updated });
   };
 
-  // Parent options: all categories except the current one being edited
-  const parentOptions = allCategories.filter((c) => c._id !== id);
+  // Parent options are categories — an exam lives inside a category (exclude self)
+  const parentOptions = (allCategories || []).filter((c) => {
+    const cId = c.id || c._id;
+    return cId !== id;
+  });
 
   if (isEdit && loading && !selected)
     return (
@@ -113,7 +126,7 @@ export default function ExamCategoryForm() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {isEdit ? 'Edit Exam Category' : 'Create Exam Category'}
+          {isEdit ? 'Edit Exam' : 'Create Exam'}
         </h2>
       </div>
 
@@ -143,17 +156,17 @@ export default function ExamCategoryForm() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <GitBranch className="inline w-4 h-4 mr-1" />
-                Parent Category{' '}
-                <span className="text-gray-400 font-normal">(leave blank for top-level)</span>
+                Exam Category{' '}
+                <span className="text-gray-400 font-normal">(leave blank for top-level exam)</span>
               </label>
               <select
                 value={form.parent}
                 onChange={(e) => setForm({ ...form, parent: e.target.value })}
                 className="input-field"
               >
-                <option value="">— None (Top-level / Root) —</option>
+                <option value="">— None (Top-level Exam) —</option>
                 {parentOptions.map((c) => (
-                  <option key={c._id} value={c._id}>
+                  <option key={c.id || c._id} value={c.id || c._id}>
                     {c.icon ? `${c.icon} ` : ''}
                     {c.name}
                   </option>
@@ -161,7 +174,7 @@ export default function ExamCategoryForm() {
               </select>
               {form.parent && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  This will be a sub-exam under the selected parent category.
+                  This exam will appear under the selected exam category.
                 </p>
               )}
             </div>
@@ -231,6 +244,23 @@ export default function ExamCategoryForm() {
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Display Order
+                  <span className="text-gray-400 font-normal ml-1">(lower = shown first)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.order}
+                  onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
+                  className="input-field"
+                  placeholder="0"
+                />
               </div>
             </div>
 

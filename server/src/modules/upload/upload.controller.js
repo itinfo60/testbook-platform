@@ -5,18 +5,28 @@ import ApiError from '../../utils/ApiError.js';
 import ApiResponse from '../../utils/ApiResponse.js';
 import catchAsync from '../../utils/catchAsync.js';
 import config from '../../config/index.js';
-import Institute from '../institute/institute.model.ts';
+import prisma from '../../config/prisma.js';
 
 // Increment storageUsed for the tenant (non-blocking)
 function trackStorageUsed(tenantId, bytes) {
   if (!tenantId || !bytes) return;
-  Institute.findByIdAndUpdate(tenantId, { $inc: { storageUsed: bytes } }).catch(() => {});
+  prisma.institute
+    .update({
+      where: { id: tenantId },
+      data: { storageUsed: { increment: bytes } },
+    })
+    .catch(() => {});
 }
 
 // Decrement storageUsed for the tenant (non-blocking)
 function trackStorageFreed(tenantId, bytes) {
   if (!tenantId || !bytes) return;
-  Institute.findByIdAndUpdate(tenantId, { $inc: { storageUsed: -bytes } }).catch(() => {});
+  prisma.institute
+    .update({
+      where: { id: tenantId },
+      data: { storageUsed: { decrement: bytes } },
+    })
+    .catch(() => {});
 }
 
 // Memory storage for direct Cloudinary streaming (no disk write)
@@ -39,7 +49,7 @@ const uploadToCloudinary = (buffer, folder, resourceType = 'auto', options = {})
   new Promise((resolve, reject) => {
     const uploadStream = cloudinary.v2.uploader.upload_stream(
       {
-        folder: `testbook/${folder}`,
+        folder: `civicshub/${folder}`,
         resource_type: resourceType,
         ...options,
       },

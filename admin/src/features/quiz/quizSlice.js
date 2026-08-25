@@ -44,7 +44,7 @@ const quizSlice = createSlice({
         state.error = action.payload?.message;
       })
       .addCase(deleteQuiz.fulfilled, (state, action) => {
-        state.list = state.list.filter((q) => q._id !== action.payload);
+        state.list = state.list.filter((q) => (q.id || q._id) !== action.payload);
       });
   },
 });

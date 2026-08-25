@@ -14,7 +14,7 @@ export default function LegalPage() {
             <HiShieldCheck className="h-4 w-4" /> Legal & Governance
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold font-display">
-            CivicsEdu Terms, Policies & Disclaimers
+            CivicsHub Terms, Policies & Disclaimers
           </h1>
         </div>
 
@@ -48,7 +48,7 @@ export default function LegalPage() {
                 Privacy Policy
               </h2>
               <p className="mb-4">
-                At CivicsEdu, we respect your privacy and are committed to protecting student
+                At CivicsHub, we respect your privacy and are committed to protecting student
                 personal information. This Privacy Policy outlines how your data is collected, used,
                 and safeguarded.
               </p>
@@ -65,7 +65,7 @@ export default function LegalPage() {
               </h3>
               <p className="mb-4">
                 To protect proprietary handwritten notes and course content, study materials
-                viewable or downloadable on CivicsEdu carry a dynamic watermark displaying your
+                viewable or downloadable on CivicsHub carry a dynamic watermark displaying your
                 registered name and student ID.
               </p>
             </div>
@@ -77,7 +77,7 @@ export default function LegalPage() {
                 Terms & Conditions
               </h2>
               <p className="mb-4">
-                By accessing or using CivicsEdu services, courses, and test series, you agree to
+                By accessing or using CivicsHub services, courses, and test series, you agree to
                 comply with the following terms:
               </p>
               <h3 className="text-base font-bold text-dark-900 dark:text-white mb-2">
@@ -114,7 +114,7 @@ export default function LegalPage() {
                 Disclaimer
               </h2>
               <p className="mb-4">
-                CivicsEdu is an independent educational coaching and test preparation platform. We
+                CivicsHub is an independent educational coaching and test preparation platform. We
                 are not affiliated with, endorsed by, or an official government representative of
                 RPSC (Rajasthan Public Service Commission) or any government agency. Official
                 recruitment notices and syllabi are sourced from official government portals for

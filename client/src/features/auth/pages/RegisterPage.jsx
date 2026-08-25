@@ -19,7 +19,7 @@ const registerSchema = z
       .refine((val) => !val || /^\d{10}$/.test(val), 'Phone must be exactly 10 digits'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     confirmPassword: z.string().min(6, 'Please confirm your password'),
-    role: z.enum(['student', 'teacher', 'parent']).default('student'),
+    role: z.string().default('student'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -54,7 +54,6 @@ export default function RegisterPage() {
   const [emailStatus, setEmailStatus] = useState({ loading: false, available: null, message: '' });
 
   const passwordValue = watch('password');
-  const roleValue = watch('role');
 
   const getPasswordStrength = (password) => {
     if (!password) return { score: 0, label: '', color: 'bg-dark-200 dark:bg-dark-700' };
@@ -251,35 +250,6 @@ export default function RegisterPage() {
             icon={HiLockClosed}
             error={errors.confirmPassword?.message}
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            I want to
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { value: 'student', label: '📚 Learn', desc: 'Take courses & tests' },
-              { value: 'teacher', label: '👨‍🏫 Teach', desc: 'Create & sell' },
-              { value: 'parent', label: '👨‍👩‍👧‍👦 Monitor', desc: 'Track progress' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setValue('role', option.value)}
-                className={`p-3 rounded-xl border-2 text-left transition-all duration-300 ${
-                  roleValue === option.value
-                    ? 'border-primary-500 bg-primary-50 dark:bg-slate-900'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                }`}
-              >
-                <div className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                  {option.label}
-                </div>
-                <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{option.desc}</div>
-              </button>
-            ))}
-          </div>
         </div>
 
         {serverError && (

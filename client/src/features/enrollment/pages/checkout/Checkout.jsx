@@ -1,43 +1,69 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { HiLockClosed, HiShieldCheck, HiCheckCircle, HiBeaker } from 'react-icons/hi';
+import { HiLockClosed, HiShieldCheck, HiCheckCircle } from 'react-icons/hi';
 import { fetchCourseById } from '@/features/course/courseSlice';
 import { fetchTestById } from '@/features/test/testSlice';
 import { enrollInCourse } from '@/features/enrollment/enrollmentSlice';
 import {
+  createOrder,
+  verifyPayment,
   dummyCheckout,
   validateCoupon,
   clearPaymentState,
   clearCoupon,
 } from '@/features/payment/paymentSlice';
-import api from '@/services/api';
+import api, { enrollmentAPI } from '@/services/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import PriceTag from '@/components/common/PriceTag';
-import { Button, Input } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+
+// Razorpay config from env
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
+const ALLOW_MOCK = import.meta.env.VITE_ALLOW_MOCK_PAYMENTS === 'true';
+
+/**
+ * Load Razorpay checkout.js script dynamically (only once)
+ */
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export default function Checkout() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { currentCourse: course, loading: courseLoading } = useSelector((state) => state.courses);
-  const { currentTest: test, loading: testLoading } = useSelector((state) => state.tests);
-  const { coupon, discount, loading } = useSelector((state) => state.payments);
+  const { currentCourse: course, loading: courseLoading } = useSelector((s) => s.courses);
+  const { currentTest: test, loading: testLoading } = useSelector((s) => s.tests);
+  const { coupon, discount, loading } = useSelector((s) => s.payments);
+  const { user } = useSelector((s) => s.auth);
   const [searchParams] = useSearchParams();
+
   const type = searchParams.get('type') || 'course';
   const isTest = type === 'test' || type === 'test_series';
 
   const [testSeriesItem, setTestSeriesItem] = useState(null);
   const [seriesLoading, setSeriesLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
-  const [confirmed, setConfirmed] = useState(false);
+  const [paying, setPaying] = useState(false);
+  // 'checking' until we know; 'owned' blocks the page entirely.
+  const [ownership, setOwnership] = useState('checking');
 
+  // ── Load item ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (isTest) {
       setSeriesLoading(true);
-      // Try fetching as TestSeries first if type=test_series, or fallback
       api
         .get(`/test-series/${id}`)
         .then((res) => {
@@ -45,9 +71,7 @@ export default function Checkout() {
           if (data) setTestSeriesItem(data);
           else dispatch(fetchTestById(id));
         })
-        .catch(() => {
-          dispatch(fetchTestById(id));
-        })
+        .catch(() => dispatch(fetchTestById(id)))
         .finally(() => setSeriesLoading(false));
     } else {
       dispatch(fetchCourseById(id));
@@ -55,25 +79,91 @@ export default function Checkout() {
     dispatch(clearPaymentState());
   }, [dispatch, id, isTest]);
 
+  // ── Block checkout for something already owned ───────────────────────────
+  // The server rejects a duplicate order, but only after the user has committed
+  // to paying. Check up front so we never show a pay button for owned content.
+  const ownedCourseId = !isTest ? course?.id || course?._id : null;
+
+  useEffect(() => {
+    if (isTest) {
+      // No client-side check endpoint for tests; the server still rejects
+      // duplicate orders and the error is surfaced on the pay attempt.
+      setOwnership('clear');
+      return;
+    }
+    if (!ownedCourseId) return;
+
+    let cancelled = false;
+    setOwnership('checking');
+
+    enrollmentAPI
+      .checkEnrollment(ownedCourseId)
+      .then((res) => {
+        if (cancelled) return;
+        const payload = res.data?.data ?? res.data ?? {};
+        setOwnership(payload.isEnrolled === true ? 'owned' : 'clear');
+      })
+      .catch(() => {
+        // Don't strand the user on a failed check — let the server be the
+        // final authority when they try to pay.
+        if (!cancelled) setOwnership('clear');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ownedCourseId, isTest]);
+
   if (
     (courseLoading && !isTest) ||
     (seriesLoading && isTest) ||
     (!testSeriesItem && testLoading && isTest) ||
     (!course && !isTest) ||
-    (!testSeriesItem && !test && isTest)
+    (!testSeriesItem && !test && isTest) ||
+    ownership === 'checking'
   ) {
     return <LoadingSpinner fullScreen />;
   }
 
   const item = testSeriesItem || (isTest ? test : course);
+
+  // Already owned — never render a price or a pay button.
+  if (ownership === 'owned') {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <HiCheckCircle className="h-16 w-16 mx-auto mb-5 text-emerald-500" />
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-dark-900 dark:text-white font-display tracking-tight mb-3">
+          You already own this course
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 mb-8 text-sm max-w-md mx-auto">
+          &ldquo;{item?.title}&rdquo; is already in your library, so there is nothing to pay for.
+          Pick up where you left off.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link
+            to={`/courses/${item?.slug || id}/learn`}
+            className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-md transition-all text-sm"
+          >
+            Continue Learning
+          </Link>
+          <Link
+            to="/my-courses"
+            className="bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-8 rounded-xl transition-all text-sm"
+          >
+            My Courses
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const effectivePrice = item?.effectivePrice ?? item?.price ?? 0;
   const isFree = isTest ? item?.isFree || effectivePrice === 0 : effectivePrice === 0;
-
-  // Base calculations
   const priceBeforeDiscount = Math.max(0, effectivePrice - discount);
   const gstAmount = priceBeforeDiscount > 0 ? Math.round(priceBeforeDiscount * 0.18) : 0;
   const finalPrice = priceBeforeDiscount + gstAmount;
 
+  // ── Coupon ───────────────────────────────────────────────────────────────
   const handleApplyCoupon = () => {
     if (!couponCode.trim()) return;
     dispatch(
@@ -85,22 +175,48 @@ export default function Checkout() {
     );
   };
 
+  /**
+   * Re-checks ownership at the moment of purchase. The page may have sat open
+   * while the course was bought in another tab, so the mount-time check can be
+   * stale by the time the user clicks pay.
+   *
+   * Returns true when the purchase should be aborted.
+   */
+  const abortIfAlreadyOwned = async () => {
+    if (isTest) return false;
+    const resolvedId = item?.id || item?._id || id;
+    try {
+      const res = await enrollmentAPI.checkEnrollment(resolvedId);
+      const payload = res.data?.data ?? res.data ?? {};
+      if (payload.isEnrolled === true) {
+        setOwnership('owned');
+        toast.success('You already own this course.');
+        navigate(`/courses/${item?.slug || id}/learn`);
+        return true;
+      }
+    } catch {
+      // Check failed — fall through and let the server reject if needed.
+    }
+    return false;
+  };
+
+  // ── Free enroll ──────────────────────────────────────────────────────────
   const handleFreeEnroll = async () => {
     if (isTest) {
-      // Free tests can be started directly, so we just redirect them to start test
       navigate(`/tests/${item?.slug || id}/take`);
       return;
     }
-    const resolvedCourseId = item?._id || id;
+    if (await abortIfAlreadyOwned()) return;
+    const resolvedId = item?.id || item?._id || id;
     try {
-      await dispatch(enrollInCourse({ courseId: resolvedCourseId })).unwrap();
+      await dispatch(enrollInCourse({ courseId: resolvedId })).unwrap();
       toast.success('Enrolled successfully!');
       navigate('/checkout/success', {
-        state: { courseId: resolvedCourseId, itemName: item?.title, free: true, isTest: false },
+        state: { courseId: resolvedId, itemName: item?.title, free: true, isTest: false },
       });
     } catch (err) {
       if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
-        toast.success('You are already enrolled in this course!');
+        toast.success('You are already enrolled!');
         navigate(`/courses/${item?.slug || id}/learn`);
       } else {
         toast.error(err || 'Enrollment failed');
@@ -108,33 +224,103 @@ export default function Checkout() {
     }
   };
 
+  // ── Paid enroll — Razorpay real or mock ──────────────────────────────────
   const handlePaidEnroll = async () => {
-    if (!confirmed) {
-      toast.error('Please confirm the payment to proceed');
-      return;
-    }
+    setPaying(true);
     try {
-      const resolvedId = item?._id || id;
+      if (await abortIfAlreadyOwned()) return;
+      const resolvedId = item?.id || item?._id || id;
       const payload = isTest ? { testId: resolvedId } : { courseId: resolvedId };
-      if (coupon) {
-        payload.couponCode = coupon.coupon?.code || coupon.code;
+      if (coupon) payload.couponCode = coupon.coupon?.code || coupon.code;
+
+      // ── MOCK / DEMO path ─────────────────────────────────────────────────
+      if (ALLOW_MOCK) {
+        await dispatch(dummyCheckout(payload)).unwrap();
+        toast.success('Payment successful!');
+        navigate('/checkout/success', {
+          state: isTest
+            ? { testId: resolvedId, itemName: item?.title, isTest: true }
+            : { courseId: resolvedId, itemName: item?.title, isTest: false },
+        });
+        return;
       }
-      await dispatch(dummyCheckout(payload)).unwrap();
-      toast.success(`Payment successful! Purchased ${isTest ? 'test' : 'course'}.`);
-      navigate('/checkout/success', {
-        state: isTest
-          ? { testId: resolvedId, itemName: item?.title, isTest: true }
-          : { courseId: resolvedId, itemName: item?.title, isTest: false },
+
+      // ── REAL RAZORPAY path ───────────────────────────────────────────────
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please try again.');
+        return;
+      }
+
+      // 1. Create order on backend
+      const orderRes = await dispatch(createOrder(payload)).unwrap();
+      const { orderId, amount: orderAmount, currency, paymentId: dbPaymentId } = orderRes;
+
+      // 2. Open Razorpay checkout modal
+      await new Promise((resolve, reject) => {
+        const rzp = new window.Razorpay({
+          key: RAZORPAY_KEY,
+          amount: orderAmount,
+          currency: currency || 'INR',
+          order_id: orderId,
+          name: 'CivicsHub',
+          description: item?.title || 'Course Purchase',
+          image: item?.thumbnail?.url || '',
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || '',
+            contact: user?.phone || '',
+          },
+          theme: { color: '#92400e' },
+          modal: {
+            ondismiss: () => {
+              toast('Payment cancelled.', { icon: '⚠️' });
+              reject(new Error('dismissed'));
+            },
+          },
+          handler: async (response) => {
+            try {
+              // 3. Verify on backend
+              await dispatch(
+                verifyPayment({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  dbPaymentId,
+                })
+              ).unwrap();
+              toast.success('Payment verified! You are now enrolled.');
+              navigate('/checkout/success', {
+                state: isTest
+                  ? { testId: resolvedId, itemName: item?.title, isTest: true }
+                  : { courseId: resolvedId, itemName: item?.title, isTest: false },
+              });
+              resolve();
+            } catch (err) {
+              toast.error(err || 'Payment verification failed. Contact support.');
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
       });
     } catch (err) {
-      if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
-        toast.success(`You are already enrolled in this ${isTest ? 'test' : 'course'}!`);
-        navigate(isTest ? `/tests/${item?.slug || id}/take` : `/courses/${item?.slug || id}/learn`);
-      } else {
-        toast.error(err || 'Payment failed');
+      if (err?.message !== 'dismissed') {
+        if (typeof err === 'string' && err.toLowerCase().includes('already enrolled')) {
+          toast.success('You are already enrolled!');
+          navigate(
+            isTest ? `/tests/${item?.slug || id}/take` : `/courses/${item?.slug || id}/learn`
+          );
+        } else if (err?.message !== 'dismissed') {
+          toast.error(typeof err === 'string' ? err : err?.message || 'Payment failed');
+        }
       }
+    } finally {
+      setPaying(false);
     }
   };
+
+  const isLoading = loading || paying;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -142,21 +328,15 @@ export default function Checkout() {
         Secure Checkout
       </h1>
 
-      {/* Informative & Clickable Course/Test Card */}
+      {/* Item card */}
       <Link
-        to={
-          isTest
-            ? item?.isSeries
-              ? `/test-series/${item?.slug || id}`
-              : `/tests/${item?.slug || id}`
-            : `/courses/${item?.slug || id}`
-        }
+        to={isTest ? `/test-series/${item?.slug || id}` : `/courses/${item?.slug || id}`}
         target="_blank"
         rel="noopener noreferrer"
         className="group bg-white dark:bg-dark-900 rounded-3xl p-5 sm:p-6 mb-6 border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start text-left block"
       >
         <div className="h-28 w-44 sm:h-32 sm:w-48 rounded-2xl bg-amber-50 dark:bg-dark-800 flex-shrink-0 overflow-hidden relative shadow-sm border border-slate-100 dark:border-dark-700">
-          {item.thumbnail?.url || (typeof item.thumbnail === 'string' && item.thumbnail) ? (
+          {item?.thumbnail?.url || typeof item?.thumbnail === 'string' ? (
             <img
               src={item.thumbnail?.url || item.thumbnail}
               alt={item.title}
@@ -169,71 +349,26 @@ export default function Checkout() {
             {isTest ? 'Test Series' : 'Course'}
           </span>
         </div>
-
         <div className="flex-1 min-w-0 w-full space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-extrabold text-dark-900 dark:text-white line-clamp-2 text-base sm:text-lg group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-              {item.title}
-            </h3>
-            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 group-hover:underline flex-shrink-0 hidden sm:inline-block">
-              View details ↗
-            </span>
-          </div>
-
+          <h3 className="font-extrabold text-dark-900 dark:text-white line-clamp-2 text-base sm:text-lg group-hover:text-amber-600 transition-colors">
+            {item?.title}
+          </h3>
           <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
             By{' '}
             <span className="text-dark-900 dark:text-white font-black">
-              {item.teacher?.name || 'EduPortal Expert Faculty'}
+              {item?.teacher?.name || 'CivicsHub Faculty'}
             </span>
           </p>
-
-          {/* High-Yield Meta Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-            {!isTest && (
-              <>
-                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
-                  📚{' '}
-                  {item.totalLessons ||
-                    item.sections?.reduce((acc, s) => acc + (s.lessons?.length || 0), 0) ||
-                    24}{' '}
-                  Lessons
-                </span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
-                  📄 PDF Notes & Handouts
-                </span>
-              </>
-            )}
-            {isTest && (
-              <>
-                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
-                  📝 {item.questionsCount || item.tests?.length || 10} Mock Tests
-                </span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300">
-                  🎯 Full Solutions & Rank
-                </span>
-              </>
-            )}
-            <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold">
-              ⚡ Instant Access
-            </span>
-          </div>
-
-          <div className="pt-2">
-            <PriceTag
-              price={effectivePrice}
-              originalPrice={
-                item.discountPrice > 0 || (item.price && item.price > effectivePrice)
-                  ? item.price
-                  : undefined
-              }
-              size="md"
-              className="justify-start"
-            />
-          </div>
+          <PriceTag
+            price={effectivePrice}
+            originalPrice={item?.price > effectivePrice ? item.price : undefined}
+            size="md"
+            className="justify-start"
+          />
         </div>
       </Link>
 
-      {/* Coupon — only for paid courses/tests */}
+      {/* Coupon */}
       {!isFree && (
         <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 mb-6 border border-slate-200 dark:border-dark-800 shadow-sm">
           <h3 className="font-bold text-dark-900 dark:text-white mb-4 text-sm uppercase tracking-wider">
@@ -248,9 +383,9 @@ export default function Checkout() {
               className="flex-1 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none uppercase"
             />
             <button
-              className="bg-slate-900 dark:bg-white text-white dark:text-dark-900 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-sm text-sm"
+              className="bg-slate-900 dark:bg-white text-white dark:text-dark-900 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:opacity-50"
               onClick={handleApplyCoupon}
-              disabled={loading}
+              disabled={isLoading || !couponCode.trim()}
             >
               Apply
             </button>
@@ -311,69 +446,51 @@ export default function Checkout() {
         </div>
       </div>
 
-      {/* Demo payment confirmation — only for paid courses */}
-      {!isFree && finalPrice > 0 && (
-        <div className="card p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10">
-          <div className="flex items-center gap-2 mb-3">
-            <HiBeaker className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <h3 className="font-semibold text-amber-800 dark:text-amber-300">Demo / Test Mode</h3>
-          </div>
-          <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-            This is a demo app. No real money is charged. Check the box below to simulate a
-            successful payment.
-          </p>
-          <label className="flex items-start gap-3 cursor-pointer group">
-            <div className="relative mt-0.5 flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div
-                className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all
-                ${
-                  confirmed
-                    ? 'bg-primary-600 border-primary-600'
-                    : 'bg-white dark:bg-dark-700 border-dark-300 dark:border-dark-500 group-hover:border-primary-400'
-                }`}
-              >
-                {confirmed && <HiCheckCircle className="h-4 w-4 text-white" />}
-              </div>
-            </div>
-            <span className="text-sm text-dark-700 dark:text-dark-300 leading-snug">
-              I understand this is a <strong>test payment</strong> and confirm the purchase of{' '}
-              <strong>{item.title}</strong> for{' '}
-              <strong>₹{finalPrice.toLocaleString('en-IN')}</strong>.
-            </span>
-          </label>
+      {/* Mock payment notice — only shown when ALLOW_MOCK=true */}
+      {ALLOW_MOCK && !isFree && finalPrice > 0 && (
+        <div className="p-4 mb-5 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10 text-sm text-amber-700 dark:text-amber-400">
+          <strong>Test Mode:</strong> No real money is charged. Click Pay to simulate a successful
+          payment.
         </div>
       )}
 
+      {/* CTA button */}
       <button
-        className={`w-full text-white font-bold py-4 rounded-xl shadow-md transition-all text-lg flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : !isFree && finalPrice > 0 && !confirmed ? 'bg-slate-300 dark:bg-dark-700 text-slate-500' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-[0.98]'}`}
+        className={`w-full text-white font-bold py-4 rounded-xl shadow-md transition-all text-lg flex items-center justify-center gap-2
+          ${isLoading ? 'opacity-70 cursor-not-allowed bg-slate-400' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-[0.98]'}`}
         onClick={isFree || finalPrice === 0 ? handleFreeEnroll : handlePaidEnroll}
-        disabled={loading || (!isFree && finalPrice > 0 && !confirmed)}
+        disabled={isLoading}
       >
-        {isFree || finalPrice === 0 ? (
+        {isLoading ? (
+          <span className="flex items-center gap-2">
+            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Processing...
+          </span>
+        ) : isFree || finalPrice === 0 ? (
           'Enroll for Free'
         ) : (
           <>
-            <HiLockClosed className="h-5 w-5" />
-            Pay Securely ₹{finalPrice.toLocaleString('en-IN')}
+            <HiLockClosed className="h-5 w-5" /> Pay ₹{finalPrice.toLocaleString('en-IN')}{' '}
+            {ALLOW_MOCK ? '(Test Mode)' : 'via Razorpay'}
           </>
         )}
       </button>
 
-      {!isFree && finalPrice > 0 && !confirmed && (
-        <p className="text-xs text-dark-400 text-center mt-2">
-          Check the box above to enable payment
-        </p>
-      )}
-
       <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-dark-400">
         <HiShieldCheck className="h-4 w-4 text-secondary-500" />
-        By proceeding, you agree to our Terms of Service and Privacy Policy.
+        {ALLOW_MOCK
+          ? 'Running in test mode. Safe for development.'
+          : 'Secured by Razorpay. 256-bit SSL encrypted.'}
       </div>
     </div>
   );

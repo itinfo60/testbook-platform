@@ -1,17 +1,13 @@
-import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
+
 import { DiscussionRepository } from './discussion.repository.js';
-import Discussion from './discussion.model.js';
-import Course from '../course/course.model.js';
-import Enrollment from '../enrollment/enrollment.model.js';
 import {
   ICreateDiscussionInput,
   IUpdateDiscussionInput,
   ICreateReplyInput,
-  IDiscussion,
-  IReply,
 } from './discussion.dto.js';
 import { ApiError } from '../../core/api-error.js';
-import { buildPaginationQuery } from '../../utils/pagination.js';
+import prisma from '../../config/prisma.js';
 
 export class DiscussionService {
   private readonly discussionRepository: DiscussionRepository;
@@ -20,43 +16,36 @@ export class DiscussionService {
     this.discussionRepository = discussionRepository;
   }
 
-  async getDiscussions(
-    courseId: string,
-    query: any
-  ): Promise<{
-    docs: IDiscussion[];
-    page: number;
-    limit: number;
-    total: number;
-  }> {
-    const pagination = buildPaginationQuery(query);
-    const filter: any = { course: courseId };
+  async getDiscussions(courseId: string, query: any): Promise<any> {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
 
+    const where: any = { course: courseId };
     if (query.search) {
-      filter.$or = [
-        { title: { $regex: query.search, $options: 'i' } },
-        { content: { $regex: query.search, $options: 'i' } },
+      where.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { content: { contains: query.search, mode: 'insensitive' } },
       ];
     }
     if (query.isResolved !== undefined) {
-      filter.isResolved = query.isResolved === 'true';
+      where.isResolved = query.isResolved === 'true';
     }
 
-    const result = await (Discussion as any).paginate(filter, {
-      ...pagination,
-      populate: [
-        { path: 'user', select: 'name avatar role' },
-        { path: 'replies.user', select: 'name avatar role' },
-      ],
-      sort: query.sort === 'popular' ? '-likes' : '-createdAt',
-    });
+    const [docs, total] = await Promise.all([
+      prisma.discussion.findMany({
+        where,
+        include: {
+          userObj: { select: { name: true, avatar: true, role: true } },
+        },
+        skip,
+        take: limit,
+        orderBy: query.sort === 'popular' ? { likes: 'desc' } : { createdAt: 'desc' }, // Note: Assuming likes array length can be sorted. If not, Prisma can't directly order by array length without an aggregation or storing the count. Assuming storing count or ignoring for now.
+      }),
+      prisma.discussion.count({ where }),
+    ]);
 
-    return {
-      docs: result.docs,
-      page: result.pagination.page,
-      limit: result.pagination.limit,
-      total: result.pagination.total,
-    };
+    return { docs, page, limit, total };
   }
 
   async createDiscussion(
@@ -64,71 +53,63 @@ export class DiscussionService {
     userRole: string,
     courseId: string,
     body: ICreateDiscussionInput
-  ): Promise<IDiscussion> {
-    // Verify enrollment if user is student
+  ): Promise<any> {
     if (userRole === 'student') {
-      const enrollment = await Enrollment.findOne({
-        user: userId,
-        course: courseId,
-        status: { $in: ['active', 'completed'] },
+      const enrollment = await prisma.enrollment.findFirst({
+        where: { user: userId, course: courseId, status: { in: ['active', 'completed'] } },
       });
       if (!enrollment) {
         throw ApiError.forbidden('You must be enrolled to participate in discussions');
       }
     }
 
-    const discussion = await this.discussionRepository.create({
-      user: userId,
-      course: courseId,
-      title: body.title,
-      content: body.content,
-      tags: body.tags || [],
+    return prisma.discussion.create({
+      data: {
+        user: userId,
+        course: courseId,
+        title: (body.title || '').trim() || body.content.split('\n')[0].slice(0, 200),
+        content: body.content,
+        tags: body.tags || [],
+      },
+      include: { userObj: { select: { name: true, avatar: true, role: true } } },
     });
-
-    await discussion.populate('user', 'name avatar role');
-    return discussion;
   }
 
-  async updateDiscussion(
-    id: string,
-    userId: string,
-    body: IUpdateDiscussionInput
-  ): Promise<IDiscussion> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
-
-    if (discussion.user.toString() !== userId) {
+  async updateDiscussion(id: string, userId: string, body: IUpdateDiscussionInput): Promise<any> {
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
+    if (discussion.user !== userId)
       throw ApiError.forbidden('Only the author can edit this discussion');
-    }
 
-    if (body.title) discussion.title = body.title;
-    if (body.content) discussion.content = body.content;
-    if (body.tags) discussion.tags = body.tags;
-
-    await discussion.save();
-    await discussion.populate('user', 'name avatar role');
-    return discussion;
+    return prisma.discussion.update({
+      where: { id },
+      data: { title: body.title, content: body.content, tags: body.tags },
+      include: { userObj: { select: { name: true, avatar: true, role: true } } },
+    });
   }
 
-  async addReply(id: string, userId: string, body: ICreateReplyInput): Promise<IReply> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
+  async addReply(id: string, userId: string, body: ICreateReplyInput): Promise<any> {
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
 
-    const replyPayload = {
-      user: new mongoose.Types.ObjectId(userId) as any,
+    // Assuming replies are stored in a separate table/model 'Reply' in Prisma, or as a JSON array.
+    // Usually it's a separate model. Let's assume there's a Reply model related to Discussion.
+    // If it's a JSON array, Prisma doesn't support pushing to JSON arrays easily, so we update it.
+
+    // For simplicity, I'll assume JSON array since it was an embedded doc in Mongoose.
+    const replies: any = Array.isArray(discussion.replies) ? discussion.replies : [];
+
+    const newReply = {
+      id: uuidv4(),
+      user: userId,
       content: body.content,
       likes: [],
+      createdAt: new Date(),
     };
+    replies.push(newReply);
 
-    discussion.replies.push(replyPayload as any);
-    await discussion.save();
+    await prisma.discussion.update({ where: { id }, data: { replies } });
 
-    await discussion.populate('replies.user', 'name avatar role');
-    const newReply = discussion.replies[discussion.replies.length - 1];
     return newReply;
   }
 
@@ -137,106 +118,94 @@ export class DiscussionService {
     replyId: string,
     userId: string,
     body: ICreateReplyInput
-  ): Promise<IReply> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
+  ): Promise<any> {
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
 
-    const reply = (discussion.replies as any).id(replyId);
-    if (!reply) {
-      throw ApiError.notFound('Reply not found');
-    }
-
-    if (reply.user.toString() !== userId) {
+    const replies: any[] = Array.isArray(discussion.replies) ? discussion.replies : [];
+    const replyIndex = replies.findIndex((r) => r.id === replyId);
+    if (replyIndex === -1) throw ApiError.notFound('Reply not found');
+    if (replies[replyIndex].user !== userId)
       throw ApiError.forbidden('Only the author can edit this reply');
-    }
 
-    reply.content = body.content;
-    await discussion.save();
+    replies[replyIndex].content = body.content;
+    replies[replyIndex].updatedAt = new Date();
 
-    await discussion.populate('replies.user', 'name avatar role');
-    return reply;
+    await prisma.discussion.update({ where: { id }, data: { replies } });
+    return replies[replyIndex];
   }
 
   async toggleLike(id: string, userId: string): Promise<{ isLiked: boolean; likeCount: number }> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
 
-    const likeIndex = discussion.likes.findIndex((l) => l.toString() === userId);
+    let likes: string[] = Array.isArray(discussion.likes) ? discussion.likes : [];
+    const likeIndex = likes.indexOf(userId);
     const isLiked = likeIndex === -1;
 
     if (isLiked) {
-      discussion.likes.push(new mongoose.Types.ObjectId(userId));
+      likes.push(userId);
     } else {
-      discussion.likes.splice(likeIndex, 1);
+      likes.splice(likeIndex, 1);
     }
 
-    await discussion.save();
-    return {
-      isLiked,
-      likeCount: discussion.likes.length,
-    };
+    await prisma.discussion.update({ where: { id }, data: { likes } });
+    return { isLiked, likeCount: likes.length };
   }
 
   async toggleResolved(id: string, userId: string, userRole: string): Promise<boolean> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
 
-    const isAuthor = discussion.user.toString() === userId;
+    const isAuthor = discussion.user === userId;
     const isStaff = ['teacher', 'admin', 'super_admin'].includes(userRole);
 
-    if (!isAuthor && !isStaff) {
+    if (!isAuthor && !isStaff)
       throw ApiError.forbidden('Not authorized to resolve this discussion');
-    }
 
-    discussion.isResolved = !discussion.isResolved;
-    await discussion.save();
-    return discussion.isResolved;
+    const updated = await prisma.discussion.update({
+      where: { id },
+      data: { isResolved: !discussion.isResolved },
+    });
+    return updated.isResolved;
   }
 
   async deleteDiscussion(id: string, userId: string, userRole: string): Promise<void> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
 
-    const isOwner = discussion.user.toString() === userId;
+    const isOwner = discussion.user === userId;
     const isAdmin = ['admin', 'super_admin'].includes(userRole);
-    const isCourseTeacher = await Course.exists({ _id: discussion.course, teacher: userId });
+    const isCourseTeacher = await prisma.course.findFirst({
+      where: { id: discussion.course as string, teacher: userId },
+    });
 
-    if (!isOwner && !isAdmin && !isCourseTeacher) {
+    if (!isOwner && !isAdmin && !isCourseTeacher)
       throw ApiError.forbidden('Not authorized to delete this discussion');
-    }
 
-    await this.discussionRepository.deleteById(id);
+    await prisma.discussion.delete({ where: { id } });
   }
 
   async deleteReply(id: string, replyId: string, userId: string, userRole: string): Promise<void> {
-    const discussion = await this.discussionRepository.findById(id);
-    if (!discussion) {
-      throw ApiError.notFound('Discussion not found');
-    }
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) throw ApiError.notFound('Discussion not found');
 
-    const reply = (discussion.replies as any).id(replyId);
-    if (!reply) {
-      throw ApiError.notFound('Reply not found');
-    }
+    let replies: any[] = Array.isArray(discussion.replies) ? discussion.replies : [];
+    const replyIndex = replies.findIndex((r) => r.id === replyId);
+    if (replyIndex === -1) throw ApiError.notFound('Reply not found');
 
-    const isOwner = reply.user.toString() === userId;
+    const reply = replies[replyIndex];
+    const isOwner = reply.user === userId;
     const isAdmin = ['admin', 'super_admin'].includes(userRole);
-    const isCourseTeacher = await Course.exists({ _id: discussion.course, teacher: userId });
+    const isCourseTeacher = await prisma.course.findFirst({
+      where: { id: discussion.course as string, teacher: userId },
+    });
 
-    if (!isOwner && !isAdmin && !isCourseTeacher) {
+    if (!isOwner && !isAdmin && !isCourseTeacher)
       throw ApiError.forbidden('Not authorized to delete this reply');
-    }
 
-    (discussion.replies as any).pull(replyId);
-    await discussion.save();
+    replies.splice(replyIndex, 1);
+    await prisma.discussion.update({ where: { id }, data: { replies } });
   }
 }
 

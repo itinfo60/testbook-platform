@@ -18,7 +18,7 @@ import {
 } from 'react-icons/hi';
 import api from '@/services/api';
 import CourseCard from '@/features/course/components/CourseCard';
-import TestCard from '@/features/test/components/TestCard';
+import TestSeriesCard from '@/features/test/components/TestSeriesCard';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
 
@@ -42,7 +42,7 @@ export default function ExamDetail() {
         if (result && result.category) {
           setData(result);
         } else if (result && result._id) {
-          setData({ category: result, courses: [], tests: [], blogs: [], resources: [] });
+          setData({ category: result, courses: [], testSeries: [], blogs: [], resources: [] });
         } else {
           setError('Exam category not found');
         }
@@ -104,7 +104,9 @@ export default function ExamDetail() {
   if (!data || !data.category)
     return <div className="text-center py-20 text-slate-500 font-bold">Exam not found</div>;
 
-  const { category, courses = [], tests = [], blogs = [], resources = [] } = data;
+  // The server returns both `testSeries` (packages) and `tests` (individual tests).
+  // This page shows the SERIES — a student picks a package, then drills into its tests.
+  const { category, courses = [], testSeries = [], blogs = [], resources = [] } = data;
 
   const pyqs = resources.filter((r) => r.resourceType === 'pyq' || r.resourceType === 'solved_pyq');
   const freeResources = resources.filter(
@@ -114,10 +116,19 @@ export default function ExamDetail() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: HiOutlineInformationCircle },
     { id: 'courses', label: `Courses (${courses.length})`, icon: HiOutlineAcademicCap },
-    { id: 'tests', label: `Test Series (${tests.length})`, icon: HiOutlineClipboardList },
+    { id: 'tests', label: `Test Series (${testSeries.length})`, icon: HiOutlineClipboardList },
     { id: 'syllabus', label: 'Syllabus', icon: HiOutlineBookOpen },
     { id: 'pattern', label: 'Exam Pattern', icon: HiOutlineViewList },
     { id: 'eligibility', label: 'Eligibility', icon: HiOutlineCheckCircle },
+    ...(category.importantDates?.length > 0
+      ? [
+          {
+            id: 'dates',
+            label: `Key Dates (${category.importantDates.length})`,
+            icon: HiOutlineInformationCircle,
+          },
+        ]
+      : []),
     { id: 'pyqs', label: `PYQs (${pyqs.length})`, icon: HiOutlineDocumentText },
     { id: 'resources', label: `Free Notes (${freeResources.length})`, icon: HiOutlineDocumentText },
     { id: 'updates', label: `Updates (${blogs.length})`, icon: HiOutlineNewspaper },
@@ -134,7 +145,7 @@ export default function ExamDetail() {
           '@type': 'Course',
           name: category?.name,
           description: category?.description || `Preparation hub for ${category?.name}`,
-          provider: { '@type': 'Organization', name: 'CivicsEdu' },
+          provider: { '@type': 'Organization', name: 'CivicsHub' },
         }}
       />
       {/* ════════ HERO SECTION (Without Key Dates Widget) ════════ */}
@@ -257,6 +268,44 @@ export default function ExamDetail() {
               </p>
             )}
           </div>
+
+          {/* Important Dates */}
+          {category.importantDates?.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                📅 Important Dates
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {category.importantDates.map((d, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30"
+                  >
+                    <span className="text-amber-500 text-lg flex-shrink-0">📅</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        {d.label}
+                      </p>
+                      {d.date && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold mt-0.5">
+                          {new Date(d.date).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      )}
+                      {d.description && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {d.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── Section 2: Courses ── */}
@@ -302,7 +351,7 @@ export default function ExamDetail() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {courses.map((course) => (
-                <CourseCard key={course._id} course={course} />
+                <CourseCard key={course.id || course._id} course={course} />
               ))}
             </div>
           )}
@@ -320,7 +369,7 @@ export default function ExamDetail() {
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                  Mock Test Series & Chapter Practice ({tests.length})
+                  Mock Test Series & Chapter Practice ({testSeries.length})
                 </h2>
                 <p className="text-xs text-slate-500">
                   Real exam pattern mocks with state rank analytics
@@ -335,7 +384,7 @@ export default function ExamDetail() {
             </Link>
           </div>
 
-          {tests.length === 0 ? (
+          {testSeries.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
               <div className="text-3xl mb-2">📝</div>
               <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1">
@@ -350,9 +399,9 @@ export default function ExamDetail() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {tests.map((test) => (
-                <TestCard key={test._id} test={test} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {testSeries.map((series) => (
+                <TestSeriesCard key={series.id || series._id} series={series} />
               ))}
             </div>
           )}
@@ -503,7 +552,7 @@ export default function ExamDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pyqs.map((resource) => (
                 <button
-                  key={resource._id}
+                  key={resource.id || resource._id}
                   onClick={() => setSelectedResource(resource)}
                   className="flex items-start gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all bg-slate-50 dark:bg-slate-900/50 text-left cursor-pointer group"
                 >
@@ -572,7 +621,7 @@ export default function ExamDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {freeResources.map((resource) => (
                 <button
-                  key={resource._id}
+                  key={resource.id || resource._id}
                   onClick={() => setSelectedResource(resource)}
                   className="flex items-start gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 transition-all bg-slate-50 dark:bg-slate-900/50 text-left cursor-pointer group"
                 >
@@ -642,7 +691,7 @@ export default function ExamDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {blogs.map((blog) => (
                 <Link
-                  key={blog._id}
+                  key={blog.id || blog._id}
                   to={`/blog/${blog.slug || blog._id}`}
                   className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-orange-500 transition-all bg-slate-50 dark:bg-slate-900/50 block group"
                 >

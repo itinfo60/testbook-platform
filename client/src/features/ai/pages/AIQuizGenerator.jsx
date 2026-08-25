@@ -90,7 +90,7 @@ export default function AIQuizGenerator() {
             >
               <option value="">Select a course</option>
               {courses.map((c) => (
-                <option key={c._id} value={c._id}>
+                <option key={c.id || c._id} value={c.id || c._id}>
                   {c.title}
                 </option>
               ))}

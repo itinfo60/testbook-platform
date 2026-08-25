@@ -38,7 +38,7 @@ app.set('io', io);
 // ===== STARTUP =====
 const startServer = async () => {
   try {
-    // Connect to MongoDB
+    // Connect to PostgreSQL (Prisma)
     await database.connect();
 
     // Connect to Redis
@@ -74,7 +74,7 @@ const startServer = async () => {
     // Start server
     server.listen(config.port, () => {
       logger.info('═══════════════════════════════════════════');
-      logger.info(`🚀 TestBook Server v2.0.0`);
+      logger.info(`🚀 CivicsHub Server v2.0.0`);
       logger.info(`📡 Environment: ${config.env}`);
       logger.info(`🌐 Server: http://localhost:${config.port}`);
       logger.info(`📋 API: http://localhost:${config.port}/api/v1`);

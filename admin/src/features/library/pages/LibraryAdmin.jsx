@@ -70,12 +70,12 @@ export default function LibraryAdmin() {
   };
 
   const openEdit = (r) => {
-    setEditId(r._id);
+    setEditId(r.id || r._id);
     setForm({
       title: r.title || '',
       description: r.description || '',
-      category: r.category?._id || r.category || '',
-      examCategory: r.examCategory?._id || r.examCategory || '',
+      category: r.category?.id || r.category?._id || r.category || '',
+      examCategory: r.examCategory?.id || r.examCategory?._id || r.examCategory || '',
       resourceType: r.resourceType || 'notes',
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : r.tags || '',
       accessLevel: r.accessLevel || 'all',
@@ -250,7 +250,7 @@ export default function LibraryAdmin() {
               >
                 <option value="">— None —</option>
                 {examCategories.map((c) => (
-                  <option key={c._id} value={c._id}>
+                  <option key={c.id || c._id} value={c.id || c._id}>
                     {c.icon ? `${c.icon} ` : ''}
                     {c.name}
                   </option>
@@ -335,7 +335,7 @@ export default function LibraryAdmin() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {resources.map((r) => (
-                  <tr key={r._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr key={r.id || r._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                       {r.title}
                     </td>
@@ -363,7 +363,7 @@ export default function LibraryAdmin() {
                       <div className="flex items-center justify-end gap-2">
                         {r.fileUrl && (
                           <button
-                            onClick={() => handleDownload(r._id, r.title)}
+                            onClick={() => handleDownload(r.id || r._id, r.title)}
                             className="p-1 text-gray-400 hover:text-blue-600"
                             title="Download"
                           >
@@ -378,7 +378,7 @@ export default function LibraryAdmin() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeleteTarget(r._id)}
+                          onClick={() => setDeleteTarget(r.id || r._id)}
                           className="p-1 text-gray-400 hover:text-red-600"
                           title="Delete"
                         >

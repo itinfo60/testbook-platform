@@ -10,7 +10,7 @@ export default function UserForm() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { selected, loading } = useSelector((s) => s.users);
-  const isEdit = !!id;
+  const isEdit = Boolean(id && id !== 'undefined');
 
   const [form, setForm] = useState({
     name: '',

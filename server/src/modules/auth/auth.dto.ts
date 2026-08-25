@@ -1,5 +1,3 @@
-import { Document, Types } from 'mongoose';
-
 export interface IUserToken {
   token: string;
   expiresAt: Date;
@@ -16,17 +14,14 @@ export interface ITeacherProfile {
   isVerified?: boolean;
 }
 
-export interface IUser extends Document {
-  _id: Types.ObjectId;
+export interface IUser {
+  id: string;
   name: string;
   email: string;
   password?: string;
   role: 'student' | 'teacher' | 'admin' | 'super_admin';
-  tenantId: Types.ObjectId;
-  avatar: {
-    url: string;
-    publicId: string;
-  };
+  tenantId?: string | null;
+  avatar?: any;
   bio?: string;
   phone?: string;
   isActive: boolean;
@@ -35,32 +30,25 @@ export interface IUser extends Document {
   emailVerificationExpire?: Date;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
-  refreshTokens: IUserToken[];
+  refreshTokens?: any;
   mfaSecret?: string;
   mfaEnabled: boolean;
   mfaBackupCodes?: string[];
   consentGiven: boolean;
   consentAt?: Date;
-  dataRetentionPolicyVersion: string;
+  dataRetentionPolicyVersion?: string;
   googleId?: string;
   authProvider: 'local' | 'google';
-  fcmTokens: string[];
-  enrolledCourses: number;
-  completedCourses: number;
-  totalTestsTaken: number;
-  totalPoints: number;
-  streak: number;
-  lastActiveAt: Date;
-  teacherProfile?: ITeacherProfile;
+  fcmTokens?: string[];
+  enrolledCourses?: number;
+  completedCourses?: number;
+  totalTestsTaken?: number;
+  totalPoints?: number;
+  streak?: number;
+  lastActiveAt?: Date;
+  teacherProfile?: any;
   createdAt: Date;
   updatedAt: Date;
-
-  comparePassword(candidatePassword: string): Promise<boolean>;
-  generateAccessToken(): string;
-  generateRefreshToken(): string;
-  generateResetToken(): string;
-  generateEmailVerificationToken(): string;
-  cleanExpiredTokens(): Promise<IUser>;
 }
 
 export interface AuthResponseDto {

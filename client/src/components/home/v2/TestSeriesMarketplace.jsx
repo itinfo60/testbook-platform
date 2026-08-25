@@ -13,10 +13,8 @@ export default function TestSeriesMarketplace() {
   // Build tabs from root-level exam categories + "All"
   const tabs = [
     'All',
-    ...categories
-      .filter((c) => !c.parent)
-      .slice(0, 6)
-      .map((c) => c.name),
+    // Hook already scopes to type:'exam' — no need to filter by parent
+    ...categories.slice(0, 6).map((c) => c.name),
   ];
 
   useEffect(() => {
