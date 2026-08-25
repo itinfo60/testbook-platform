@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import hpp from 'hpp';
 import path from 'path';
+import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createBullBoard } from '@bull-board/api';
@@ -370,9 +371,12 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-// ===== SERVE FRONTEND IN PRODUCTION =====
-if (config.env === 'production') {
-  const clientDist = path.join(__dirname, '../../client/dist');
+// ===== SERVE FRONTEND (IF DIST EXISTS) OR API STATUS =====
+const clientDist = path.join(__dirname, '../../client/dist');
+const hasClientDist =
+  fs.existsSync(clientDist) && fs.existsSync(path.join(clientDist, 'index.html'));
+
+if (hasClientDist) {
   app.use(express.static(clientDist));
   // Any non-API route serves the React app
   app.get('*', (req, res, next) => {
@@ -383,10 +387,13 @@ if (config.env === 'production') {
   app.get('/', (req, res) => {
     res.status(200).json({
       success: true,
-      message: '🚀 CivicsEdu API Server v2.0.0',
-      status: 'running',
+      message: '🚀 CivicsEdu API Server v2.0.0 is Live',
+      status: 'online',
       environment: config.env,
-      endpoints: { api: '/api/v1', health: '/health' },
+      endpoints: {
+        api: `${API_PREFIX}`,
+        health: '/health',
+      },
       timestamp: new Date().toISOString(),
     });
   });
