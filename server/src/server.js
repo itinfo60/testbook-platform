@@ -3,7 +3,7 @@ import http from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
-import app from './app.js';
+import app, { isAllowedOrigin } from './app.js';
 import config from './config/index.js';
 import database from './config/database.js';
 import redis from './config/redis.js';
@@ -23,7 +23,13 @@ const server = http.createServer(app);
 // ===== SOCKET.IO =====
 const io = new SocketServer(server, {
   cors: {
-    origin: [config.clientUrl, config.adminUrl, 'http://localhost:5173', 'http://localhost:5174'],
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST'],
   },

@@ -139,28 +139,61 @@ app.use(
   })
 );
 
+// ===== CORS CONFIGURATION =====
+const allowedOrigins = [
+  config.clientUrl,
+  config.adminUrl,
+  'https://civicsedu.com',
+  'https://www.civicsedu.com',
+  'https://admin.civicsedu.com',
+  'https://civicsedu-client.vercel.app',
+  'https://civicsedu-admin.vercel.app',
+  process.env.PLATFORM_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:8080',
+  'http://localhost:3000',
+].filter(Boolean);
+
+export const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // allow mobile / server-to-server / curl
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow all Vercel deployments and custom subdomains
+  if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+  if (/^https:\/\/.*\.civicsedu\.com$/.test(origin)) return true;
+  return false;
+};
+
 app.use(
   cors({
-    origin: [
-      config.clientUrl,
-      config.adminUrl,
-      process.env.PLATFORM_URL || 'http://localhost:5175',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:8080',
-    ],
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
       'X-Requested-With',
       'X-Tenant-Id',
       'X-Tenant-Subdomain',
+      'X-App-Source',
+      'x-request-id',
+      'sentry-trace',
+      'baggage',
+      'Accept',
     ],
+    exposedHeaders: ['X-Request-Id', 'X-Total-Count'],
     maxAge: 86400,
   })
 );
+
+app.options('*', cors());
 
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
