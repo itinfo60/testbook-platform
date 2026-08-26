@@ -154,7 +154,9 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest('hex');
 
-      if (!crypto.timingSafeEqual(Buffer.from(razorpay_signature), Buffer.from(expectedSig))) {
+      const sigBuf = Buffer.from(razorpay_signature || '');
+      const expBuf = Buffer.from(expectedSig || '');
+      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
         throw ApiError.unauthorized('Payment verification failed - invalid signature');
       }
     }

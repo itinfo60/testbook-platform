@@ -302,17 +302,34 @@ export default function Checkout() {
                 })
               ).unwrap();
               toast.success('Payment verified! You are now enrolled.');
-              navigate('/checkout/success', {
-                state: isTest
-                  ? {
-                      testId: resolvedId,
-                      testSeriesId: type === 'test_series' ? resolvedId : null,
-                      itemName: item?.title,
-                      isTest: true,
-                      isSeries: type === 'test_series',
-                    }
-                  : { courseId: resolvedId, itemName: item?.title, isTest: false },
-              });
+
+              const successState = isTest
+                ? {
+                    testId: resolvedId,
+                    testSeriesId: type === 'test_series' ? resolvedId : null,
+                    itemName: item?.title,
+                    isTest: true,
+                    isSeries: type === 'test_series',
+                  }
+                : { courseId: resolvedId, itemName: item?.title, isTest: false };
+
+              try {
+                sessionStorage.setItem('last_checkout_state', JSON.stringify(successState));
+              } catch (e) {}
+
+              const queryParams = new URLSearchParams({
+                type: isTest ? (type === 'test_series' ? 'series' : 'test') : 'course',
+                id: resolvedId || '',
+                name: item?.title || '',
+              }).toString();
+
+              setTimeout(() => {
+                navigate(`/checkout/success?${queryParams}`, {
+                  state: successState,
+                  replace: true,
+                });
+              }, 150);
+
               resolve();
             } catch (err) {
               try {
@@ -321,7 +338,11 @@ export default function Checkout() {
                   error: { reason: 'Signature verification failed', details: err },
                 });
               } catch (e) {}
-              toast.error(err || 'Payment verification failed. Contact support.');
+              toast.error(
+                typeof err === 'string'
+                  ? err
+                  : err?.message || 'Payment verification failed. Contact support.'
+              );
               reject(err);
             }
           },
