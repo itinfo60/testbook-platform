@@ -156,36 +156,46 @@ export class PaymentController extends BaseController {
       amount = item.price || 0;
     }
 
+    const basePrice = item.price || 0;
+
     // Apply Coupon
     let discount = 0;
     let appliedCoupon: any = null;
+    let priceAfterDiscount = basePrice;
     if (couponCode) {
       const couponService = new CouponService();
       try {
         const validation = await couponService.validateCoupon(req.userId, {
           code: couponCode,
           courseId: courseId || undefined,
-          amount,
+          amount: basePrice,
         });
         discount = validation.discount;
-        amount = validation.finalAmount;
+        priceAfterDiscount = validation.finalAmount;
         appliedCoupon = validation.coupon;
       } catch (err) {
         throw ApiError.badRequest((err as any).message || 'Invalid coupon code');
       }
     }
 
+    const gstAmount = priceAfterDiscount > 0 ? Math.round(priceAfterDiscount * 0.18) : 0;
+    const finalAmount = priceAfterDiscount + gstAmount;
+
     // Create a Payment record using Prisma schema fields
     const payment = await prisma.payment.create({
       data: {
         userId: req.userId,
         orderId: `DEMO_${Date.now()}_${req.userId.slice(-6)}`,
-        amount,
+        amount: finalAmount,
         currency: 'INR',
         status: 'completed',
         notes: {
           demo: true,
           itemTitle: item.title,
+          basePrice,
+          discount,
+          gstAmount,
+          finalAmount,
           ...(appliedCoupon ? { coupon: appliedCoupon.code, discount } : {}),
         },
         tenantId: req.tenantId || undefined,
@@ -202,7 +212,7 @@ export class PaymentController extends BaseController {
           paymentId: payment.id,
           status: 'active',
           paymentStatus: 'paid',
-          amount,
+          amount: finalAmount,
         },
       });
 

@@ -14,6 +14,8 @@ import logger from '../../utils/logger.js';
 import config from '../../config/index.js';
 import { transactionalEmailQueue, notificationQueue } from '../../queues/index.js';
 
+import { CouponService } from '../coupon/coupon.service.js';
+
 export class PaymentService extends BaseService<IPayment, PaymentRepository> {
   public razorpay: Razorpay | null;
 
@@ -28,14 +30,14 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     const { courseId, testId, couponCode } = data;
 
     let item: any = null;
-    let amount = 0;
+    let basePrice = 0;
 
     if (courseId) {
       item = await prisma.course.findFirst({
         where: { OR: [{ id: courseId }, { slug: courseId }] },
       });
       if (!item) throw ApiError.notFound('Course not found');
-      amount = item.price || 0;
+      basePrice = item.price || 0;
 
       const existing = await prisma.enrollment.findFirst({
         where: { userId, courseId: item.id, status: { in: ['active', 'completed'] } },
@@ -47,30 +49,41 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
         item = await prisma.testSeries.findFirst({ where: { id: testId } });
       }
       if (!item || !item.isPublished) throw ApiError.notFound('Test or Test Series not found');
-      amount = item.price || 0;
+      basePrice = item.price || 0;
     }
 
     if (!item) throw ApiError.badRequest('No valid item to purchase');
 
     let discount = 0;
     let couponNotes: any = {};
+    let priceAfterDiscount = basePrice;
 
     if (couponCode) {
+      const couponService = new CouponService();
       try {
-        const coupon = await prisma.coupon.findFirst({
-          where: { code: couponCode.toUpperCase(), isActive: true },
+        const validation = await couponService.validateCoupon(userId, {
+          code: couponCode,
+          courseId: courseId || undefined,
+          amount: basePrice,
         });
-        if (!coupon) throw new Error('Invalid coupon');
-        discount = coupon.discount || 0;
-        amount = Math.max(0, amount - discount);
-        couponNotes = { couponCode, discount };
+        discount = validation.discount;
+        priceAfterDiscount = validation.finalAmount;
+        couponNotes = {
+          couponCode: validation.coupon.code,
+          discount: validation.discount,
+          discountType: validation.coupon.discountType,
+        };
       } catch (e: any) {
         throw ApiError.badRequest(e.message || 'Invalid coupon');
       }
     }
 
+    // 18% GST calculation
+    const gstAmount = priceAfterDiscount > 0 ? Math.round(priceAfterDiscount * 0.18) : 0;
+    const finalAmount = priceAfterDiscount + gstAmount;
+
     // Free enrollment
-    if (amount === 0 && courseId) {
+    if (finalAmount === 0 && courseId) {
       const enrollment = await prisma.enrollment.create({
         data: {
           userId,
@@ -80,6 +93,10 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           amount: 0,
         },
       });
+      if (couponNotes?.couponCode) {
+        const couponService = new CouponService();
+        await couponService.recordUsage(couponNotes.couponCode, userId).catch(() => {});
+      }
       await redis.delPattern('courses:*');
       return { enrollment, isFree: true };
     }
@@ -89,7 +106,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     }
 
     let orderId = `order_mock_${Date.now()}_${userId.slice(-6)}`;
-    let orderAmount = Math.round(amount * 100);
+    let orderAmount = Math.round(finalAmount * 100);
     const orderCurrency = 'INR';
 
     if (this.razorpay) {
@@ -98,7 +115,15 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           amount: orderAmount,
           currency: orderCurrency,
           receipt: `receipt_${Date.now()}_${userId.slice(-6)}`,
-          notes: { userId, itemId: courseId || testId || '', ...couponNotes },
+          notes: {
+            userId,
+            itemId: courseId || testId || '',
+            basePrice,
+            discount,
+            gstAmount,
+            finalAmount,
+            ...couponNotes,
+          },
         });
         orderId = order.id;
         orderAmount = order.amount as number;
@@ -117,7 +142,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       data: {
         userId,
         orderId,
-        amount,
+        amount: finalAmount,
         currency: orderCurrency,
         status: 'pending',
         notes: {
@@ -125,6 +150,10 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           itemTitle: item.title,
           courseId: courseId || (item.sections ? item.id : null),
           testId: testId || (!item.sections ? item.id : null),
+          basePrice,
+          discount,
+          gstAmount,
+          finalAmount,
           ...couponNotes,
         },
         tenantId: targetTenantId,
@@ -216,6 +245,13 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           paymentId: payment.id,
         },
       });
+
+      if (paymentNotes.couponCode) {
+        try {
+          const couponService = new CouponService();
+          await couponService.recordUsage(paymentNotes.couponCode, userId).catch(() => {});
+        } catch (e) {}
+      }
 
       await redis.delPattern('courses:*');
       await redis.delPattern('admin:dashboard:*').catch(() => {});
