@@ -60,8 +60,6 @@ liveClassQueue.add(
   { repeat: { every: 60000 }, jobId: 'liveclass_auto_transition', removeOnComplete: { count: 5 } }
 );
 
-export const queueConnection = connection;
-
 // ── Dev utility: drain all stale failed jobs from every queue ────────────────
 export async function drainFailedJobs() {
   if (config.env === 'production') return;
