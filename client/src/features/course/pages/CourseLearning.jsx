@@ -103,6 +103,7 @@ export default function CourseLearning() {
   const lastHeartbeatTime = useRef(0);
   const [attachTimestamp, setAttachTimestamp] = useState(true);
   const [completing, setCompleting] = useState(false);
+  const [completingCourse, setCompletingCourse] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
@@ -313,8 +314,6 @@ export default function CourseLearning() {
     currentLessonKey && completedLessonIds.includes(currentLessonKey)
   );
   const isAllCompleted = totalLessons > 0 && totalCompleted >= totalLessons;
-
-  const [completingCourse, setCompletingCourse] = useState(false);
 
   const handleMarkCourseComplete = async () => {
     if (completingCourse) return;

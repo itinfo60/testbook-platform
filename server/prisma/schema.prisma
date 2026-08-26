@@ -543,3 +543,26 @@ model SupportTicket {
   @@index([status])
 }
 
+// ─────────────────────────────────────────────────────────────────
+// NOTE
+// ─────────────────────────────────────────────────────────────────
+model Note {
+  id        String   @id @default(uuid())
+  user      String
+  course    String
+  lesson    String?
+  content   String
+  timestamp Int      @default(0)
+  color     String?  @default("#FFD700")
+  isPinned  Boolean  @default(false)
+  tenantId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([user])
+  @@index([course])
+  @@index([lesson])
+  @@index([tenantId])
+}
+

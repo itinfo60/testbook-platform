@@ -19,7 +19,24 @@ export class NoteService {
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const filter: any = { user: userId, course: courseId };
+    let targetCourseIds = [courseId];
+    if (courseId) {
+      try {
+        const foundCourse = await prisma.course.findFirst({
+          where: { OR: [{ id: courseId }, { slug: courseId }] },
+          select: { id: true, slug: true },
+        });
+        if (foundCourse) {
+          targetCourseIds = Array.from(
+            new Set([courseId, foundCourse.id, foundCourse.slug].filter(Boolean) as string[])
+          );
+        }
+      } catch {
+        // fallback to original courseId
+      }
+    }
+
+    const filter: any = { user: userId, course: { in: targetCourseIds } };
     if (query.lessonId) filter.lesson = query.lessonId;
 
     const [docs, total] = await Promise.all([
@@ -48,7 +65,6 @@ export class NoteService {
         where: { user: userId },
         skip,
         take: limit,
-        include: { courseObj: { select: { title: true, slug: true, thumbnail: true } } },
         orderBy: { updatedAt: 'desc' },
       }),
       prisma.note.count({ where: { user: userId } }),
@@ -59,10 +75,21 @@ export class NoteService {
 
   async createNote(userId: string, courseId: string, body: ICreateNoteInput): Promise<any> {
     const userObj = await prisma.user.findUnique({ where: { id: userId } });
+    let resolvedCourseId = courseId;
+    try {
+      const foundCourse = await prisma.course.findFirst({
+        where: { OR: [{ id: courseId }, { slug: courseId }] },
+        select: { id: true },
+      });
+      if (foundCourse) resolvedCourseId = foundCourse.id;
+    } catch {
+      // fallback
+    }
+
     const note = await prisma.note.create({
       data: {
         user: userId,
-        course: courseId,
+        course: resolvedCourseId,
         lesson: body.lessonId,
         content: body.content,
         timestamp: body.timestamp || 0,
