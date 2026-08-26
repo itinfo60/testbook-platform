@@ -50,11 +50,12 @@ export default function MyCourses() {
           {enrollments.map((enrollment) => {
             const course = enrollment.course || {};
             const progress = enrollment.progressPercentage ?? enrollment.progress ?? 0;
+            const courseSlug = course.slug || course.id || course._id;
 
             return (
               <Link
                 key={enrollment.id || enrollment._id}
-                to={`/courses/${course.slug || course._id}/learn`}
+                to={`/courses/${courseSlug}/learn`}
                 className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden group flex flex-col relative"
               >
                 <div className="h-48 bg-slate-100 dark:bg-dark-800 overflow-hidden relative">
@@ -71,30 +72,38 @@ export default function MyCourses() {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center z-10">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider bg-black/40 backdrop-blur-sm px-2 py-1 rounded-md">
-                      {progress === 100 ? 'Completed' : 'In Progress'}
+                    <span className="text-xs font-bold text-white uppercase tracking-wider bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg">
+                      {progress >= 100 ? '✓ Completed' : 'In Progress'}
                     </span>
                   </div>
                 </div>
-                <div className="p-6 flex-1 flex flex-col justify-between">
+                <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-bold text-dark-900 dark:text-white line-clamp-2 mb-4 group-hover:text-amber-500 transition-colors">
+                    <h3 className="font-bold text-dark-900 dark:text-white line-clamp-2 mb-4 group-hover:text-amber-600 transition-colors">
                       {course.title}
                     </h3>
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                         Progress
                       </span>
-                      <span className="text-xs font-bold text-amber-500">{progress}%</span>
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                        {progress}%
+                      </span>
                     </div>
-                    <ProgressBar value={progress} size="sm" className="mb-4" color="bg-amber-500" />
+                    <ProgressBar
+                      value={progress}
+                      size="sm"
+                      className="mb-4"
+                      color="emerald"
+                      showLabel={false}
+                    />
 
-                    <button className="w-full bg-slate-50 dark:bg-dark-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-slate-700 dark:text-slate-300 hover:text-amber-600 font-bold py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 border border-slate-200 dark:border-dark-700 hover:border-amber-200 dark:hover:border-amber-800">
-                      {progress >= 100 ? 'Review Course' : 'Resume Learning'}{' '}
-                      <HiArrowRight className="h-4 w-4" />
-                    </button>
+                    <div className="w-full bg-slate-50 dark:bg-dark-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-slate-700 dark:text-slate-300 hover:text-amber-600 font-bold py-2.5 rounded-xl transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 border border-slate-200 dark:border-dark-700 hover:border-amber-200 dark:hover:border-amber-800">
+                      <span>{progress >= 100 ? 'Review Course' : 'Resume Learning'}</span>
+                      <HiArrowRight className="h-3.5 w-3.5" />
+                    </div>
                   </div>
                 </div>
               </Link>

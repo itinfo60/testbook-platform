@@ -171,7 +171,6 @@ export default function CourseDetail() {
   }, [myExistingReview, reviewSubmitted]);
   useEffect(() => {
     window.scrollTo(0, 0);
-    enrollmentCheckedRef.current = '';
     setEnrollmentChecked(false);
     setCheckingEnrollment(!!isAuthenticated);
     dispatch(fetchCourseById(id));

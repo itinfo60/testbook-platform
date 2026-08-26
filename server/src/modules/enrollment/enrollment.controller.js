@@ -81,6 +81,7 @@ export const getMyEnrollments = catchAsync(async (req, res) => {
             price: true,
             totalLessons: true,
             totalDuration: true,
+            sections: true,
           },
         },
       },
@@ -91,8 +92,42 @@ export const getMyEnrollments = catchAsync(async (req, res) => {
     prisma.enrollment.count({ where: filter }),
   ]);
 
+  const docsWithProgress = docs.map((enrollment) => {
+    const course = enrollment.course || {};
+    let sections = [];
+    if (typeof course.sections === 'string') {
+      try {
+        sections = JSON.parse(course.sections);
+      } catch (e) {}
+    } else if (Array.isArray(course.sections)) {
+      sections = course.sections;
+    }
+
+    const allLessonCount = sections.reduce(
+      (acc, s) => acc + (s.lessons || []).filter((l) => l.type !== 'quiz').length,
+      0
+    );
+    const totalLessons = allLessonCount || course.totalLessons || 0;
+    const completedCount = Array.isArray(enrollment.completedLessons)
+      ? enrollment.completedLessons.length
+      : 0;
+
+    const computedProgress =
+      totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
+    const progressPercentage =
+      typeof enrollment.progressPercentage === 'number' && enrollment.progressPercentage > 0
+        ? enrollment.progressPercentage
+        : computedProgress;
+
+    return {
+      ...enrollment,
+      progressPercentage,
+      progress: progressPercentage,
+    };
+  });
+
   ApiResponse.paginated(res, {
-    docs,
+    docs: docsWithProgress,
     page,
     limit,
     total,

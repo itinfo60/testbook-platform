@@ -99,11 +99,50 @@ export default function CourseLearning() {
 
   const playerRef = useRef(null);
   const [videoTime, setVideoTime] = useState(0);
+  const [attachTimestamp, setAttachTimestamp] = useState(true);
   const sessionWatchTime = useRef(0);
   const lastHeartbeatTime = useRef(0);
-  const [attachTimestamp, setAttachTimestamp] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [completingCourse, setCompletingCourse] = useState(false);
+
+  const sections = course?.sections || [];
+
+  const flatLessonsWithSection = useMemo(() => {
+    return sections.flatMap((s) =>
+      (s.lessons || []).filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
+    );
+  }, [sections]);
+
+  const allLessons = useMemo(() => {
+    return flatLessonsWithSection.map((item) => item.lesson);
+  }, [flatLessonsWithSection]);
+
+  const totalLessons = allLessons.length;
+
+  const currentLessonKey = currentLesson
+    ? String(currentLesson.id || currentLesson._id || '').trim()
+    : '';
+  const currentLessonAltKey = currentLesson
+    ? String(currentLesson._id || currentLesson.id || '').trim()
+    : '';
+  const totalCompleted = completedLessonIds.length;
+  const isCurrentCompleted = Boolean(
+    (currentLessonKey && completedLessonIds.includes(currentLessonKey)) ||
+    (currentLessonAltKey && completedLessonIds.includes(currentLessonAltKey))
+  );
+  const isAllCompleted = totalLessons > 0 && totalCompleted >= totalLessons;
+
+  const currentLessonIndex = useMemo(() => {
+    if (!currentLesson) return -1;
+    const currId = String(currentLesson.id || currentLesson._id || '').trim();
+    return flatLessonsWithSection.findIndex(({ lesson }) => {
+      const lid = String(lesson.id || lesson._id || '').trim();
+      return (
+        (currId && lid && lid === currId) ||
+        (currentLesson.title && lesson.title && currentLesson.title === lesson.title)
+      );
+    });
+  }, [currentLesson, flatLessonsWithSection]);
 
   useEffect(() => {
     dispatch(fetchCourseById(id));
@@ -304,19 +343,6 @@ export default function CourseLearning() {
     );
   }
 
-  const sections = course.sections || [];
-  const allLessons = sections.flatMap((s) => (s.lessons || []).filter((l) => l.type !== 'quiz'));
-  const totalLessons = allLessons.length;
-
-  const currentLessonKey = currentLesson
-    ? String(currentLesson.id || currentLesson._id).trim()
-    : '';
-  const totalCompleted = completedLessonIds.length;
-  const isCurrentCompleted = Boolean(
-    currentLessonKey && completedLessonIds.includes(currentLessonKey)
-  );
-  const isAllCompleted = totalLessons > 0 && totalCompleted >= totalLessons;
-
   const handleMarkCourseComplete = async () => {
     if (completingCourse) return;
     const courseLookupId = course?.id || course?._id?.toString() || id;
@@ -344,59 +370,22 @@ export default function CourseLearning() {
   };
 
   // Navigate to next lesson
+  const hasNext = () =>
+    currentLessonIndex >= 0 && currentLessonIndex < flatLessonsWithSection.length - 1;
+  const hasPrev = () => currentLessonIndex > 0;
+
   const goToNext = () => {
-    if (!currentLesson) return;
-    const currId = String(currentLesson.id || currentLesson._id || '').trim();
-    const flatLessons = sections.flatMap((s) =>
-      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
-    );
-    const idx = flatLessons.findIndex(
-      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
-    );
-    if (idx >= 0 && idx < flatLessons.length - 1) {
-      const next = flatLessons[idx + 1];
+    if (hasNext()) {
+      const next = flatLessonsWithSection[currentLessonIndex + 1];
       handleLessonSelect(next.lesson, next.section);
     }
   };
 
-  const hasNext = () => {
-    if (!currentLesson) return false;
-    const currId = String(currentLesson.id || currentLesson._id || '').trim();
-    const flatLessons = sections.flatMap((s) =>
-      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
-    );
-    const idx = flatLessons.findIndex(
-      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
-    );
-    return idx >= 0 && idx < flatLessons.length - 1;
-  };
-
-  // Navigate to previous lesson
   const goToPrev = () => {
-    if (!currentLesson) return;
-    const currId = String(currentLesson.id || currentLesson._id || '').trim();
-    const flatLessons = sections.flatMap((s) =>
-      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
-    );
-    const idx = flatLessons.findIndex(
-      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
-    );
-    if (idx > 0) {
-      const prev = flatLessons[idx - 1];
+    if (hasPrev()) {
+      const prev = flatLessonsWithSection[currentLessonIndex - 1];
       handleLessonSelect(prev.lesson, prev.section);
     }
-  };
-
-  const hasPrev = () => {
-    if (!currentLesson) return false;
-    const currId = String(currentLesson.id || currentLesson._id || '').trim();
-    const flatLessons = sections.flatMap((s) =>
-      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
-    );
-    const idx = flatLessons.findIndex(
-      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
-    );
-    return idx > 0;
   };
 
   // Mirrors the lock rule in LessonContent: free lessons are the open demos.
@@ -482,36 +471,89 @@ export default function CourseLearning() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Header Action Buttons */}
           {!isEnrolled ? (
             <Link
               to={`/courses/${course?.slug || id}`}
-              className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-3 sm:px-4 rounded-lg shadow-xs transition-all text-[11px] sm:text-xs shrink-0"
+              className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-3 sm:px-4 rounded-lg shadow-xs transition-all text-xs shrink-0"
             >
               <span>Enroll to Unlock</span>
             </Link>
           ) : (
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Progress Counter */}
-              <div className="flex flex-col items-end pl-2 sm:pl-3 border-l border-slate-200 dark:border-dark-800">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            <>
+              {/* Desktop-only action controls in top bar */}
+              {currentLesson && (
+                <div className="hidden lg:flex items-center gap-2">
+                  <button
+                    onClick={goToPrev}
+                    disabled={!hasPrev()}
+                    className="btn-secondary !text-[11px] !py-0 w-28 h-7.5 flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 rounded-lg"
+                    title="Previous Lesson"
+                  >
+                    <HiArrowLeft className="w-3 h-3" /> Prev
+                  </button>
+
+                  <button
+                    onClick={() => handleLessonComplete(!isCurrentCompleted)}
+                    disabled={completing}
+                    className={`w-28 h-7.5 flex items-center justify-center gap-1 px-2 py-0 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
+                      isCurrentCompleted
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                    }`}
+                    title={
+                      isCurrentCompleted
+                        ? 'Click to unmark as complete'
+                        : 'Mark this lesson complete'
+                    }
+                  >
+                    <HiCheck className="h-3 w-3" />
+                    <span>
+                      {completing ? 'Saving...' : isCurrentCompleted ? 'Completed' : 'Complete'}
+                    </span>
+                  </button>
+
+                  {hasNext() ? (
+                    <button
+                      onClick={goToNext}
+                      className="bg-amber-800 hover:bg-amber-900 text-white font-bold w-28 h-7.5 py-0 px-2 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 text-[11px] cursor-pointer active:scale-95 shrink-0"
+                      title="Next Lesson"
+                    >
+                      <span>Next</span>
+                      <HiArrowRight className="w-3 h-3" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleMarkCourseComplete}
+                      disabled={completingCourse}
+                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold w-28 h-7.5 py-0 px-2 rounded-lg shadow-xs text-[11px] cursor-pointer active:scale-95 shrink-0 flex items-center justify-center gap-1"
+                      title="Finish Entire Course"
+                    >
+                      <span>🎉 {isAllCompleted ? 'Finished' : 'Finish'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Progress Counter — Desktop only */}
+              <div className="hidden lg:flex flex-col items-end pl-3 border-l border-slate-200 dark:border-dark-800">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                   Progress
                 </span>
-                <span className="text-xs font-extrabold text-emerald-600">
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                   {totalCompleted}/{totalLessons} (
                   {Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)}%)
                 </span>
               </div>
-            </div>
+            </>
           )}
 
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
+            className="lg:hidden flex items-center justify-center h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
             title="Course Contents"
           >
-            <HiMenu className="h-4 w-4 sm:h-5 sm:w-5" />
+            <HiMenu className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -565,74 +607,66 @@ export default function CourseLearning() {
             courseSlug={course?.slug || id}
           />
 
-          {/* Responsive Control Bar for Mobile and Desktop */}
+          {/* Mobile-only Control Bar below video/content */}
           {isEnrolled && currentLesson && (
-            <div className="mt-4 bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-3.5 sm:p-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                {/* Left: Navigation and Lesson completion toggle */}
-                <div className="flex items-center gap-2 flex-wrap">
+            <div className="lg:hidden mt-3 bg-white dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-800 p-2.5 sm:p-3 shadow-xs">
+              {/* Action Buttons Row - Equal 3 Columns Grid */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={goToPrev}
+                  disabled={!hasPrev()}
+                  className="btn-secondary !text-[11px] !py-0 w-full h-8 flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer rounded-lg"
+                  title="Previous Lesson"
+                >
+                  <HiArrowLeft className="w-3 h-3" />
+                  <span>Prev</span>
+                </button>
+
+                <button
+                  onClick={() => handleLessonComplete(!isCurrentCompleted)}
+                  disabled={completing}
+                  className={`w-full h-8 flex items-center justify-center gap-1 px-1 py-0 rounded-lg text-[11px] font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                    isCurrentCompleted
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                  }`}
+                >
+                  <HiCheck
+                    className={`w-3.5 h-3.5 shrink-0 ${isCurrentCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-white'}`}
+                  />
+                  <span className="truncate">
+                    {completing ? 'Saving...' : isCurrentCompleted ? 'Completed' : 'Complete'}
+                  </span>
+                </button>
+
+                {hasNext() ? (
                   <button
-                    onClick={goToPrev}
-                    disabled={!hasPrev()}
-                    className="btn-secondary !text-xs !py-2 !px-3 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                    onClick={goToNext}
+                    className="bg-amber-800 hover:bg-amber-900 text-white font-bold w-full h-8 px-1 py-0 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 text-[11px] cursor-pointer active:scale-95"
+                    title="Next Lesson"
                   >
-                    <HiArrowLeft className="w-3.5 h-3.5" /> Previous
+                    <span>Next</span>
+                    <HiArrowRight className="w-3 h-3" />
                   </button>
-
+                ) : (
                   <button
-                    onClick={() => handleLessonComplete(!isCurrentCompleted)}
-                    disabled={completing}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
-                      isCurrentCompleted
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
-                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                    }`}
+                    onClick={handleMarkCourseComplete}
+                    disabled={completingCourse}
+                    className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold w-full h-8 px-1 py-0 rounded-lg shadow-sm transition-all flex items-center justify-center gap-1 text-[11px] cursor-pointer active:scale-95"
+                    title="Finish Entire Course"
                   >
-                    <HiCheck
-                      className={`w-4 h-4 ${isCurrentCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-white'}`}
-                    />
-                    <span>
-                      {completing
-                        ? 'Updating...'
-                        : isCurrentCompleted
-                          ? 'Lesson Completed'
-                          : 'Mark Lesson Complete'}
-                    </span>
+                    <span>🎉 Finish</span>
                   </button>
-                </div>
-
-                {/* Right: Next button & Mark Course Complete */}
-                <div className="flex items-center justify-between sm:justify-end gap-2.5">
-                  <div className="text-xs text-slate-500 font-medium sm:hidden">
-                    <span className="font-bold text-emerald-600">{totalCompleted}</span> /{' '}
-                    {totalLessons} completed
-                  </div>
-
-                  {hasNext() ? (
-                    <button
-                      onClick={goToNext}
-                      className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-2 px-4 rounded-xl shadow-xs transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 ml-auto sm:ml-0 shrink-0"
-                    >
-                      <span>Next Lesson</span>
-                      <HiArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleMarkCourseComplete}
-                      disabled={completingCourse}
-                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold py-2 px-4 rounded-xl shadow-sm transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 ml-auto sm:ml-0 shrink-0"
-                    >
-                      <span>
-                        🎉 {isAllCompleted ? 'Course 100% Completed!' : 'Mark Course Complete'}
-                      </span>
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
 
-              {/* Progress Bar under action bar */}
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-dark-800 flex items-center gap-3">
-                <div className="flex-1 bg-slate-100 dark:bg-dark-800 rounded-full h-2 overflow-hidden">
+              {/* Progress Bar under action buttons */}
+              <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-dark-800 flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-500 shrink-0">
+                  {totalCompleted}/{totalLessons} (
+                  {Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)}%)
+                </span>
+                <div className="flex-1 bg-slate-100 dark:bg-dark-800 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                     style={{
@@ -640,13 +674,6 @@ export default function CourseLearning() {
                     }}
                   />
                 </div>
-                <span className="text-[11px] font-bold text-slate-500 shrink-0">
-                  {Math.min(
-                    100,
-                    Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)
-                  )}
-                  % Completed
-                </span>
               </div>
             </div>
           )}
