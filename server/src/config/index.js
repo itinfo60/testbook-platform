@@ -103,11 +103,8 @@ const config = {
   },
 };
 
-// Validate required env vars (always, not just production)
+// Validate required env vars
 const required = ['JWT_SECRET', 'DATABASE_URL'];
-if (config.env === 'production') {
-  required.push('SMTP_USER', 'REDIS_URL');
-}
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length) {
   throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
