@@ -5,33 +5,44 @@ import { ILeaderboardResponse, ILeaderboardEntry } from './leaderboard.dto.js';
 
 export class LeaderboardService {
   async getLeaderboard(
-    period: 'all' | 'weekly' | 'monthly' = 'all',
-    limit = 50,
+    period: 'all' | 'weekly' | 'monthly' | 'allTime' = 'all',
+    limit = 10,
     currentUserId?: string
   ): Promise<ILeaderboardResponse> {
+    const normalizedPeriod = period === 'allTime' ? 'all' : period;
+    const effectiveLimit = Math.min(10, Math.max(1, limit || 10));
+
     const tenantId = getTenantId();
     const cacheKey = tenantId
-      ? `tenant:${tenantId}:leaderboard:${period}:${limit}`
-      : `leaderboard:${period}:${limit}`;
+      ? `tenant:${tenantId}:leaderboard:${normalizedPeriod}:${effectiveLimit}`
+      : `leaderboard:${normalizedPeriod}:${effectiveLimit}`;
 
-    const cached = await redis.get(cacheKey);
+    const cached = await redis.get(cacheKey).catch(() => null);
     if (cached) {
-      const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-      const userRank = this.calculateUserRank(parsed.leaderboard, currentUserId);
-      return { leaderboard: parsed.leaderboard, userRank, period };
+      try {
+        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+        const userRank = this.calculateUserRank(parsed.leaderboard, currentUserId);
+        return {
+          leaderboard: (parsed.leaderboard || []).slice(0, 10),
+          userRank,
+          period: normalizedPeriod,
+        };
+      } catch (e) {}
     }
 
     let leaderboard: ILeaderboardEntry[] = [];
 
-    if (period === 'all') {
-      const userQuery: any = {};
+    if (normalizedPeriod === 'all') {
+      const userQuery: any = {
+        role: 'student',
+      };
       if (tenantId) {
         userQuery.tenantId = tenantId;
       }
       const users = await prisma.user.findMany({
         where: userQuery,
         orderBy: { totalPoints: 'desc' },
-        take: limit,
+        take: effectiveLimit,
         select: {
           id: true,
           name: true,
@@ -45,8 +56,8 @@ export class LeaderboardService {
       leaderboard = users.map((u: any, index: number) => ({
         rank: index + 1,
         _id: u.id.toString(),
-        name: u.name,
-        avatar: u.avatar,
+        name: u.name || 'Anonymous Learner',
+        avatar: u.avatar || '',
         totalPoints: u.totalPoints ?? 0,
         totalScore: u.totalPoints ?? 0,
         completedCourses: u.completedCourses ?? 0,
@@ -55,13 +66,13 @@ export class LeaderboardService {
     } else {
       const dateFilter: any = {};
       const now = new Date();
-      if (period === 'weekly') {
-        dateFilter.createdAt = { gte: new Date(now.getTime() - 7 * 86400000) };
-      } else if (period === 'monthly') {
-        dateFilter.createdAt = { gte: new Date(now.getFullYear(), now.getMonth(), 1) };
+      if (normalizedPeriod === 'weekly') {
+        dateFilter.startedAt = { gte: new Date(now.getTime() - 7 * 86400000) };
+      } else if (normalizedPeriod === 'monthly') {
+        dateFilter.startedAt = { gte: new Date(now.getFullYear(), now.getMonth(), 1) };
       }
 
-      const matchStage: any = { status: 'completed', ...dateFilter };
+      const matchStage: any = { ...dateFilter };
       if (tenantId) matchStage.tenantId = tenantId;
 
       const results = await prisma.testAttempt.groupBy({
@@ -71,27 +82,44 @@ export class LeaderboardService {
         _count: { _all: true },
         _avg: { percentage: true },
         orderBy: { _sum: { score: 'desc' } },
-        take: limit,
+        take: effectiveLimit,
       });
 
-      leaderboard = results.map((entry: any, index: number) => ({
-        rank: index + 1,
-        _id: entry.userId?.toString() || '',
-        name: entry.userId, // Normally would require fetching user
-        avatar: '',
-        totalPoints: entry._sum?.score ?? 0,
-        totalScore: entry._sum?.score ?? 0,
-        testsCompleted: entry._count?._all ?? 0,
-        avgPercentage: entry._avg?.percentage ?? 0,
-        completedCourses: 0,
-        streak: 0,
-      }));
+      const userIds = results.map((r: any) => r.userId).filter(Boolean);
+      const users =
+        userIds.length > 0
+          ? await prisma.user.findMany({
+              where: { id: { in: userIds } },
+              select: { id: true, name: true, avatar: true },
+            })
+          : [];
+      const userMap = new Map(users.map((u) => [u.id, u]));
+
+      leaderboard = results.map((entry: any, index: number) => {
+        const user = userMap.get(entry.userId);
+        return {
+          rank: index + 1,
+          _id: entry.userId?.toString() || '',
+          name: user?.name || 'Anonymous Learner',
+          avatar: user?.avatar || '',
+          totalPoints: Math.round(entry._sum?.score ?? 0),
+          totalScore: Math.round(entry._sum?.score ?? 0),
+          testsCompleted: entry._count?._all ?? 0,
+          avgPercentage: Math.round(entry._avg?.percentage ?? 0),
+          completedCourses: 0,
+          streak: 0,
+        };
+      });
     }
 
-    await redis.set(cacheKey, JSON.stringify({ leaderboard }), 'EX', 300);
+    await redis.set(cacheKey, JSON.stringify({ leaderboard }), 'EX', 300).catch(() => {});
 
     const userRank = this.calculateUserRank(leaderboard, currentUserId);
-    return { leaderboard, userRank: userRank as any, period };
+    return {
+      leaderboard: leaderboard.slice(0, 10),
+      userRank: userRank as any,
+      period: normalizedPeriod,
+    };
   }
 
   private calculateUserRank(

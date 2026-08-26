@@ -16,8 +16,8 @@ export class LeaderboardController extends BaseController {
   }
 
   getLeaderboard = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const period = (req.query.period as 'all' | 'weekly' | 'monthly') || 'all';
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+    const period = (req.query.period as 'all' | 'weekly' | 'monthly' | 'allTime') || 'all';
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
     const userId = req.userId;
 
     const data = await this.leaderboardService.getLeaderboard(period, limit, userId);

@@ -23,11 +23,13 @@ export default function LeaderboardPage() {
 
   const periodLabel = tabs.find((t) => t.key === period)?.label || period;
 
+  const topEntries = (entries || []).slice(0, 10);
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center mb-8">
-        <h1 className="section-title">🏆 Leaderboard</h1>
-        <p className="section-subtitle">See how you stack up against other learners</p>
+        <h1 className="section-title">🏆 Top 10 Leaderboard</h1>
+        <p className="section-subtitle">See how you stack up against top learners</p>
       </div>
 
       <Tabs
@@ -66,15 +68,17 @@ export default function LeaderboardPage() {
 
       {loading ? (
         <LoadingSpinner />
-      ) : entries.length === 0 ? (
+      ) : topEntries.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="text-5xl mb-4">🏆</div>
           <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">No data yet</h3>
-          <p className="text-dark-500">Complete tests to appear on the leaderboard!</p>
+          <p className="text-dark-500">
+            Complete tests this {periodLabel.toLowerCase()} to appear in the Top 10!
+          </p>
         </div>
       ) : (
         <div className="card overflow-hidden">
-          {entries.map((entry, i) => (
+          {topEntries.map((entry, i) => (
             <div
               key={entry._id || i}
               className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 border-b border-dark-50 dark:border-dark-800 last:border-0 ${

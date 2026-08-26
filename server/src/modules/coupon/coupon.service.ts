@@ -1,3 +1,4 @@
+import prisma from '../../config/prisma.js';
 import { CouponRepository } from './coupon.repository.js';
 import { ApiError } from '../../core/api-error.js';
 
