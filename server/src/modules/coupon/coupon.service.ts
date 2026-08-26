@@ -66,13 +66,17 @@ function formatCouponData(body: any) {
 
 function mapCouponResponse(coupon: any) {
   if (!coupon) return coupon;
+  const usedCount = coupon.usedCount ?? coupon.usageCount ?? 0;
   return {
     ...coupon,
     discountValue:
       coupon.discountType === 'percentage' ? coupon.discountPercent : coupon.discountAmount,
     startDate: coupon.validFrom,
     endDate: coupon.validUntil,
+    expiresAt: coupon.validUntil,
     maxUsage: coupon.maxUses,
+    usedCount,
+    usageCount: usedCount,
   };
 }
 
@@ -85,8 +89,12 @@ export class CouponService {
 
   async validateCoupon(userId: string, input: any): Promise<any> {
     const { code, courseId, amount = 0 } = input;
+    if (!code) throw ApiError.badRequest('Coupon code is required');
 
-    const coupon = await this.couponRepository.findOne({ code: code.toUpperCase() });
+    const cleanCode = code.toUpperCase().trim();
+    const coupon = await prisma.coupon.findFirst({
+      where: { code: cleanCode },
+    });
     if (!coupon) {
       throw ApiError.notFound('Coupon not found');
     }
@@ -103,7 +111,7 @@ export class CouponService {
       throw ApiError.badRequest('Coupon has expired');
     }
 
-    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+    if (coupon.maxUses && (coupon.usedCount || 0) >= coupon.maxUses) {
       throw ApiError.badRequest('Coupon usage limit reached');
     }
 
@@ -202,12 +210,21 @@ export class CouponService {
     }
   }
 
-  async recordUsage(code: string, userId: string): Promise<void> {
-    const coupon = await this.couponRepository.findOne({ code: code.toUpperCase() });
+  async recordUsage(code: string, userId?: string): Promise<void> {
+    if (!code) return;
+    const cleanCode = code.toUpperCase().trim();
+    const coupon = await prisma.coupon.findFirst({
+      where: { code: cleanCode },
+    });
     if (!coupon) return;
 
-    await this.couponRepository.updateById(coupon.id, {
-      usedCount: coupon.usedCount + 1,
+    await prisma.coupon.update({
+      where: { id: coupon.id },
+      data: {
+        usedCount: {
+          increment: 1,
+        },
+      },
     });
   }
 }

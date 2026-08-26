@@ -62,9 +62,9 @@ export default function CouponList() {
         val === 'percentage' ? `${row.discountValue}%` : formatCurrency(row.discountValue),
     },
     {
-      key: 'usageCount',
+      key: 'usedCount',
       label: 'Used',
-      render: (val, row) => `${val || 0} / ${row.maxUsage || '∞'}`,
+      render: (val, row) => `${val ?? row.usageCount ?? 0} / ${row.maxUsage ?? row.maxUses ?? '∞'}`,
     },
     {
       key: 'expiresAt',
