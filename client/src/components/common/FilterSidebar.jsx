@@ -87,8 +87,9 @@ export default function FilterSidebar({
   activeFilters = {},
   onFilterChange,
   onClear,
+  showTitle = true,
+  className = '',
 }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState({});
 
   const toggleExpand = (e, val) => {
@@ -96,30 +97,33 @@ export default function FilterSidebar({
     setExpandedNodes((prev) => ({ ...prev, [val]: !prev[val] }));
   };
 
-  const hasActiveFilters = Object.values(activeFilters).some(
-    (v) => v !== '' && v !== undefined && v !== null
-  );
+  const hasActiveFilters = Object.values(activeFilters).some((v) => {
+    if (Array.isArray(v)) return v.length > 0;
+    return v !== '' && v !== undefined && v !== null;
+  });
 
-  const content = (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h2>
-        {onClear && hasActiveFilters && (
-          <button
-            onClick={onClear}
-            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-          >
-            Clear all
-          </button>
-        )}
-      </div>
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {showTitle && (
+        <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-dark-700">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">Filters</h2>
+          {onClear && hasActiveFilters && (
+            <button
+              onClick={onClear}
+              className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
 
       {filters.map((filter) => (
-        <div key={filter.key}>
-          <h3 className="text-[15px] font-bold text-gray-900 dark:text-white mb-4">
+        <div key={filter.key} className="space-y-3">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white tracking-wide">
             {filter.label}
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filter.options.map((option) => (
               <FilterOptionItem
                 key={option.value}
@@ -136,68 +140,5 @@ export default function FilterSidebar({
         </div>
       ))}
     </div>
-  );
-
-  return (
-    <>
-      {/* Mobile trigger button */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden inline-flex items-center gap-2 px-4 py-3 rounded-xl border 
-                   border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 
-                   text-gray-700 dark:text-gray-300 text-sm font-medium
-                   hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-      >
-        <Filter className="w-4 h-4" />
-        Filters
-        {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-primary-600" />}
-      </button>
-
-      {/* Desktop sidebar */}
-      <div className="hidden lg:block w-64 flex-shrink-0">
-        <div
-          className="sticky top-24 bg-white dark:bg-gray-800 rounded-xl border 
-                        border-gray-200 dark:border-gray-700 p-5 shadow-sm"
-        >
-          {content}
-        </div>
-      </div>
-
-      {/* Mobile drawer overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 transition-opacity"
-            onClick={() => setMobileOpen(false)}
-          />
-          {/* Drawer */}
-          <div
-            className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white dark:bg-gray-900 
-                          shadow-xl z-50 overflow-y-auto animate-slide-in-right"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4">{content}</div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="w-full px-4 py-2.5 bg-primary-600 text-white font-medium rounded-lg 
-                           hover:bg-primary-700 transition-colors"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }

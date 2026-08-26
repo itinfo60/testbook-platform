@@ -207,13 +207,18 @@ export default function CourseCatalog() {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-white dark:bg-dark-900 overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-dark-100 dark:border-dark-700">
-              <span className="font-semibold text-dark-900 dark:text-white">Filters</span>
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-dark-900 overflow-y-auto shadow-2xl flex flex-col z-10">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-dark-700 bg-slate-50/80 dark:bg-dark-800/80 sticky top-0 z-20 backdrop-blur-sm">
+              <span className="font-bold text-dark-900 dark:text-white flex items-center gap-2">
+                Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+              </span>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="p-1 rounded-lg text-dark-400 hover:text-dark-700 dark:hover:text-white"
+                className="p-1.5 rounded-lg text-dark-400 hover:text-dark-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-dark-700"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -225,24 +230,29 @@ export default function CourseCatalog() {
                 </svg>
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-5 flex-1 overflow-y-auto">
               <FilterSidebar
                 filters={filterConfig}
+                showTitle={false}
                 activeFilters={{
                   ...filters,
                   category: filters.category ? filters.category.split(',') : [],
                 }}
-                onFilterChange={(key, value) => {
-                  handleFilterChange(key, value);
-                  setSidebarOpen(false);
-                }}
+                onFilterChange={handleFilterChange}
                 onClear={() => {
                   dispatch(clearFilters());
                   setPage(1);
                   setSearchParams({}, { state: { preventScroll: true } });
-                  setSidebarOpen(false);
                 }}
               />
+            </div>
+            <div className="p-4 border-t border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-900 sticky bottom-0">
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-2.5 px-4 rounded-xl transition-colors text-sm shadow-md"
+              >
+                Apply Filters
+              </button>
             </div>
           </div>
         </div>
@@ -251,20 +261,22 @@ export default function CourseCatalog() {
       {/* Main Content: Sidebar + Grid */}
       <div className="flex gap-6 lg:gap-8">
         {/* Filter Sidebar — desktop only */}
-        <div className="hidden lg:block flex-shrink-0">
-          <FilterSidebar
-            filters={filterConfig}
-            activeFilters={{
-              ...filters,
-              category: filters.category ? filters.category.split(',') : [],
-            }}
-            onFilterChange={handleFilterChange}
-            onClear={() => {
-              dispatch(clearFilters());
-              setPage(1);
-              setSearchParams({}, { state: { preventScroll: true } });
-            }}
-          />
+        <div className="hidden lg:block w-72 flex-shrink-0">
+          <div className="sticky top-24 bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-5 shadow-sm">
+            <FilterSidebar
+              filters={filterConfig}
+              activeFilters={{
+                ...filters,
+                category: filters.category ? filters.category.split(',') : [],
+              }}
+              onFilterChange={handleFilterChange}
+              onClear={() => {
+                dispatch(clearFilters());
+                setPage(1);
+                setSearchParams({}, { state: { preventScroll: true } });
+              }}
+            />
+          </div>
         </div>
 
         {/* Course Grid + Pagination */}
