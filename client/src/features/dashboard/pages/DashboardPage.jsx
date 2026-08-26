@@ -1,7 +1,7 @@
 import SeoHead from '@/components/SeoHead';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   HiAcademicCap,
   HiArrowRight,
@@ -32,6 +32,7 @@ import { testAPI, enrollmentAPI, liveClassAPI, quizAPI } from '@/services/api';
 
 export default function Dashboard() {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { user } = useAuth();
   const { enrollments, loading } = useSelector((state) => state.enrollments);
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
@@ -41,6 +42,44 @@ export default function Dashboard() {
   const [quizzes, setQuizzes] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [error, setError] = useState(null);
+
+  const scrollToTarget = (targetId) => {
+    if (!targetId) return;
+    const elem = document.getElementById(targetId);
+    if (elem) {
+      const yOffset = -85;
+      const y = elem.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToSection = (e, link) => {
+    if (link && link.startsWith('#')) {
+      e.preventDefault();
+      const targetId = link.slice(1);
+      scrollToTarget(targetId);
+      window.history.replaceState(null, '', link);
+    }
+  };
+
+  useEffect(() => {
+    if (location.hash) {
+      const targetId = location.hash.slice(1);
+      const attemptScroll = () => {
+        const elem = document.getElementById(targetId);
+        if (elem) {
+          scrollToTarget(targetId);
+          return true;
+        }
+        return false;
+      };
+
+      if (!attemptScroll()) {
+        const timer = setTimeout(attemptScroll, 250);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [location.hash, loading, quizzes.length, enrollments.length]);
 
   useEffect(() => {
     dispatch(fetchMyEnrollments());
@@ -264,7 +303,8 @@ export default function Dashboard() {
           <a
             key={mod.label}
             href={mod.link}
-            className="bg-white dark:bg-dark-900 p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-dark-800 hover:shadow-md hover:-translate-y-1 hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 group flex flex-col justify-between"
+            onClick={(e) => scrollToSection(e, mod.link)}
+            className="bg-white dark:bg-dark-900 p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-dark-800 hover:shadow-md hover:-translate-y-1 hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 group flex flex-col justify-between cursor-pointer"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
