@@ -2389,6 +2389,81 @@ async function getAdminTenantId(req) {
   return fresh?.tenantId || null;
 }
 
+function formatAdminCouponData(body) {
+  const data = {};
+
+  if (body.code !== undefined) {
+    data.code = String(body.code).toUpperCase().trim();
+  }
+
+  if (body.discountType !== undefined) {
+    data.discountType = body.discountType === 'flat' ? 'fixed' : body.discountType;
+  }
+
+  const discountType = data.discountType || body.discountType || 'percentage';
+  const val =
+    body.discountValue !== undefined && body.discountValue !== ''
+      ? Number(body.discountValue)
+      : undefined;
+
+  if (discountType === 'percentage') {
+    if (val !== undefined) {
+      data.discountPercent = val;
+      data.discountAmount = 0;
+    } else if (body.discountPercent !== undefined) {
+      data.discountPercent = Number(body.discountPercent);
+      data.discountAmount = 0;
+    }
+  } else {
+    data.discountType = 'fixed';
+    if (val !== undefined) {
+      data.discountAmount = val;
+      data.discountPercent = 0;
+    } else if (body.discountAmount !== undefined) {
+      data.discountAmount = Number(body.discountAmount);
+      data.discountPercent = 0;
+    }
+  }
+
+  if (body.maxDiscount !== undefined) {
+    data.maxDiscount =
+      body.maxDiscount && body.maxDiscount !== '' ? Number(body.maxDiscount) : null;
+  }
+  if (body.minOrderAmount !== undefined || body.minPurchaseAmount !== undefined) {
+    const m = body.minOrderAmount ?? body.minPurchaseAmount;
+    data.minOrderAmount = m !== '' && m !== null && m !== undefined ? Number(m) : 0;
+  }
+  if (body.validFrom !== undefined || body.startDate !== undefined) {
+    const d = body.validFrom || body.startDate;
+    data.validFrom = d ? new Date(d) : null;
+  }
+  if (body.validUntil !== undefined || body.endDate !== undefined || body.expiresAt !== undefined) {
+    const d = body.validUntil || body.endDate || body.expiresAt;
+    data.validUntil = d ? new Date(d) : null;
+  }
+  if (body.maxUses !== undefined || body.maxUsage !== undefined || body.usageLimit !== undefined) {
+    const u = body.maxUses ?? body.maxUsage ?? body.usageLimit;
+    data.maxUses = u && u !== '' ? parseInt(String(u), 10) : null;
+  }
+  if (body.isActive !== undefined) {
+    data.isActive = Boolean(body.isActive);
+  }
+
+  return data;
+}
+
+function mapAdminCouponResponse(coupon) {
+  if (!coupon) return coupon;
+  return {
+    ...coupon,
+    discountValue:
+      coupon.discountType === 'percentage' ? coupon.discountPercent : coupon.discountAmount,
+    startDate: coupon.validFrom,
+    endDate: coupon.validUntil,
+    maxUsage: coupon.maxUses,
+  };
+}
+
 export const adminGetCoupons = catchAsync(async (req, res) => {
   const tenantId = await getAdminTenantId(req);
   const page = parseInt(req.query.page) || 1;
@@ -2401,10 +2476,12 @@ export const adminGetCoupons = catchAsync(async (req, res) => {
   if (req.query.search) where.code = { contains: req.query.search, mode: 'insensitive' };
   if (req.query.isActive !== undefined) where.isActive = req.query.isActive === 'true';
 
-  const [docs, total] = await Promise.all([
+  const [rawDocs, total] = await Promise.all([
     prisma.coupon.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
     prisma.coupon.count({ where }),
   ]);
+
+  const docs = rawDocs.map(mapAdminCouponResponse);
 
   ApiResponse.paginated(res, { docs, page, limit, total });
 });
@@ -2417,12 +2494,13 @@ export const adminGetCouponById = catchAsync(async (req, res) => {
   };
   const coupon = await prisma.coupon.findFirst({ where });
   if (!coupon) throw ApiError.notFound('Coupon not found');
-  ApiResponse.ok(res, { coupon });
+  ApiResponse.ok(res, { coupon: mapAdminCouponResponse(coupon) });
 });
 
 export const adminCreateCoupon = catchAsync(async (req, res) => {
   const tenantId = await getAdminTenantId(req);
-  const code = (req.body.code || '').toUpperCase();
+  const formatted = formatAdminCouponData(req.body);
+  const code = formatted.code || (req.body.code || '').toUpperCase().trim();
   if (!code) throw ApiError.badRequest('Coupon code is required');
 
   const where = {
@@ -2434,28 +2512,17 @@ export const adminCreateCoupon = catchAsync(async (req, res) => {
 
   const coupon = await prisma.coupon.create({
     data: {
+      ...formatted,
       code,
-      discountType: req.body.discountType || 'percentage',
-      discountAmount: Number(req.body.discountAmount) || 0,
-      discountPercent: Number(req.body.discountPercent) || 0,
-      minOrderAmount: Number(req.body.minOrderAmount) || 0,
-      maxDiscount: req.body.maxDiscount ? Number(req.body.maxDiscount) : null,
-      maxUses: req.body.maxUses ? Number(req.body.maxUses) : null,
-      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true,
-      validFrom: req.body.validFrom ? new Date(req.body.validFrom) : null,
-      validUntil:
-        req.body.validUntil || req.body.expiresAt
-          ? new Date(req.body.validUntil || req.body.expiresAt)
-          : null,
       tenantId: tenantId || null,
     },
   });
-  ApiResponse.created(res, { coupon }, 'Coupon created');
+  ApiResponse.created(res, { coupon: mapAdminCouponResponse(coupon) }, 'Coupon created');
 });
 
 export const adminUpdateCoupon = catchAsync(async (req, res) => {
   const tenantId = await getAdminTenantId(req);
-  if (req.body.code) req.body.code = req.body.code.toUpperCase();
+  const formatted = formatAdminCouponData(req.body);
 
   const where = {
     id: req.params.id,
@@ -2464,31 +2531,23 @@ export const adminUpdateCoupon = catchAsync(async (req, res) => {
   const coupon = await prisma.coupon.findFirst({ where });
   if (!coupon) throw ApiError.notFound('Coupon not found');
 
-  const updateData = {
-    ...req.body,
-    ...(req.body.discountAmount !== undefined && {
-      discountAmount: Number(req.body.discountAmount),
-    }),
-    ...(req.body.discountPercent !== undefined && {
-      discountPercent: Number(req.body.discountPercent),
-    }),
-    ...(req.body.minOrderAmount !== undefined && {
-      minOrderAmount: Number(req.body.minOrderAmount),
-    }),
-    ...(req.body.maxDiscount !== undefined && {
-      maxDiscount: req.body.maxDiscount ? Number(req.body.maxDiscount) : null,
-    }),
-    ...(req.body.maxUses !== undefined && {
-      maxUses: req.body.maxUses ? Number(req.body.maxUses) : null,
-    }),
-  };
+  if (formatted.code && formatted.code !== coupon.code) {
+    const existing = await prisma.coupon.findFirst({
+      where: {
+        code: formatted.code,
+        id: { not: coupon.id },
+        ...(tenantId ? { tenantId } : {}),
+      },
+    });
+    if (existing) throw ApiError.conflict('Coupon code already exists');
+  }
 
   const updated = await prisma.coupon.update({
     where: { id: coupon.id },
-    data: updateData,
+    data: formatted,
   });
 
-  ApiResponse.ok(res, { coupon: updated }, 'Coupon updated');
+  ApiResponse.ok(res, { coupon: mapAdminCouponResponse(updated) }, 'Coupon updated');
 });
 
 export const adminDeleteCoupon = catchAsync(async (req, res) => {
