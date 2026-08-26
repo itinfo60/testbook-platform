@@ -15,6 +15,15 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import App from './App';
 import './index.css';
 
+// Handle new deployments and stale cached bundles smoothly
+window.addEventListener('vite:preloadError', (event) => {
+  const lastReload = sessionStorage.getItem('vite_preload_retry');
+  if (!lastReload || Date.now() - Number(lastReload) > 10000) {
+    sessionStorage.setItem('vite_preload_retry', String(Date.now()));
+    window.location.reload();
+  }
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

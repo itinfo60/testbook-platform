@@ -30,95 +30,144 @@ const FeatureBoundary = () => (
   </ErrorBoundary>
 );
 
+// Helper to auto-recover when a new build is deployed and old chunk hashes are invalidated
+const lazyWithRetry = (importFn) =>
+  lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      const isChunkError =
+        error?.name === 'ChunkLoadError' ||
+        error?.message?.includes('Failed to fetch dynamically imported module') ||
+        error?.message?.includes('Importing a module script failed') ||
+        error?.message?.includes('error loading dynamically imported module') ||
+        error?.message?.includes('text/html');
+
+      if (isChunkError) {
+        const lastRetry = sessionStorage.getItem('chunk_retry_' + window.location.pathname);
+        if (!lastRetry || Date.now() - Number(lastRetry) > 10000) {
+          sessionStorage.setItem('chunk_retry_' + window.location.pathname, String(Date.now()));
+          window.location.reload();
+          return new Promise(() => {});
+        }
+      }
+      throw error;
+    }
+  });
+
 // ===== LAZY LOADED PAGES =====
 // Auth
-const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
-const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'));
-const AuthCallbackPage = lazy(() => import('@/features/auth/pages/AuthCallbackPage'));
-const VerifyEmailPage = lazy(() => import('@/features/auth/pages/verify/VerifyEmailPage'));
+const LoginPage = lazyWithRetry(() => import('@/features/auth/pages/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('@/features/auth/pages/RegisterPage'));
+const ForgotPasswordPage = lazyWithRetry(() => import('@/features/auth/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazyWithRetry(() => import('@/features/auth/pages/ResetPasswordPage'));
+const AuthCallbackPage = lazyWithRetry(() => import('@/features/auth/pages/AuthCallbackPage'));
+const VerifyEmailPage = lazyWithRetry(() => import('@/features/auth/pages/verify/VerifyEmailPage'));
 
 // Public
-const HomePage = lazy(() => import('@/features/home/pages/HomePage'));
-const CourseCatalog = lazy(() => import('@/features/course/pages/CourseCatalog'));
-const CourseDetail = lazy(() => import('@/features/course/pages/CourseDetail'));
-const TestCatalog = lazy(() => import('@/features/test/pages/TestCatalog'));
-const TestSeriesCatalog = lazy(() => import('@/features/test/pages/TestSeriesCatalog'));
-const TestSeriesDetail = lazy(() => import('@/features/test/pages/TestSeriesDetail'));
-const TestDetail = lazy(() => import('@/features/test/pages/TestDetail'));
-const LeaderboardPage = lazy(() => import('@/features/leaderboard/pages/LeaderboardPage'));
-const CertificateVerify = lazy(() => import('@/features/auth/pages/verify/CertificateVerify'));
-const UnauthorizedPage = lazy(() => import('@/features/auth/pages/UnauthorizedPage'));
-const BlogList = lazy(() => import('@/features/blog/pages/BlogList'));
-const BlogDetail = lazy(() => import('@/features/blog/pages/BlogDetail'));
-const JobAlertList = lazy(() => import('@/features/blog/pages/JobAlertList'));
-const PricingPage = lazy(() => import('@/features/subscription/pages/PricingPage'));
-const NotFoundPage = lazy(() => import('@/features/home/pages/NotFoundPage'));
+const HomePage = lazyWithRetry(() => import('@/features/home/pages/HomePage'));
+const CourseCatalog = lazyWithRetry(() => import('@/features/course/pages/CourseCatalog'));
+const CourseDetail = lazyWithRetry(() => import('@/features/course/pages/CourseDetail'));
+const TestCatalog = lazyWithRetry(() => import('@/features/test/pages/TestCatalog'));
+const TestSeriesCatalog = lazyWithRetry(() => import('@/features/test/pages/TestSeriesCatalog'));
+const TestSeriesDetail = lazyWithRetry(() => import('@/features/test/pages/TestSeriesDetail'));
+const TestDetail = lazyWithRetry(() => import('@/features/test/pages/TestDetail'));
+const LeaderboardPage = lazyWithRetry(() => import('@/features/leaderboard/pages/LeaderboardPage'));
+const CertificateVerify = lazyWithRetry(
+  () => import('@/features/auth/pages/verify/CertificateVerify')
+);
+const UnauthorizedPage = lazyWithRetry(() => import('@/features/auth/pages/UnauthorizedPage'));
+const BlogList = lazyWithRetry(() => import('@/features/blog/pages/BlogList'));
+const BlogDetail = lazyWithRetry(() => import('@/features/blog/pages/BlogDetail'));
+const JobAlertList = lazyWithRetry(() => import('@/features/blog/pages/JobAlertList'));
+const PricingPage = lazyWithRetry(() => import('@/features/subscription/pages/PricingPage'));
+const NotFoundPage = lazyWithRetry(() => import('@/features/home/pages/NotFoundPage'));
 
 // CivicsEdu Public Pages
-const ExamsCatalog = lazy(() => import('@/features/exams/pages/ExamsCatalog'));
-const ExamDetail = lazy(() => import('@/features/exams/pages/ExamDetail'));
-const SearchResultsPage = lazy(() => import('@/features/search/pages/SearchResultsPage'));
-const FreeResourcesPage = lazy(() => import('@/features/free-zone/pages/FreeResourcesPage'));
-const AboutPage = lazy(() => import('@/features/about/pages/AboutPage'));
-const FacultyPage = lazy(() => import('@/features/faculty/pages/FacultyPage'));
-const SuccessStoriesPage = lazy(() => import('@/features/success/pages/SuccessStoriesPage'));
-const HelpCenterPage = lazy(() => import('@/features/support/pages/HelpCenterPage'));
-const LegalPage = lazy(() => import('@/features/legal/pages/LegalPage'));
-const DailyQuizPage = lazy(() => import('@/features/quiz/pages/DailyQuizPage'));
+const ExamsCatalog = lazyWithRetry(() => import('@/features/exams/pages/ExamsCatalog'));
+const ExamDetail = lazyWithRetry(() => import('@/features/exams/pages/ExamDetail'));
+const SearchResultsPage = lazyWithRetry(() => import('@/features/search/pages/SearchResultsPage'));
+const FreeResourcesPage = lazyWithRetry(
+  () => import('@/features/free-zone/pages/FreeResourcesPage')
+);
+const AboutPage = lazyWithRetry(() => import('@/features/about/pages/AboutPage'));
+const FacultyPage = lazyWithRetry(() => import('@/features/faculty/pages/FacultyPage'));
+const SuccessStoriesPage = lazyWithRetry(
+  () => import('@/features/success/pages/SuccessStoriesPage')
+);
+const HelpCenterPage = lazyWithRetry(() => import('@/features/support/pages/HelpCenterPage'));
+const LegalPage = lazyWithRetry(() => import('@/features/legal/pages/LegalPage'));
+const DailyQuizPage = lazyWithRetry(() => import('@/features/quiz/pages/DailyQuizPage'));
 
 // Student Protected
-const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
-const MyCourses = lazy(() => import('@/features/course/pages/MyCourses'));
-const CourseLearning = lazy(() => import('@/features/course/pages/CourseLearning'));
-const MyTestAttempts = lazy(() => import('@/features/test/pages/MyTestAttempts'));
-const QuizPage = lazy(() => import('@/features/quiz/pages/QuizPage'));
+const DashboardPage = lazyWithRetry(() => import('@/features/dashboard/pages/DashboardPage'));
+const MyCourses = lazyWithRetry(() => import('@/features/course/pages/MyCourses'));
+const CourseLearning = lazyWithRetry(() => import('@/features/course/pages/CourseLearning'));
+const MyTestAttempts = lazyWithRetry(() => import('@/features/test/pages/MyTestAttempts'));
+const QuizPage = lazyWithRetry(() => import('@/features/quiz/pages/QuizPage'));
 
-const Wishlist = lazy(() => import('@/features/wishlist/pages/Wishlist'));
-const Checkout = lazy(() => import('@/features/enrollment/pages/checkout/Checkout'));
-const CheckoutSuccess = lazy(() => import('@/features/enrollment/pages/checkout/CheckoutSuccess'));
-const OrderHistory = lazy(() => import('@/features/enrollment/pages/orders/OrderHistory'));
-const Profile = lazy(() => import('@/features/auth/pages/profile/Profile'));
-const ProfileSettingsPage = lazy(
+const Wishlist = lazyWithRetry(() => import('@/features/wishlist/pages/Wishlist'));
+const Checkout = lazyWithRetry(() => import('@/features/enrollment/pages/checkout/Checkout'));
+const CheckoutSuccess = lazyWithRetry(
+  () => import('@/features/enrollment/pages/checkout/CheckoutSuccess')
+);
+const OrderHistory = lazyWithRetry(() => import('@/features/enrollment/pages/orders/OrderHistory'));
+const Profile = lazyWithRetry(() => import('@/features/auth/pages/profile/Profile'));
+const ProfileSettingsPage = lazyWithRetry(
   () => import('@/features/auth/pages/settings/ProfileSettingsPage')
 );
-const NotificationsPage = lazy(() => import('@/features/notification/pages/NotificationsPage'));
+const NotificationsPage = lazyWithRetry(
+  () => import('@/features/notification/pages/NotificationsPage')
+);
 
 // Teacher (heavy — lazy critical)
-const TeacherLayout = lazy(() => import('@/features/teacher/pages/TeacherLayout'));
-const TeacherDashboard = lazy(() => import('@/features/teacher/pages/TeacherDashboard'));
-const TeacherCourses = lazy(() => import('@/features/course/pages/teacher/TeacherCourses'));
-const TeacherCourseForm = lazy(() => import('@/features/course/pages/teacher/TeacherCourseForm'));
-const TeacherTests = lazy(() => import('@/features/test/pages/teacher/TeacherTests'));
-const TeacherTestForm = lazy(() => import('@/features/test/pages/teacher/TeacherTestForm'));
-const TeacherTestAnalytics = lazy(
+const TeacherLayout = lazyWithRetry(() => import('@/features/teacher/pages/TeacherLayout'));
+const TeacherDashboard = lazyWithRetry(() => import('@/features/teacher/pages/TeacherDashboard'));
+const TeacherCourses = lazyWithRetry(
+  () => import('@/features/course/pages/teacher/TeacherCourses')
+);
+const TeacherCourseForm = lazyWithRetry(
+  () => import('@/features/course/pages/teacher/TeacherCourseForm')
+);
+const TeacherTests = lazyWithRetry(() => import('@/features/test/pages/teacher/TeacherTests'));
+const TeacherTestForm = lazyWithRetry(
+  () => import('@/features/test/pages/teacher/TeacherTestForm')
+);
+const TeacherTestAnalytics = lazyWithRetry(
   () => import('@/features/test/pages/teacher/TeacherTestAnalytics')
 );
-const TeacherQuizzes = lazy(() => import('@/features/quiz/pages/teacher/TeacherQuizzes'));
-const TeacherQuizForm = lazy(() => import('@/features/quiz/pages/teacher/TeacherQuizForm'));
-const TeacherStudents = lazy(() => import('@/features/teacher/pages/TeacherStudents'));
-const TeacherRevenue = lazy(() => import('@/features/teacher/pages/TeacherRevenue'));
-const TeacherDiscussions = lazy(() => import('@/features/teacher/pages/TeacherDiscussions'));
-const TeacherAttendance = lazy(() => import('@/features/teacher/pages/TeacherAttendance'));
-const TeacherLiveClasses = lazy(() => import('@/features/liveclass/pages/TeacherLiveClasses'));
-const TeacherBlogManagement = lazy(() => import('@/features/blog/pages/TeacherBlogManagement'));
+const TeacherQuizzes = lazyWithRetry(() => import('@/features/quiz/pages/teacher/TeacherQuizzes'));
+const TeacherQuizForm = lazyWithRetry(
+  () => import('@/features/quiz/pages/teacher/TeacherQuizForm')
+);
+const TeacherStudents = lazyWithRetry(() => import('@/features/teacher/pages/TeacherStudents'));
+const TeacherRevenue = lazyWithRetry(() => import('@/features/teacher/pages/TeacherRevenue'));
+const TeacherDiscussions = lazyWithRetry(
+  () => import('@/features/teacher/pages/TeacherDiscussions')
+);
+const TeacherAttendance = lazyWithRetry(() => import('@/features/teacher/pages/TeacherAttendance'));
+const TeacherLiveClasses = lazyWithRetry(
+  () => import('@/features/liveclass/pages/TeacherLiveClasses')
+);
+const TeacherBlogManagement = lazyWithRetry(
+  () => import('@/features/blog/pages/TeacherBlogManagement')
+);
 
 // AI
-const AIQuestionGenerator = lazy(() => import('@/features/ai/pages/AIQuestionGenerator'));
+const AIQuestionGenerator = lazyWithRetry(() => import('@/features/ai/pages/AIQuestionGenerator'));
 
-const AIQuizGenerator = lazy(() => import('@/features/ai/pages/AIQuizGenerator'));
+const AIQuizGenerator = lazyWithRetry(() => import('@/features/ai/pages/AIQuizGenerator'));
 
 // Live Classes
-const LiveClassList = lazy(() => import('@/features/liveclass/pages/LiveClassList'));
-const LiveClassRoom = lazy(() => import('@/features/liveclass/pages/LiveClassRoom'));
+const LiveClassList = lazyWithRetry(() => import('@/features/liveclass/pages/LiveClassList'));
+const LiveClassRoom = lazyWithRetry(() => import('@/features/liveclass/pages/LiveClassRoom'));
 
 // Institute
-const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingSettings'));
+const BrandingSettings = lazyWithRetry(() => import('@/features/institute/pages/BrandingSettings'));
 
 // Test taking
-const TestTaking = lazy(() => import('@/features/test/pages/TestTaking'));
-const TestResult = lazy(() => import('@/features/test/pages/TestResult'));
+const TestTaking = lazyWithRetry(() => import('@/features/test/pages/TestTaking'));
+const TestResult = lazyWithRetry(() => import('@/features/test/pages/TestResult'));
 
 const FullScreenLoader = () => (
   <div className="h-screen bg-slate-950 flex items-center justify-center">

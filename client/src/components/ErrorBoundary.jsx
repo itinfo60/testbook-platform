@@ -1,16 +1,40 @@
 import * as Sentry from '@sentry/react';
+import { useEffect } from 'react';
 import { HiExclamationCircle, HiRefresh } from 'react-icons/hi';
 
+function isChunkLoadError(error) {
+  if (!error) return false;
+  const msg = String(error.message || error).toLowerCase();
+  return (
+    msg.includes('failed to fetch dynamically imported module') ||
+    msg.includes('importing a module script failed') ||
+    msg.includes('error loading dynamically imported module') ||
+    msg.includes('mime type of "text/html"')
+  );
+}
+
 function FallbackUI({ error, resetError }) {
+  useEffect(() => {
+    if (isChunkLoadError(error)) {
+      const lastReload = sessionStorage.getItem('chunk_error_reload');
+      if (!lastReload || Date.now() - Number(lastReload) > 10000) {
+        sessionStorage.setItem('chunk_error_reload', String(Date.now()));
+        window.location.reload();
+      }
+    }
+  }, [error]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
         <HiExclamationCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
         <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          Something went wrong
+          {isChunkLoadError(error) ? 'New Version Available' : 'Something went wrong'}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-          An unexpected error occurred. It has been reported automatically.
+          {isChunkLoadError(error)
+            ? 'A new version of the app has been published. Refreshing...'
+            : 'An unexpected error occurred. It has been reported automatically.'}
         </p>
         {import.meta.env.DEV && error?.message && (
           <pre className="text-left text-xs bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4 overflow-auto text-red-700 dark:text-red-300">
