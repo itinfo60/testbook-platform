@@ -1,5 +1,5 @@
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { HiCheckCircle, HiArrowRight, HiPlay, HiBookOpen, HiAcademicCap } from 'react-icons/hi';
@@ -11,8 +11,12 @@ export default function CheckoutSuccess() {
   const dispatch = useDispatch();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
     clearApiCache('courses');
     clearApiCache('enrollment');
     clearApiCache('tests');

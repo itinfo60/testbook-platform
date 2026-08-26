@@ -6,8 +6,8 @@ export default function ProtectedRoute({ children, roles }) {
   const { isAuthenticated, user, loading, initialized } = useAuth();
   const location = useLocation();
 
-  // Wait until auth state is fully resolved (token validated via getProfile or loginWithSupabase)
-  if (loading || !initialized) return <LoadingSpinner fullScreen />;
+  // Wait until auth state is fully resolved on initial load
+  if (!initialized) return <LoadingSpinner fullScreen />;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;

@@ -334,7 +334,9 @@ const authSlice = createSlice({
         s.error = a.payload;
       })
       .addCase(getProfile.pending, (s) => {
-        s.loading = true;
+        if (!s.initialized) {
+          s.loading = true;
+        }
       })
       .addCase(getProfile.fulfilled, (s, a) => {
         s.loading = false;
