@@ -1,13 +1,22 @@
 import { Queue } from 'bullmq';
+import IORedis from 'ioredis';
 import config from '../config/index.js';
 import logger from '../utils/logger.js';
 
-const connection = {
-  host: config.redis.host,
-  port: config.redis.port,
-  ...(config.redis.password && { password: config.redis.password }),
-  maxRetriesPerRequest: null,
-};
+export const queueConnection = config.redis.url
+  ? new IORedis(config.redis.url, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      tls: config.redis.url.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
+    })
+  : {
+      host: config.redis.host,
+      port: config.redis.port,
+      ...(config.redis.password && { password: config.redis.password }),
+      maxRetriesPerRequest: null,
+    };
+
+const connection = queueConnection;
 
 const defaultJobOptions = {
   attempts: 2, // Down from 3 — auth errors shouldn't burn 3 rounds

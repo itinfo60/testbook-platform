@@ -223,23 +223,21 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       const course = await prisma.course.findUnique({ where: { id: targetCourseId } });
       const user = await prisma.user.findUnique({ where: { id: userId } });
 
-      try {
-        await transactionalEmailQueue.add('send', {
+      // Non-blocking asynchronous notifications
+      Promise.allSettled([
+        transactionalEmailQueue.add('send', {
           type: 'enrollment_confirmation',
           data: { user, course },
-        });
-
-        await notificationQueue.add('send', {
+        }),
+        notificationQueue.add('send', {
           type: 'enrollment',
           userId,
           tenantId,
           title: 'Payment Successful',
           message: `You are now enrolled in "${course?.title}"`,
           data: { courseId: course?.id, paymentId: payment.id },
-        });
-      } catch (queueErr) {
-        logger.warn('[Notification] Queue push skipped in dev:', queueErr);
-      }
+        }),
+      ]).catch(() => {});
 
       return { enrollment, payment };
     }
@@ -282,18 +280,16 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
 
         await redis.delPattern('admin:dashboard:*').catch(() => {});
 
-        try {
-          await notificationQueue.add('send', {
+        notificationQueue
+          .add('send', {
             type: 'test_series_enrollment',
             userId,
             tenantId,
             title: 'Payment Successful',
             message: `You are now enrolled in "${series.title}"`,
             data: { testSeriesId: series.id, paymentId: payment.id },
-          });
-        } catch (queueErr) {
-          logger.warn('[Notification] Queue push skipped in dev:', queueErr);
-        }
+          })
+          .catch(() => {});
 
         return { testSeriesEnrollment, payment };
       }
