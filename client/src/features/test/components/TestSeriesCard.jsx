@@ -39,7 +39,10 @@ export default function TestSeriesCard({ series }) {
   const finalPrice = Number(price) || 0;
 
   return (
-    <div className="bg-white dark:bg-dark-900 rounded-[24px] p-5 sm:p-6 border border-dark-200/60 dark:border-dark-800 shadow-sm hover:shadow-premium hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden h-full">
+    <Link
+      to={`/test-series/${slug || id || _id}`}
+      className="bg-white dark:bg-dark-900 rounded-[24px] p-5 sm:p-6 border border-dark-200/60 dark:border-dark-800 shadow-sm hover:shadow-premium hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden h-full cursor-pointer"
+    >
       {isFeatured && (
         <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-[20px] uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
           <HiSparkles className="h-3 w-3" /> Featured
@@ -111,14 +114,11 @@ export default function TestSeriesCard({ series }) {
           )}
         </div>
 
-        <Link
-          to={`/test-series/${slug || id || _id}`}
-          className="bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 hover:bg-primary-600 hover:text-white dark:hover:bg-primary-500 dark:hover:text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all inline-flex items-center gap-1.5"
-        >
+        <span className="bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 group-hover:bg-primary-600 group-hover:text-white dark:group-hover:bg-primary-500 dark:group-hover:text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all inline-flex items-center gap-1.5">
           <span>View Series</span>
-          <HiArrowRight className="h-4 w-4" />
-        </Link>
+          <HiArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+        </span>
       </div>
-    </div>
+    </Link>
   );
 }

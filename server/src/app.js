@@ -165,35 +165,34 @@ export const isAllowedOrigin = (origin) => {
   return false;
 };
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (isAllowedOrigin(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'X-Tenant-Id',
-      'X-Tenant-Subdomain',
-      'X-App-Source',
-      'x-request-id',
-      'sentry-trace',
-      'baggage',
-      'Accept',
-    ],
-    exposedHeaders: ['X-Request-Id', 'X-Total-Count'],
-    maxAge: 86400,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-Tenant-Id',
+    'X-Tenant-Subdomain',
+    'X-App-Source',
+    'x-request-id',
+    'sentry-trace',
+    'baggage',
+    'Accept',
+  ],
+  exposedHeaders: ['X-Request-Id', 'X-Total-Count'],
+  maxAge: 86400,
+};
 
-app.options('*', cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
@@ -219,6 +218,29 @@ if (config.env !== 'test') {
 if (config.env !== 'test') {
   app.use('/api/', globalLimiter);
 }
+
+// ===== HTTP CACHE-CONTROL HEADERS (EDGE CDN & BROWSER ACCELERATION) =====
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    const p = req.path;
+    // Cache read-only public catalog routes for 60s with 5min stale-while-revalidate
+    if (
+      p.startsWith('/api/v1/courses') ||
+      p.startsWith('/api/v1/exam-categories') ||
+      p.startsWith('/api/v1/categories') ||
+      p.startsWith('/api/v1/test-series') ||
+      p.startsWith('/api/v1/tests') ||
+      p.startsWith('/api/v1/blogs') ||
+      p.startsWith('/api/v1/library') ||
+      p.startsWith('/api/v1/institutes/public') ||
+      p.startsWith('/api/v1/branding') ||
+      p.startsWith('/api/v1/faculty')
+    ) {
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    }
+  }
+  next();
+});
 
 // ===== STATIC FILES =====
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

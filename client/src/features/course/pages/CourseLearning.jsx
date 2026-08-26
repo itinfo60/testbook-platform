@@ -256,18 +256,21 @@ export default function CourseLearning() {
   const handleAddDiscussion = async (e) => {
     e.preventDefault();
     if (!discussionText.trim()) return;
-    // Don't derive a separate title from content — it just causes duplicate
-    // text in the UI for short messages. Let the server use content as the title.
-    await dispatch(
-      createDiscussion({
-        course: courseId,
-        title: '', // server falls back to content when title is empty
-        content: discussionText,
-        lessonId: currentLesson?._id,
-      })
-    );
-    setDiscussionText('');
-    toast.success('Discussion posted');
+    try {
+      await dispatch(
+        createDiscussion({
+          course: courseId,
+          title: '',
+          content: discussionText.trim(),
+          lessonId: currentLesson?.id || currentLesson?._id,
+        })
+      ).unwrap();
+      setDiscussionText('');
+      toast.success('Discussion posted');
+      dispatch(fetchDiscussions({ courseId }));
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : err?.message || 'Failed to post discussion');
+    }
   };
 
   const handleSeekTo = (timestamp) => {
@@ -309,6 +312,35 @@ export default function CourseLearning() {
   const isCurrentCompleted = Boolean(
     currentLessonKey && completedLessonIds.includes(currentLessonKey)
   );
+  const isAllCompleted = totalLessons > 0 && totalCompleted >= totalLessons;
+
+  const [completingCourse, setCompletingCourse] = useState(false);
+
+  const handleMarkCourseComplete = async () => {
+    if (completingCourse) return;
+    const courseLookupId = course?.id || course?._id?.toString() || id;
+    setCompletingCourse(true);
+    try {
+      await dispatch(
+        completeLesson({
+          courseId: courseLookupId,
+          completedCourse: true,
+          markAllComplete: true,
+        })
+      ).unwrap();
+
+      allLessons.forEach((l) => {
+        const lid = String(l.id || l._id || '').trim();
+        if (lid) dispatch(markLessonDone({ lessonId: lid, completed: true }));
+      });
+
+      toast.success('Congratulations! Course marked as fully completed! 🎉');
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : err?.message || 'Failed to complete course');
+    } finally {
+      setCompletingCourse(false);
+    }
+  };
 
   // Navigate to next lesson
   const goToNext = () => {
@@ -336,6 +368,34 @@ export default function CourseLearning() {
       ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
     );
     return idx >= 0 && idx < flatLessons.length - 1;
+  };
+
+  // Navigate to previous lesson
+  const goToPrev = () => {
+    if (!currentLesson) return;
+    const currId = String(currentLesson.id || currentLesson._id || '').trim();
+    const flatLessons = sections.flatMap((s) =>
+      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
+    );
+    const idx = flatLessons.findIndex(
+      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
+    );
+    if (idx > 0) {
+      const prev = flatLessons[idx - 1];
+      handleLessonSelect(prev.lesson, prev.section);
+    }
+  };
+
+  const hasPrev = () => {
+    if (!currentLesson) return false;
+    const currId = String(currentLesson.id || currentLesson._id || '').trim();
+    const flatLessons = sections.flatMap((s) =>
+      s.lessons.filter((l) => l.type !== 'quiz').map((l) => ({ lesson: l, section: s }))
+    );
+    const idx = flatLessons.findIndex(
+      ({ lesson }) => String(lesson.id || lesson._id || '').trim() === currId
+    );
+    return idx > 0;
   };
 
   // Mirrors the lock rule in LessonContent: free lessons are the open demos.
@@ -397,21 +457,22 @@ export default function CourseLearning() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-950 flex flex-col">
       {/* Top bar */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-dark-900 border-b border-slate-200 dark:border-dark-800 px-3 sm:px-6 py-3.5 flex items-center justify-between gap-4 shadow-sm">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
+      <div className="sticky top-0 z-30 bg-white dark:bg-dark-900 border-b border-slate-200 dark:border-dark-800 px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 shadow-xs">
+        <div className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0">
           <Link
             to="/my-courses"
-            className="flex items-center justify-center h-10 w-10 rounded-full bg-slate-100 dark:bg-dark-800 hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/30 dark:hover:text-amber-500 text-slate-500 transition-colors flex-shrink-0"
+            className="flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-slate-100 dark:bg-dark-800 hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/30 dark:hover:text-amber-500 text-slate-500 transition-colors shrink-0"
+            title="Back to My Courses"
           >
-            <HiArrowLeft className="h-5 w-5" />
+            <HiArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Link>
-          <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-dark-800 mx-2"></div>
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <p className="text-sm font-bold text-dark-900 dark:text-white truncate">
+          <div className="hidden sm:block w-px h-6 sm:h-8 bg-slate-200 dark:bg-dark-800"></div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm font-bold text-dark-900 dark:text-white truncate leading-snug">
               {course.title}
             </p>
             {currentLesson && (
-              <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 truncate uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-amber-600 dark:text-amber-500 truncate uppercase tracking-wider mt-0.5">
                 {currentSection?.title} <span className="text-slate-400 mx-1">•</span>{' '}
                 {currentLesson.title}
               </p>
@@ -419,71 +480,77 @@ export default function CourseLearning() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <div className="hidden sm:flex items-center gap-3 pr-4 border-r border-slate-200 dark:border-dark-800">
-            {/* Progress tracking needs an active enrollment — offer to enroll instead */}
-            {!isEnrolled && (
-              <Link
-                to={`/courses/${course?.slug || id}`}
-                className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-4 rounded-lg shadow-sm transition-all text-xs"
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Header Action Buttons */}
+          {!isEnrolled ? (
+            <Link
+              to={`/courses/${course?.slug || id}`}
+              className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-3 sm:px-4 rounded-lg shadow-xs transition-all text-[11px] sm:text-xs shrink-0"
+            >
+              <span className="hidden sm:inline">Enroll to Unlock</span>
+              <span className="sm:hidden">Enroll</span>
+            </Link>
+          ) : currentLesson ? (
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={() => handleLessonComplete(!isCurrentCompleted)}
+                disabled={completing}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
+                  isCurrentCompleted
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                }`}
+                title={isCurrentCompleted ? 'Click to unmark' : 'Mark this lesson complete'}
               >
-                Enroll to Unlock All Lessons
-              </Link>
-            )}
-            {currentLesson && isEnrolled && (
-              <div className="flex items-center gap-2">
+                <HiCheck className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {completing ? 'Saving...' : isCurrentCompleted ? 'Completed' : 'Mark as Complete'}
+                </span>
+                <span className="sm:hidden">
+                  {completing ? '...' : isCurrentCompleted ? 'Done' : 'Complete'}
+                </span>
+              </button>
+
+              {hasNext() ? (
                 <button
-                  onClick={() => handleLessonComplete(!isCurrentCompleted)}
-                  disabled={completing}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    isCurrentCompleted
-                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                  }`}
+                  onClick={goToNext}
+                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-2.5 sm:px-3.5 rounded-lg shadow-xs transition-all flex items-center gap-1 text-xs cursor-pointer active:scale-95 shrink-0"
+                  title="Next Lesson"
                 >
-                  {isCurrentCompleted ? (
-                    <>
-                      <HiCheck className="h-3.5 w-3.5" />
-                      {completing ? 'Saving...' : 'Completed'}
-                    </>
-                  ) : (
-                    <>{completing ? 'Saving...' : 'Mark as Complete'}</>
-                  )}
+                  <span className="hidden sm:inline">Next</span>
+                  <HiArrowRight className="h-3.5 w-3.5" />
                 </button>
+              ) : (
+                <button
+                  onClick={handleMarkCourseComplete}
+                  disabled={completingCourse}
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-1.5 px-2.5 sm:px-3 rounded-lg shadow-xs text-xs cursor-pointer active:scale-95 shrink-0"
+                  title="Mark Entire Course as Completed"
+                >
+                  <span>🎉 {isAllCompleted ? 'Finished' : 'Finish'}</span>
+                </button>
+              )}
+            </div>
+          ) : null}
 
-                {hasNext() ? (
-                  <button
-                    onClick={() => {
-                      goToNext();
-                    }}
-                    className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95"
-                  >
-                    Next Lesson
-                  </button>
-                ) : isCurrentCompleted ? (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800">
-                    Course Completed!
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          <div className="hidden sm:flex flex-col items-end">
+          {/* Desktop Progress Counter */}
+          <div className="hidden md:flex flex-col items-end pl-2 border-l border-slate-200 dark:border-dark-800">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Course Progress
+              Progress
             </span>
-            <span className="text-sm font-extrabold text-green-600">
-              {totalCompleted} / {totalLessons}
+            <span className="text-xs font-extrabold text-emerald-600">
+              {totalCompleted}/{totalLessons} (
+              {Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)}%)
             </span>
           </div>
 
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center justify-center h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600"
+            className="lg:hidden flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-100 transition-colors shrink-0"
+            title="Course Contents"
           >
-            <HiMenu className="h-5 w-5" />
+            <HiMenu className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         </div>
       </div>
@@ -536,6 +603,92 @@ export default function CourseLearning() {
             isEnrolled={isEnrolled}
             courseSlug={course?.slug || id}
           />
+
+          {/* Responsive Control Bar for Mobile and Desktop */}
+          {isEnrolled && currentLesson && (
+            <div className="mt-4 bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 p-3.5 sm:p-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                {/* Left: Navigation and Lesson completion toggle */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={goToPrev}
+                    disabled={!hasPrev()}
+                    className="btn-secondary !text-xs !py-2 !px-3 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                  >
+                    <HiArrowLeft className="w-3.5 h-3.5" /> Previous
+                  </button>
+
+                  <button
+                    onClick={() => handleLessonComplete(!isCurrentCompleted)}
+                    disabled={completing}
+                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
+                      isCurrentCompleted
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                    }`}
+                  >
+                    <HiCheck
+                      className={`w-4 h-4 ${isCurrentCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-white'}`}
+                    />
+                    <span>
+                      {completing
+                        ? 'Updating...'
+                        : isCurrentCompleted
+                          ? 'Lesson Completed'
+                          : 'Mark Lesson Complete'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Right: Next button & Mark Course Complete */}
+                <div className="flex items-center justify-between sm:justify-end gap-2.5">
+                  <div className="text-xs text-slate-500 font-medium sm:hidden">
+                    <span className="font-bold text-emerald-600">{totalCompleted}</span> /{' '}
+                    {totalLessons} completed
+                  </div>
+
+                  {hasNext() ? (
+                    <button
+                      onClick={goToNext}
+                      className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-2 px-4 rounded-xl shadow-xs transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 ml-auto sm:ml-0 shrink-0"
+                    >
+                      <span>Next Lesson</span>
+                      <HiArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleMarkCourseComplete}
+                      disabled={completingCourse}
+                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold py-2 px-4 rounded-xl shadow-sm transition-all flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 ml-auto sm:ml-0 shrink-0"
+                    >
+                      <span>
+                        🎉 {isAllCompleted ? 'Course 100% Completed!' : 'Mark Course Complete'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress Bar under action bar */}
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-dark-800 flex items-center gap-3">
+                <div className="flex-1 bg-slate-100 dark:bg-dark-800 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0))}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-slate-500 shrink-0">
+                  {Math.min(
+                    100,
+                    Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)
+                  )}
+                  % Completed
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Tabs below — only shown when the viewer has access to content */}
           {tabs.length > 0 && (
@@ -703,7 +856,7 @@ export default function CourseLearning() {
                                 {d.replies.map((r, ri) => (
                                   <div key={ri} className="text-sm">
                                     <span className="font-medium text-dark-700 dark:text-dark-300">
-                                      {r.user?.name || 'User'}:{' '}
+                                      {r.userName || r.user?.name || 'User'}:{' '}
                                     </span>
                                     <span className="text-dark-500 break-words">{r.content}</span>
                                   </div>

@@ -6,7 +6,7 @@ export function ThemeProvider({ children }) {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false; // Default to light mode
   });
 
   useEffect(() => {
@@ -20,11 +20,9 @@ export function ThemeProvider({ children }) {
     }
   }, [darkMode]);
 
-  const toggleDarkMode = () => setDarkMode(prev => !prev);
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>{children}</ThemeContext.Provider>
   );
 }

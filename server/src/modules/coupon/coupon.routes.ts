@@ -17,6 +17,7 @@ router.post('/validate', authenticate, validate(validateCouponSchema), controlle
 router.use(authenticate, authorize('admin', 'super_admin'));
 
 router.get('/', controller.getCoupons);
+router.get('/:id', controller.getCouponById);
 router.post('/', validate(createCouponSchema), controller.createCoupon);
 router.put('/:id', validate(updateCouponSchema), controller.updateCoupon);
 router.delete('/:id', controller.deleteCoupon);

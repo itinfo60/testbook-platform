@@ -12,8 +12,13 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-redux': ['@reduxjs/toolkit', 'react-redux'],
+          'vendor-query': ['@tanstack/react-query'],
           'vendor-icons': ['react-icons'],
           'vendor-utils': ['axios', 'date-fns'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-livekit': ['livekit-client', '@livekit/components-react'],
+          'vendor-charts': ['recharts'],
         },
       },
     },
@@ -40,16 +45,36 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/*.map'],
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\/api\/v1\/courses/,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'api-courses', expiration: { maxAgeSeconds: 300 } },
+            urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxAgeSeconds: 31536000, maxEntries: 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
           },
           {
-            urlPattern: /^https:\/\/res\.cloudinary\.com/,
+            urlPattern: /^https:\/\/(?:res\.cloudinary\.com|images\.unsplash\.com)\/.*/i,
             handler: 'CacheFirst',
-            options: { cacheName: 'cloudinary-assets', expiration: { maxAgeSeconds: 86400 } },
+            options: {
+              cacheName: 'media-assets-cache',
+              expiration: { maxAgeSeconds: 86400 * 30, maxEntries: 150 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern:
+              /\/api\/v1\/(courses|categories|exam-categories|test-series|tests|blogs|library|quizzes|institutes).*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'api-catalog-cache',
+              expiration: { maxAgeSeconds: 3600, maxEntries: 100 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
           },
         ],
       },

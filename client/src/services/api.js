@@ -29,6 +29,118 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// ===== SWR CACHE & REQUEST DEDUPLICATION (FOR LIGHTNING-FAST BROWSING) =====
+const defaultAdapter = axios.defaults.adapter;
+const apiMemoryCache = new Map();
+const inFlightRequests = new Map();
+
+const FRESH_TTL = 30 * 1000; // 30 seconds fresh
+const STALE_TTL = 5 * 60 * 1000; // 5 minutes stale-while-revalidate
+
+const SWR_PATTERNS = [
+  /\/courses/i,
+  /\/exam-categories/i,
+  /\/categories/i,
+  /\/test-series/i,
+  /\/tests/i,
+  /\/blogs/i,
+  /\/library/i,
+  /\/institutes/i,
+  /\/branding/i,
+  /\/quizzes\/daily/i,
+  /\/faculty/i,
+  /\/settings/i,
+];
+
+function isCacheableGetRequest(config) {
+  if (config.method && config.method.toLowerCase() !== 'get') return false;
+  if (config.cache === false || config.headers?.['Cache-Control'] === 'no-cache') return false;
+  const url = config.url || '';
+  return SWR_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+function getCacheKey(config) {
+  const url = config.url || '';
+  const params = config.params ? JSON.stringify(config.params) : '';
+  const tenant = config.headers?.['X-Tenant-Subdomain'] || config.headers?.['X-Tenant-Id'] || '';
+  return `${config.baseURL || ''}${url}?${params}&tenant=${tenant}`;
+}
+
+export function clearApiCache(pattern) {
+  if (!pattern) {
+    apiMemoryCache.clear();
+    return;
+  }
+  for (const key of apiMemoryCache.keys()) {
+    if (key.includes(pattern)) {
+      apiMemoryCache.delete(key);
+    }
+  }
+}
+
+if (typeof defaultAdapter === 'function') {
+  api.defaults.adapter = async (config) => {
+    if (isCacheableGetRequest(config)) {
+      const key = getCacheKey(config);
+      const cached = apiMemoryCache.get(key);
+      const now = Date.now();
+
+      if (inFlightRequests.has(key)) {
+        return inFlightRequests.get(key);
+      }
+
+      if (cached) {
+        const age = now - cached.timestamp;
+        if (age < FRESH_TTL) {
+          return Promise.resolve({ ...cached.response, config });
+        }
+
+        if (age < STALE_TTL) {
+          defaultAdapter(config)
+            .then((res) => {
+              apiMemoryCache.set(key, { timestamp: Date.now(), response: res });
+              return res;
+            })
+            .catch(() => {});
+
+          return Promise.resolve({ ...cached.response, config });
+        }
+      }
+
+      const fetchPromise = defaultAdapter(config)
+        .then((res) => {
+          apiMemoryCache.set(key, { timestamp: Date.now(), response: res });
+          inFlightRequests.delete(key);
+          return res;
+        })
+        .catch((err) => {
+          inFlightRequests.delete(key);
+          if (cached) {
+            return { ...cached.response, config };
+          }
+          return Promise.reject(err);
+        });
+
+      inFlightRequests.set(key, fetchPromise);
+      return fetchPromise;
+    }
+
+    if (config.method && config.method.toLowerCase() !== 'get') {
+      const url = config.url || '';
+      if (url.includes('/courses')) clearApiCache('courses');
+      if (url.includes('/tests')) clearApiCache('tests');
+      if (url.includes('/blogs')) clearApiCache('blogs');
+      if (url.includes('/library')) clearApiCache('library');
+      if (url.includes('/enrollments')) {
+        clearApiCache('courses');
+        clearApiCache('enrollment');
+      }
+    }
+
+    return defaultAdapter(config);
+  };
+}
+
 let _store = null;
 
 export function injectStore(storeRef) {

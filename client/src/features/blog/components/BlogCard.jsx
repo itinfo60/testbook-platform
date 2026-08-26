@@ -6,12 +6,17 @@ export default function BlogCard({ blog }) {
   const { title, slug, excerpt, coverImage, author, publishedAt, tags, views } = blog;
 
   return (
-    <div className="group bg-white dark:bg-dark-900 rounded-[24px] overflow-hidden border border-dark-200/60 dark:border-dark-800 transition-all duration-300 shadow-sm hover:shadow-premium hover:-translate-y-1.5 flex flex-col h-full">
+    <Link
+      to={`/blog/${slug}`}
+      className="group bg-white dark:bg-dark-900 rounded-[24px] overflow-hidden border border-dark-200/60 dark:border-dark-800 transition-all duration-300 shadow-sm hover:shadow-premium hover:-translate-y-1.5 flex flex-col h-full cursor-pointer"
+    >
       {/* Image Container */}
-      <Link to={`/blog/${slug}`} className="block relative aspect-[16/9] overflow-hidden shrink-0">
+      <div className="block relative aspect-[16/9] overflow-hidden shrink-0">
         <img
           src={coverImage?.url || '/images/placeholders/blog-placeholder.jpg'}
           alt={title}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dark-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -27,7 +32,7 @@ export default function BlogCard({ blog }) {
             </span>
           ))}
         </div>
-      </Link>
+      </div>
 
       {/* Content */}
       <div className="p-6 flex flex-col flex-1">
@@ -50,11 +55,9 @@ export default function BlogCard({ blog }) {
             </div>
           </div>
 
-          <Link to={`/blog/${slug}`}>
-            <h3 className="text-lg lg:text-xl font-black text-dark-900 dark:text-white mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 leading-snug">
-              {title}
-            </h3>
-          </Link>
+          <h3 className="text-lg lg:text-xl font-black text-dark-900 dark:text-white mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 leading-snug">
+            {title}
+          </h3>
 
           <p className="text-dark-500 dark:text-dark-400 text-[13px] font-medium line-clamp-3 mb-6 leading-relaxed">
             {excerpt || 'Read the latest insights and updates from our community experts...'}
@@ -72,15 +75,12 @@ export default function BlogCard({ blog }) {
             </span>
           </div>
 
-          <Link
-            to={`/blog/${slug}`}
-            className="inline-flex items-center gap-1.5 text-xs font-black text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 group/btn"
-          >
+          <span className="inline-flex items-center gap-1.5 text-xs font-black text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300">
             Read Article
-            <HiArrowNarrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-          </Link>
+            <HiArrowNarrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

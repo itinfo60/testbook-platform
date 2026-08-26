@@ -503,7 +503,8 @@ export default function FreeResourcesPage() {
                   return (
                     <div
                       key={resource.id || resource._id}
-                      className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-400 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between group"
+                      onClick={() => setSelectedResource(resource)}
+                      className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-400 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between group cursor-pointer"
                     >
                       <div>
                         {/* Header Badge */}
@@ -534,7 +535,11 @@ export default function FreeResourcesPage() {
                         {catName && (
                           <div className="mb-4">
                             <button
-                              onClick={() => catSlug && handleCategoryChange(catSlug)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (catSlug) handleCategoryChange(catSlug);
+                              }}
                               className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-900/40 hover:bg-amber-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
                             >
                               <HiAcademicCap className="h-3.5 w-3.5" />
@@ -546,24 +551,29 @@ export default function FreeResourcesPage() {
 
                       {/* Footer Actions Bar */}
                       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => setSelectedResource(resource)}
-                          className="text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1 cursor-pointer py-1.5"
-                        >
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1 py-1.5">
                           <HiEye className="h-4 w-4" /> View Details
-                        </button>
+                        </span>
 
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => handleShare(resource)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShare(resource);
+                            }}
                             title="Share Link"
                             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                           >
                             <HiShare className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDownload(resource)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(resource);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
                           >
                             <HiDownload className="h-4 w-4" /> Download PDF
                           </button>

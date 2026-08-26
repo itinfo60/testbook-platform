@@ -86,9 +86,10 @@ export default function CuratedExams() {
               const testCount = exam.testCount || exam.testsCount || 0;
 
               return (
-                <div
+                <Link
                   key={exam._id}
-                  className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-navy-100 transition-all flex flex-col justify-between group"
+                  to={`/exams/${exam.slug}`}
+                  className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-navy-100 transition-all flex flex-col justify-between group cursor-pointer"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-4">
@@ -138,15 +139,12 @@ export default function CuratedExams() {
                           : 'Mock Tests'}
                       </span>
                     </div>
-                    <Link
-                      to={`/exams/${exam.slug}`}
-                      className="w-full bg-navy-950 hover:bg-navy-900 group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
-                    >
+                    <span className="w-full bg-navy-950 hover:bg-navy-900 group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
                       <span>Explore Exam</span>
                       <HiArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
+                    </span>
                   </div>
-                </div>
+                </Link>
               );
             })
           )}

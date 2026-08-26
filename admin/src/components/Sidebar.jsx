@@ -21,6 +21,7 @@ import {
   Megaphone,
   Palette,
   Activity,
+  LifeBuoy,
   X,
   ChevronLeft,
 } from 'lucide-react';
@@ -85,6 +86,7 @@ const navSections = [
   {
     title: '10. Policies & Support CMS',
     items: [
+      { label: 'Support & Queries', path: '/support-tickets', icon: LifeBuoy },
       { label: 'Branding', path: '/branding', icon: Palette },
       { label: 'Legal & Policies', path: '/legal-settings', icon: FileText },
       { label: 'Help & FAQs', path: '/help-settings', icon: Star },

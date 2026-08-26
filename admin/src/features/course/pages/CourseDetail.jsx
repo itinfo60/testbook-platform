@@ -12,6 +12,7 @@ import {
   ToggleLeft,
   ToggleRight,
   CheckCircle,
+  CheckCircle2,
   Video,
   FileText,
   Clock,
@@ -20,8 +21,11 @@ import {
   Calendar,
   ShieldCheck,
   Plus,
+  MessageSquare,
+  Send,
+  CornerDownRight,
 } from 'lucide-react';
-import { coursesAPI, enrollmentsAPI, reviewsAPI } from '@/services/api';
+import { coursesAPI, enrollmentsAPI, reviewsAPI, discussionsAPI } from '@/services/api';
 import LoadingSpinner from '@/components/loadingSpinner';
 import StatsCard from '@/components/StatsCard';
 import DataTable from '@/components/DataTable';
@@ -37,6 +41,29 @@ export default function CourseDetail() {
   const [activeTab, setActiveTab] = useState('curriculum');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [revokeTarget, setRevokeTarget] = useState(null);
+  const [discussions, setDiscussions] = useState([]);
+  const [discussionsLoading, setDiscussionsLoading] = useState(false);
+  const [replyText, setReplyText] = useState({});
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  const loadDiscussions = async () => {
+    if (!id) return;
+    setDiscussionsLoading(true);
+    try {
+      const res = await discussionsAPI.getCourseDiscussions(id);
+      const docs =
+        res.data?.data?.discussions ||
+        res.data?.data?.docs ||
+        res.data?.discussions ||
+        res.data?.docs ||
+        [];
+      setDiscussions(Array.isArray(docs) ? docs : []);
+    } catch (err) {
+      console.error('Failed to load discussions', err);
+    } finally {
+      setDiscussionsLoading(false);
+    }
+  };
 
   const loadCourse = async () => {
     setLoading(true);
@@ -44,6 +71,7 @@ export default function CourseDetail() {
       const res = await coursesAPI.getById(id);
       const payload = res.data?.data || res.data;
       setData(payload);
+      loadDiscussions();
     } catch (err) {
       toast.error('Failed to load course details');
     } finally {
@@ -54,6 +82,50 @@ export default function CourseDetail() {
   useEffect(() => {
     if (id) loadCourse();
   }, [id]);
+
+  const handleReplyDiscussion = async (discussionId) => {
+    const text = replyText[discussionId];
+    if (!text?.trim()) return;
+    try {
+      await discussionsAPI.reply(discussionId, { content: text.trim() });
+      toast.success('Reply posted');
+      setReplyText((prev) => ({ ...prev, [discussionId]: '' }));
+      setReplyingTo(null);
+      loadDiscussions();
+    } catch (err) {
+      toast.error('Failed to post reply');
+    }
+  };
+
+  const handleToggleResolve = async (discussionId) => {
+    try {
+      await discussionsAPI.resolve(discussionId);
+      toast.success('Discussion status updated');
+      loadDiscussions();
+    } catch {
+      toast.error('Failed to update discussion status');
+    }
+  };
+
+  const handleDeleteDiscussion = async (discussionId) => {
+    try {
+      await discussionsAPI.delete(discussionId);
+      toast.success('Discussion deleted');
+      loadDiscussions();
+    } catch {
+      toast.error('Failed to delete discussion');
+    }
+  };
+
+  const handleDeleteReply = async (discussionId, replyId) => {
+    try {
+      await discussionsAPI.deleteReply(discussionId, replyId);
+      toast.success('Reply deleted');
+      loadDiscussions();
+    } catch {
+      toast.error('Failed to delete reply');
+    }
+  };
 
   const handleTogglePublish = async () => {
     try {
@@ -326,11 +398,12 @@ export default function CourseDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 gap-6">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 gap-4 sm:gap-6 overflow-x-auto">
         {[
           { key: 'curriculum', label: 'Curriculum & Lessons', count: totalLessons },
           { key: 'students', label: 'Enrolled Students', count: enrolledStudents.length },
           { key: 'reviews', label: 'Student Reviews', count: reviews.length },
+          { key: 'discussions', label: 'Discussions & Doubts', count: discussions.length },
           { key: 'live', label: 'Live Classes', count: liveClasses.length },
         ].map((tab) => (
           <button
@@ -610,6 +683,185 @@ export default function CourseDetail() {
               );
             }}
           />
+        </div>
+      )}
+
+      {/* Tab 4: Discussions & Doubts */}
+      {activeTab === 'discussions' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Course Discussions & Student Doubts
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Answer student questions and moderate public discussion threads
+              </p>
+            </div>
+            <span className="text-sm font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/40 px-3 py-1 rounded-full border border-primary-200 dark:border-primary-800">
+              {discussions.length} Total Threads
+            </span>
+          </div>
+
+          {discussionsLoading ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner size="md" />
+            </div>
+          ) : discussions.length === 0 ? (
+            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+              <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <h4 className="text-base font-semibold text-gray-800 dark:text-gray-200">
+                No Discussions Yet
+              </h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                Students haven't asked any doubts or posted questions in this course yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {discussions.map((disc) => {
+                const discId = disc.id || disc._id;
+                const author = disc.user || {};
+                const replies = Array.isArray(disc.replies) ? disc.replies : [];
+
+                return (
+                  <div
+                    key={discId}
+                    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-xs transition-all hover:border-gray-300 dark:hover:border-gray-600 space-y-4"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center font-bold text-sm shrink-0">
+                          {author.avatar ? (
+                            <img
+                              src={author.avatar}
+                              alt={author.name}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            (author.name || 'Student').charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-gray-900 dark:text-white">
+                              {author.name || 'Student'}
+                            </span>
+                            <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                              {author.role || 'Student'}
+                            </span>
+                            {disc.isResolved && (
+                              <span className="badge badge-success flex items-center gap-1 text-[10px] px-2 py-0.5">
+                                <CheckCircle2 className="w-3 h-3" /> Answered
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500">{formatDate(disc.createdAt)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleResolve(discId)}
+                          className={`btn text-xs font-semibold px-2.5 py-1 rounded-lg ${
+                            disc.isResolved
+                              ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 border border-amber-200'
+                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border border-emerald-200'
+                          }`}
+                        >
+                          {disc.isResolved ? 'Mark Unresolved' : 'Mark Answered'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDiscussion(discId)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                          title="Delete Discussion"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div>
+                      {disc.title && (
+                        <h4 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">
+                          {disc.title}
+                        </h4>
+                      )}
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap leading-relaxed">
+                        {disc.content}
+                      </p>
+                    </div>
+
+                    {/* Replies List */}
+                    {replies.length > 0 && (
+                      <div className="pl-4 sm:pl-6 border-l-2 border-primary-200 dark:border-primary-800/60 space-y-3 pt-2">
+                        {replies.map((rep) => (
+                          <div
+                            key={rep.id}
+                            className="bg-gray-50 dark:bg-gray-900/60 rounded-xl p-3 text-xs sm:text-sm space-y-1 relative group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-gray-900 dark:text-white">
+                                  {rep.userName || 'Instructor / Staff'}
+                                </span>
+                                {rep.userRole && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300">
+                                    {rep.userRole}
+                                  </span>
+                                )}
+                                <span className="text-gray-400 text-[10px]">
+                                  {formatDate(rep.createdAt)}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteReply(discId, rep.id)}
+                                className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                title="Delete Reply"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                              {rep.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Inline Reply Form */}
+                    <div className="pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={replyText[discId] || ''}
+                        onChange={(e) =>
+                          setReplyText((prev) => ({ ...prev, [discId]: e.target.value }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleReplyDiscussion(discId);
+                          }
+                        }}
+                        placeholder="Write an official answer or reply to this student doubt..."
+                        className="input-field !text-xs sm:!text-sm !py-2 flex-1"
+                      />
+                      <button
+                        onClick={() => handleReplyDiscussion(discId)}
+                        disabled={!replyText[discId]?.trim()}
+                        className="btn-primary !py-2 !px-3.5 text-xs font-semibold flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                      >
+                        <Send className="w-3.5 h-3.5" /> Reply
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

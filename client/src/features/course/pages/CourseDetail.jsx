@@ -143,26 +143,19 @@ export default function CourseDetail() {
   }, [myExistingReview, reviewSubmitted]);
   useEffect(() => {
     window.scrollTo(0, 0);
-    enrollmentCheckedRef.current = ''; // reset on new course page
+    enrollmentCheckedRef.current = '';
     setEnrollmentChecked(false);
-    // Only show checking spinner if user is logged in
     setCheckingEnrollment(!!isAuthenticated);
     dispatch(fetchCourseById(id));
-    // Use the URL param for now; once the course loads we re-fetch with the real _id below
-    dispatch(fetchCourseReviews({ courseId: id }));
-  }, [dispatch, id]);
+  }, [dispatch, id, isAuthenticated]);
 
-  // Once the course loads we know the real ObjectId — re-fetch reviews with
-  // it so the slug-based initial fetch (which may fail) is replaced with a
-  // reliable ID-based one.
+  // Fetch reviews once the course data is loaded
   useEffect(() => {
-    if (!(course?.id || course?.id || course?._id)) return;
-    const courseIdString = (course.id || course.id || course._id).toString();
-    const courseMatchesUrl = courseIdString === id || course.slug === id;
-    if (courseMatchesUrl) {
+    const courseIdString = (course?.id || course?._id)?.toString();
+    if (courseIdString && (courseIdString === id || course?.slug === id)) {
       dispatch(fetchCourseReviews({ courseId: courseIdString }));
     }
-  }, [dispatch, course, id]);
+  }, [dispatch, course?.id, course?._id, course?.slug, id]);
 
   // Once course loads, check enrollment using the real _id
   // Re-runs when auth state changes (user logs in/out on same page)

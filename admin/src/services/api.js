@@ -234,6 +234,30 @@ export const reviewsAPI = {
 };
 
 // ══════════════════════════════════════════════
+// DISCUSSIONS & DOUBTS
+// ══════════════════════════════════════════════
+export const discussionsAPI = {
+  getCourseDiscussions: (courseId, params) =>
+    api.get(`/discussions/course/${courseId}${qs(params)}`),
+  create: (courseId, data) => api.post(`/discussions/course/${courseId}`, data),
+  reply: (id, data) => api.post(`/discussions/${id}/reply`, data),
+  resolve: (id) => api.patch(`/discussions/${id}/resolve`),
+  delete: (id) => api.delete(`/discussions/${id}`),
+  deleteReply: (id, replyId) => api.delete(`/discussions/${id}/reply/${replyId}`),
+};
+
+// ══════════════════════════════════════════════
+// SUPPORT TICKETS & HELP DESK
+// ══════════════════════════════════════════════
+export const supportAPI = {
+  getTickets: (params) => api.get(`/support/tickets${qs(params)}`),
+  createTicket: (data) => api.post('/support/tickets', data),
+  updateTicket: (id, data) => api.put(`/support/tickets/${id}`, data),
+  replyTicket: (id, data) => api.post(`/support/tickets/${id}/reply`, data),
+  deleteTicket: (id) => api.delete(`/support/tickets/${id}`),
+};
+
+// ══════════════════════════════════════════════
 // ENROLLMENTS
 // ══════════════════════════════════════════════
 export const enrollmentsAPI = {

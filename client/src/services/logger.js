@@ -125,7 +125,7 @@ class FrontendLogger {
     this.action('PAGE_VIEW', `Visited ${path}`, { title: title || document.title, path });
   }
 
-  async flush(useBeacon = false) {
+  async flush(useBeacon = true) {
     if (!this.queue.length) return;
 
     const batch = [...this.queue];
@@ -134,11 +134,12 @@ class FrontendLogger {
     const endpoint = `${API_BASE}/logs`;
     const payload = JSON.stringify({ logs: batch, app: this.app });
 
-    if (useBeacon && navigator.sendBeacon) {
+    if (useBeacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
       try {
         const blob = new Blob([payload], { type: 'application/json' });
-        navigator.sendBeacon(endpoint, blob);
-        return;
+        if (navigator.sendBeacon(endpoint, blob)) {
+          return;
+        }
       } catch (_) {}
     }
 
@@ -147,13 +148,11 @@ class FrontendLogger {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-App-Source': this.app,
         },
         body: payload,
         keepalive: true,
       });
     } catch (err) {
-      // Re-queue items if transmission failed (limit queue to 50 max to prevent memory leaks)
       if (this.queue.length < 50) {
         this.queue = [...batch, ...this.queue];
       }

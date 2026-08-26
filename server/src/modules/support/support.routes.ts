@@ -1,14 +1,22 @@
 import express from 'express';
-import { createTicket, getTickets } from './support.controller.js';
-import { protect, authorize } from '../../middleware/auth.js';
-import { requireTenant } from '../../middleware/tenant.middleware.js';
+import {
+  createTicket,
+  getTickets,
+  updateTicket,
+  replyTicket,
+  deleteTicket,
+} from './support.controller.js';
+import { authenticate, authorize, optionalAuth } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-// Public route for submitting tickets
-router.post('/tickets', requireTenant, createTicket);
+// Public / Student route for submitting support tickets
+router.post('/tickets', optionalAuth, createTicket);
 
-// Admin route for viewing tickets
-router.get('/tickets', protect, authorize('admin', 'super_admin'), getTickets);
+// Admin routes for managing tickets
+router.get('/tickets', authenticate, authorize('admin', 'super_admin'), getTickets);
+router.put('/tickets/:id', authenticate, authorize('admin', 'super_admin'), updateTicket);
+router.post('/tickets/:id/reply', authenticate, authorize('admin', 'super_admin'), replyTicket);
+router.delete('/tickets/:id', authenticate, authorize('admin', 'super_admin'), deleteTicket);
 
 export default router;

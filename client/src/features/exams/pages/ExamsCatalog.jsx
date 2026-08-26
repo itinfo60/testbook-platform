@@ -157,9 +157,10 @@ export default function ExamsCatalog() {
   }, [location.search, location.state, dynamicGroups]);
 
   const renderCategoryCard = (cat) => (
-    <div
+    <Link
       key={cat._id || cat.id}
-      className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md hover:shadow-xl border border-slate-200 dark:border-slate-800 transition-all flex flex-col justify-between group"
+      to={`/exams/${cat.slug || cat._id || cat.id}`}
+      className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 border border-slate-200 dark:border-slate-800 transition-all flex flex-col justify-between group cursor-pointer"
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-4">
@@ -194,15 +195,12 @@ export default function ExamsCatalog() {
           </span>
         </div>
 
-        <button
-          onClick={() => navigate(`/exams/${cat.slug || cat._id || cat.id}`)}
-          className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
-        >
+        <span className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
           <span>View Exam Hub</span>
-          <HiArrowRight className="h-4 w-4" />
-        </button>
+          <HiArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+        </span>
       </div>
-    </div>
+    </Link>
   );
 
   return (

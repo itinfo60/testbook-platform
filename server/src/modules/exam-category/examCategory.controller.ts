@@ -8,7 +8,13 @@ import { runWithTenant } from '../../utils/TenantContext.js';
 
 export const getCategories = catchAsync(async (req, res) => {
   const isFlat = req.query.flat === 'true';
-  const typeFilter = req.query.type ? { type: req.query.type } : {};
+  const typeFilter = req.query.type ? String(req.query.type) : 'all';
+  const cacheKey = `categories:${isFlat ? 'flat' : 'tree'}:${typeFilter}`;
+
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    return ApiResponse.ok(res, cached);
+  }
 
   const [allCatsRaw, courses, tests, testSeries] = await runWithTenant(null, true, async () => {
     return await Promise.all([
@@ -49,24 +55,19 @@ export const getCategories = catchAsync(async (req, res) => {
   };
 
   // Build recursive subcategories tree
-  const buildSubcategoryTree = (parentId: string): any[] => {
+  const buildSubcategoryTree = (parentId: string | null): any[] => {
     const children = allCatsRaw.filter((c) => c.parentId === parentId);
-    return children.map((sub) => {
-      const allSubIds = getDescendantIds(sub.id);
-      const courseCount = allSubIds.reduce((sum, id) => sum + (courseCountMap[id] || 0), 0);
-      const testCount = allSubIds.reduce((sum, id) => sum + (testCountMap[id] || 0), 0);
-      const testSeriesCount = allSubIds.reduce((sum, id) => sum + (seriesCountMap[id] || 0), 0);
-      const nestedSubs = buildSubcategoryTree(sub.id);
-
+    return children.map((cat) => {
+      const allDescendantIds = getDescendantIds(cat.id);
+      const courseCount = allDescendantIds.reduce((sum, id) => sum + (courseCountMap[id] || 0), 0);
+      const testCount = allDescendantIds.reduce((sum, id) => sum + (testCountMap[id] || 0), 0);
+      const testSeriesCount = allDescendantIds.reduce(
+        (sum, id) => sum + (seriesCountMap[id] || 0),
+        0
+      );
+      const nestedSubs = buildSubcategoryTree(cat.id);
       return {
-        id: sub.id,
-        _id: sub.id,
-        name: sub.name,
-        slug: sub.slug,
-        icon: sub.icon,
-        description: sub.description,
-        type: sub.type,
-        parentId: sub.parentId,
+        ...cat,
         courseCount,
         coursesCount: courseCount,
         testCount,
@@ -136,6 +137,8 @@ export const getCategories = catchAsync(async (req, res) => {
     categories: outputCategories,
     allCategories: req.query.type === 'resource' ? outputCategories : nonResourceAll,
   };
+
+  await redis.set(cacheKey, data, 600); // 10 minutes cache
 
   ApiResponse.ok(res, data);
 });

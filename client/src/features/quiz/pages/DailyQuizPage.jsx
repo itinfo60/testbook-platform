@@ -255,9 +255,10 @@ export default function DailyQuizPage() {
               const typeLabel = quiz.type === 'daily' ? 'Daily Challenge' : 'Practice Drill';
 
               return (
-                <div
+                <Link
                   key={quiz.id || quiz._id}
-                  className="bg-white dark:bg-dark-900 p-6 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-600 transition-all flex flex-col justify-between group"
+                  to={`/quiz/${quiz.id || quiz._id}`}
+                  className="bg-white dark:bg-dark-900 p-6 rounded-3xl border border-slate-200 dark:border-dark-800 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-amber-400 dark:hover:border-amber-600 transition-all flex flex-col justify-between group cursor-pointer"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -300,13 +301,11 @@ export default function DailyQuizPage() {
                     </div>
                   </div>
 
-                  <Link
-                    to={`/quiz/${quiz.id || quiz._id}`}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-3 px-4 rounded-2xl shadow-md transition-all text-xs text-center flex items-center justify-center gap-2"
-                  >
-                    Start Quiz Drill <HiArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
+                  <span className="w-full bg-amber-500 hover:bg-amber-600 group-hover:bg-amber-600 text-white font-extrabold py-3 px-4 rounded-2xl shadow-md transition-all text-xs text-center flex items-center justify-center gap-2">
+                    <span>Start Quiz Drill</span>
+                    <HiArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                  </span>
+                </Link>
               );
             })}
           </div>

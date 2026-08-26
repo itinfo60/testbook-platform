@@ -55,12 +55,16 @@ function getAlertStatus(alert) {
 }
 
 function JobCard({ job }) {
+  const navigate = useNavigate();
   const alert = job.jobAlert || {};
   const statusKey = getAlertStatus(alert);
   const status = STATUS_CONFIG[statusKey];
 
   return (
-    <div className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-xl transition-all duration-300 overflow-hidden group">
+    <div
+      onClick={() => navigate(`/blog/${job.slug}`)}
+      className="bg-white dark:bg-dark-900 rounded-3xl border border-slate-200 dark:border-dark-800 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group cursor-pointer"
+    >
       {/* Top accent bar */}
       <div
         className={`h-1 w-full ${statusKey === 'active' ? 'bg-gradient-to-r from-green-400 to-emerald-500' : statusKey === 'closing' ? 'bg-gradient-to-r from-amber-400 to-orange-500' : statusKey === 'closed' ? 'bg-slate-300' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}
@@ -162,6 +166,7 @@ function JobCard({ job }) {
               href={alert.officialNotificationUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-4 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5"
             >
               Official PDF <HiExternalLink className="h-3.5 w-3.5" />

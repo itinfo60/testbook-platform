@@ -323,15 +323,24 @@ export default function Checkout() {
                 name: item?.title || '',
               }).toString();
 
+              navigate(`/checkout/success?${queryParams}`, {
+                state: successState,
+                replace: true,
+              });
+
+              // Direct window redirect fallback to guarantee navigation out of Razorpay modal
               setTimeout(() => {
-                navigate(`/checkout/success?${queryParams}`, {
-                  state: successState,
-                  replace: true,
-                });
-              }, 150);
+                if (
+                  window.location.pathname.startsWith('/checkout') &&
+                  !window.location.pathname.includes('/success')
+                ) {
+                  window.location.href = `/checkout/success?${queryParams}`;
+                }
+              }, 300);
 
               resolve();
             } catch (err) {
+              setPaying(false);
               try {
                 await paymentAPI.recordFailure({
                   orderId,

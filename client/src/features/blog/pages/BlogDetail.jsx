@@ -1,7 +1,16 @@
 import SeoHead from '@/components/SeoHead';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
+import {
+  FaWhatsapp,
+  FaTelegramPlane,
+  FaTwitter,
+  FaLinkedinIn,
+  FaLink,
+  FaCheck,
+} from 'react-icons/fa';
 import { fetchBlogBySlug, clearCurrentBlog } from '../blogSlice';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import {
@@ -50,6 +59,60 @@ export default function BlogDetail() {
   const isJobAlert = currentBlog.type === 'job_alert';
   const jobAlert = currentBlog.jobAlert || {};
   const blog = currentBlog;
+
+  const [copied, setCopied] = useState(false);
+
+  const getShareUrl = () => {
+    return typeof window !== 'undefined' ? window.location.href : '';
+  };
+
+  const handleCopyLink = async () => {
+    const url = getShareUrl();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      toast.success('Article link copied to clipboard! 📋');
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      toast.error('Failed to copy link. Please copy URL from browser.');
+    }
+  };
+
+  const handleShare = async () => {
+    const url = getShareUrl();
+    const title = currentBlog?.title || 'Article';
+    const text = currentBlog?.excerpt || `Read "${title}" on CivicsEdu`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    handleCopyLink();
+  };
+
+  const shareTitle = encodeURIComponent(currentBlog?.title || 'CivicsEdu Article');
+  const shareUrl = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`;
+  const telegramUrl = `https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`;
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`;
+  const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`;
 
   return (
     <article className="min-h-screen bg-slate-50 dark:bg-dark-950 pb-20 text-dark-900 dark:text-dark-100">
@@ -141,6 +204,15 @@ export default function BlogDetail() {
                 <HiEye className="h-4 w-4 text-emerald-400" />
                 <span>{currentBlog.views || 1} Views</span>
               </div>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3.5 py-1.5 rounded-xl backdrop-blur-md transition-colors cursor-pointer font-bold select-none active:scale-95"
+                title="Share this article"
+              >
+                <HiShare className="h-4 w-4" />
+                <span>Share</span>
+              </button>
             </div>
           </div>
         </div>
@@ -295,25 +367,100 @@ export default function BlogDetail() {
               </div>
             )}
 
-          {/* Tags & Share */}
-          <div className="mt-12 pt-8 border-t border-slate-200 dark:border-dark-800 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              {currentBlog.tags?.map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold"
-                >
-                  <HiHashtag className="text-amber-500" />
-                  {tag}
+          {/* Tags & Social Share Section */}
+          <div className="mt-12 pt-8 border-t border-slate-200 dark:border-dark-800 space-y-6">
+            {/* Tags */}
+            {currentBlog.tags && currentBlog.tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-slate-400 mr-1">Tags:</span>
+                {currentBlog.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold"
+                  >
+                    <HiHashtag className="text-amber-500" />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Social Share Toolbar */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-dark-800/60 border border-slate-200 dark:border-dark-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <HiShare className="h-4 w-4 text-amber-500" /> Share this article:
                 </span>
-              ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* WhatsApp */}
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  title="Share on WhatsApp"
+                >
+                  <FaWhatsapp className="h-4 w-4" /> WhatsApp
+                </a>
+
+                {/* Telegram */}
+                <a
+                  href={telegramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  title="Share on Telegram"
+                >
+                  <FaTelegramPlane className="h-4 w-4" /> Telegram
+                </a>
+
+                {/* Twitter / X */}
+                <a
+                  href={twitterUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-black text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  title="Share on X"
+                >
+                  <FaTwitter className="h-4 w-4" /> X
+                </a>
+
+                {/* LinkedIn */}
+                <a
+                  href={linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  title="Share on LinkedIn"
+                >
+                  <FaLinkedinIn className="h-4 w-4" /> LinkedIn
+                </a>
+
+                {/* Copy Link / Native Share */}
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-dark-900 hover:bg-amber-50 dark:hover:bg-dark-800 text-dark-900 dark:text-white border border-slate-300 dark:border-dark-600 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Copy link or native share"
+                >
+                  {copied ? (
+                    <>
+                      <FaCheck className="h-3.5 w-3.5 text-emerald-500" />
+                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                        Copied!
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <FaLink className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => navigator.clipboard?.writeText(window.location.href)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-dark-800 hover:bg-amber-800 hover:text-white text-dark-900 dark:text-white font-bold rounded-xl transition-all text-xs cursor-pointer"
-            >
-              <HiShare className="h-4 w-4" /> Share Link
-            </button>
           </div>
         </div>
       </div>

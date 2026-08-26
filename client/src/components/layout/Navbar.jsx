@@ -128,6 +128,7 @@ export default function Navbar() {
                     <Link
                       key={link.path}
                       to={link.path}
+                      onMouseEnter={() => prefetchRoute(link.path)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                         isActive
                           ? 'text-primary-600 bg-primary-50 dark:text-primary-400 dark:bg-primary-950/80 font-bold'

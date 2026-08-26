@@ -50,6 +50,8 @@ model User {
   payments                  Payment[]
   testAttempts              TestAttempt[]
   quizAttempts              QuizAttempt[]
+  discussions               Discussion[]
+  supportTickets            SupportTicket[]
 
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
@@ -133,6 +135,7 @@ model Course {
 
   enrollments   Enrollment[]
   reviews       Review[]
+  discussions   Discussion[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -487,5 +490,56 @@ model AppLog {
   @@index([createdAt])
   @@index([userId])
   @@index([event])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DISCUSSION & DOUBTS
+// ─────────────────────────────────────────────────────────────────
+model Discussion {
+  id          String   @id @default(uuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  tags        String[] @default([])
+  likes       String[] @default([])
+  isResolved  Boolean  @default(false)
+  replies     Json?    @default("[]")
+  tenantId    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([courseId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SUPPORT TICKET & HELP DESK
+// ─────────────────────────────────────────────────────────────────
+model SupportTicket {
+  id          String    @id @default(uuid())
+  name        String
+  email       String
+  subject     String
+  message     String
+  category    String    @default("General")
+  priority    String    @default("medium") // low, medium, high, urgent
+  status      String    @default("open")   // open, in_progress, resolved, closed
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reply       String?
+  repliedAt   DateTime?
+  tenantId    String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([status])
 }
 

@@ -53,6 +53,7 @@ const AnnouncementCenter = lazy(() => import('@/features/notification/pages/Anno
 const BrandingSettings = lazy(() => import('@/features/institute/pages/BrandingSettings'));
 const LegalSettings = lazy(() => import('@/features/settings/pages/LegalSettings'));
 const HelpSettings = lazy(() => import('@/features/settings/pages/HelpSettings'));
+const SupportTicketsList = lazy(() => import('@/features/support/pages/SupportTicketsList'));
 const SuccessStoriesSettings = lazy(
   () => import('@/features/settings/pages/SuccessStoriesSettings')
 );
@@ -148,6 +149,7 @@ export default function App() {
             <Route path="branding" element={<BrandingSettings />} />
             <Route path="legal-settings" element={<LegalSettings />} />
             <Route path="help-settings" element={<HelpSettings />} />
+            <Route path="support-tickets" element={<SupportTicketsList />} />
             <Route path="success-stories-settings" element={<SuccessStoriesSettings />} />
             <Route path="live-classes" element={<LiveClassesPage />} />
             <Route path="logs" element={<LogsExplorer />} />

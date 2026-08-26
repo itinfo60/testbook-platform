@@ -88,18 +88,24 @@ const discussionSlice = createSlice({
         state.discussions.unshift(action.payload);
       })
       .addCase(replyToDiscussion.fulfilled, (state, action) => {
-        const idx = state.discussions.findIndex((d) => d._id === action.payload.id);
+        const idx = state.discussions.findIndex(
+          (d) => String(d.id || d._id) === String(action.payload.id)
+        );
         if (idx >= 0) {
           if (!state.discussions[idx].replies) state.discussions[idx].replies = [];
           state.discussions[idx].replies.push(action.payload.reply);
         }
       })
       .addCase(likeDiscussion.fulfilled, (state, action) => {
-        const d = state.discussions.find((d) => d._id === action.payload.id);
+        const d = state.discussions.find(
+          (d) => String(d.id || d._id) === String(action.payload.id)
+        );
         if (d) d.likes = action.payload.likes ?? (d.likes || 0) + 1;
       })
       .addCase(resolveDiscussion.fulfilled, (state, action) => {
-        const d = state.discussions.find((d) => d._id === action.payload.id);
+        const d = state.discussions.find(
+          (d) => String(d.id || d._id) === String(action.payload.id)
+        );
         if (d) d.isResolved = true;
       });
   },

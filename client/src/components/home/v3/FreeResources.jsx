@@ -75,9 +75,10 @@ export default function FreeResources() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
             {resources.map((resource) => (
-              <div
+              <Link
                 key={resource._id || resource.id}
-                className="bg-white rounded-3xl p-6 border border-navy-100 hover:border-navy-300 hover:-translate-y-1 transition-all shadow-sm flex flex-col justify-between group"
+                to="/free-resources"
+                className="bg-white rounded-3xl p-6 border border-navy-100 hover:border-navy-300 hover:shadow-xl hover:-translate-y-1 transition-all shadow-sm flex flex-col justify-between group cursor-pointer"
               >
                 <div>
                   <span
@@ -93,13 +94,10 @@ export default function FreeResources() {
                   </p>
                 </div>
 
-                <Link
-                  to="/free-resources"
-                  className="flex items-center justify-center gap-2 text-xs font-bold text-navy-900 bg-navy-50 hover:bg-navy-100 group-hover:text-accent-600 transition-colors py-2 px-3 rounded-xl border border-navy-100 mt-auto"
-                >
+                <span className="flex items-center justify-center gap-2 text-xs font-bold text-navy-900 bg-navy-50 hover:bg-navy-100 group-hover:text-accent-600 transition-colors py-2 px-3 rounded-xl border border-navy-100 mt-auto">
                   <HiOutlineDownload className="h-4 w-4" /> Download PDF
-                </Link>
-              </div>
+                </span>
+              </Link>
             ))}
           </div>
         )}

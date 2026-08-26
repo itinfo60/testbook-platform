@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
   HiQuestionMarkCircle,
   HiSearch,
@@ -16,6 +17,7 @@ import { supportAPI } from '@/services/api';
 import api from '@/services/api';
 
 export default function HelpCenterPage() {
+  const { user } = useSelector((state) => state.auth || {});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [openFaq, setOpenFaq] = useState(null);
@@ -30,6 +32,8 @@ export default function HelpCenterPage() {
   const [loading, setLoading] = useState(true);
 
   const [ticketForm, setTicketForm] = useState({
+    name: '',
+    email: '',
     category: 'Account & Login',
     subject: '',
     description: '',
@@ -114,10 +118,29 @@ export default function HelpCenterPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await supportAPI.createTicket(ticketForm);
-      const ticketId = res.data?.data?.ticketId || Math.floor(100000 + Math.random() * 900000);
-      toast.success(`Support ticket created! Ticket ID #EDU-${ticketId}`);
-      setTicketForm({ category: 'Account & Login', subject: '', description: '' });
+      const payload = {
+        name: user?.name || ticketForm.name || 'Student',
+        email: user?.email || ticketForm.email || 'support-query@civicsedu.com',
+        category: ticketForm.category,
+        subject: ticketForm.subject.trim(),
+        message: ticketForm.description.trim(),
+        description: ticketForm.description.trim(),
+      };
+
+      const res = await supportAPI.createTicket(payload);
+      const ticketId =
+        res.data?.data?.ticketId ||
+        res.data?.ticketId ||
+        `EDU-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      toast.success(`Support ticket created! Ticket ID ${ticketId}`);
+      setTicketForm({
+        name: '',
+        email: '',
+        category: 'Account & Login',
+        subject: '',
+        description: '',
+      });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit ticket. Please try again.');
     } finally {
@@ -159,114 +182,136 @@ export default function HelpCenterPage() {
           </div>
         </div>
 
-        {/* Support Contact Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-xs">
-            <div className="h-11 w-11 bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">
-              <HiPhone />
+        {/* Contact Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card p-6 border border-slate-200/80 dark:border-dark-800 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="space-y-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <HiMail className="h-5 w-5" />
+              </div>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                Email Support
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Send queries with screenshots or receipts. We respond within 24 hours.
+              </p>
             </div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
-              Phone Helpline
-            </h3>
-            <p className="text-xs text-slate-400 mb-2">
-              {helpData.supportHours || 'Mon – Sat (9 AM – 7 PM)'}
-            </p>
-            <a
-              href={`tel:${helpData.supportPhone}`}
-              className="text-xs font-bold text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline"
-            >
-              {helpData.supportPhone}
-            </a>
-          </div>
-
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-xs">
-            <div className="h-11 w-11 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">
-              <HiChat />
-            </div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
-              WhatsApp Support
-            </h3>
-            <p className="text-xs text-slate-400 mb-2">Fast Resolution Chat</p>
-            <a
-              href={`https://wa.me/${cleanPhone}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
-            >
-              Chat on WhatsApp →
-            </a>
-          </div>
-
-          <div className="bg-white dark:bg-dark-900 rounded-2xl p-6 border border-slate-200 dark:border-dark-800 text-center shadow-xs">
-            <div className="h-11 w-11 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">
-              <HiMail />
-            </div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">Email Support</h3>
-            <p className="text-xs text-slate-400 mb-2">24h Response Window</p>
             <a
               href={`mailto:${helpData.supportEmail}`}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline"
+              className="mt-4 text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 flex items-center gap-1"
             >
-              {helpData.supportEmail}
+              {helpData.supportEmail} →
             </a>
           </div>
+
+          <div className="card p-6 border border-slate-200/80 dark:border-dark-800 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="space-y-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <HiChat className="h-5 w-5" />
+              </div>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                WhatsApp Helpline
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Fastest resolution for urgent enrollment and test series issues.
+              </p>
+            </div>
+            {cleanPhone ? (
+              <a
+                href={`https://wa.me/${cleanPhone}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center gap-1"
+              >
+                Chat on WhatsApp →
+              </a>
+            ) : (
+              <span className="mt-4 text-xs font-semibold text-slate-400">
+                {helpData.supportWhatsapp || helpData.supportPhone}
+              </span>
+            )}
+          </div>
+
+          <div className="card p-6 border border-slate-200/80 dark:border-dark-800 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="space-y-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:bg-amber-400 flex items-center justify-center">
+                <HiClock className="h-5 w-5" />
+              </div>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                Helpline Hours & Office
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {helpData.supportHours}
+              </p>
+            </div>
+            <p className="mt-4 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
+              <HiLocationMarker className="h-4 w-4 text-slate-400 shrink-0" />
+              <span className="truncate">{helpData.officeAddress}</span>
+            </p>
+          </div>
         </div>
 
-        {/* FAQs List */}
-        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200 dark:border-dark-800">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">
+        {/* FAQ Accordion */}
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-xl sm:text-2xl font-bold font-display text-slate-900 dark:text-white">
               Frequently Asked Questions
             </h2>
-            <span className="text-xs text-slate-400">{filteredFaqs.length} questions</span>
+            <p className="text-xs text-slate-500 mt-1">
+              Click any question below to see detailed answers.
+            </p>
           </div>
 
-          <div className="space-y-3">
-            {filteredFaqs.map((faq, idx) => {
-              const qId = faq.id || idx;
-              const qTitle = faq.question || faq.q;
-              const aBody = faq.answer || faq.a;
-              const qCat = faq.category || faq.cat;
-
-              return (
-                <div
-                  key={qId}
-                  className="border border-slate-200/90 dark:border-dark-800 rounded-2xl overflow-hidden"
-                >
-                  <button
-                    onClick={() => setOpenFaq(openFaq === qId ? null : qId)}
-                    className="w-full px-5 py-4 text-left font-semibold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-dark-800/60 transition-colors cursor-pointer"
+          <div className="space-y-3 max-w-3xl mx-auto">
+            {filteredFaqs.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-xs">
+                No matching questions found for "{search}". Submit a support ticket below!
+              </div>
+            ) : (
+              filteredFaqs.map((faq, idx) => {
+                const isOpen = openFaq === idx;
+                return (
+                  <div
+                    key={faq.id || idx}
+                    className="card overflow-hidden border border-slate-200/80 dark:border-dark-800 transition-all"
                   >
-                    <div className="flex items-center gap-2.5">
-                      {qCat && (
-                        <span className="text-[10px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/60 px-2 py-0.5 rounded-md border border-primary-100 dark:border-primary-900/40">
-                          {qCat}
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : idx)}
+                      className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 focus:outline-none"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/60 px-2 py-0.5 rounded-md shrink-0">
+                          {faq.category || 'General'}
                         </span>
+                        <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          {faq.question || faq.q}
+                        </span>
+                      </div>
+                      {isOpen ? (
+                        <HiChevronUp className="h-4 w-4 text-slate-400 shrink-0" />
+                      ) : (
+                        <HiChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
                       )}
-                      <span>{qTitle}</span>
-                    </div>
-                    {openFaq === qId ? (
-                      <HiChevronUp className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                    ) : (
-                      <HiChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-4 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-dark-800/60 leading-relaxed">
+                        {faq.answer || faq.a}
+                      </div>
                     )}
-                  </button>
-                  {openFaq === qId && (
-                    <div className="px-5 py-3.5 bg-slate-50/70 dark:bg-dark-800/40 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-dark-800">
-                      {aBody}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* Ticket Creation Form */}
-        <div className="bg-white dark:bg-dark-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200 dark:border-dark-800 max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 mb-4">
-            <HiTicket className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">
+        {/* Submit Ticket Section */}
+        <div className="max-w-2xl mx-auto card p-6 sm:p-8 border border-slate-200/80 dark:border-dark-800 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-8 w-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 flex items-center justify-center">
+              <HiTicket className="h-4 w-4" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               Submit a Support Ticket
             </h2>
           </div>
@@ -276,6 +321,37 @@ export default function HelpCenterPage() {
           </p>
 
           <form onSubmit={handleTicketSubmit} className="space-y-4">
+            {!user && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Your Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={ticketForm.name}
+                    onChange={(e) => setTicketForm({ ...ticketForm, name: e.target.value })}
+                    placeholder="Enter your name"
+                    className="input-field text-xs"
+                    required={!user}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Your Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={ticketForm.email}
+                    onChange={(e) => setTicketForm({ ...ticketForm, email: e.target.value })}
+                    placeholder="name@example.com"
+                    className="input-field text-xs"
+                    required={!user}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Category

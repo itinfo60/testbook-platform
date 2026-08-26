@@ -220,7 +220,24 @@ export const updateProgress = catchAsync(async (req, res) => {
     ? enrollment.completedLessons.filter((id) => typeof id === 'string' && id.trim().length > 0)
     : [];
 
-  if (lessonId !== undefined && lessonId !== null) {
+  let sections = [];
+  if (typeof course.sections === 'string') {
+    try {
+      sections = JSON.parse(course.sections);
+    } catch (e) {}
+  } else if (Array.isArray(course.sections)) {
+    sections = course.sections;
+  }
+  const allLessonIds = sections
+    .flatMap((s) => (s.lessons || []).map((l) => String(l.id || l._id || '').trim()))
+    .filter((id) => id.length > 0);
+
+  let status = enrollment.status;
+  let completedAt = enrollment.completedAt;
+
+  if (req.body.completedCourse === true || req.body.markAllComplete === true) {
+    completedLessons = Array.from(new Set([...completedLessons, ...allLessonIds]));
+  } else if (lessonId !== undefined && lessonId !== null) {
     const lid = String(lessonId).trim();
     if (lid.length > 0) {
       if (completed === false) {
@@ -231,14 +248,15 @@ export const updateProgress = catchAsync(async (req, res) => {
     }
   }
 
-  const totalLessons = course.totalLessons || 0;
+  const totalLessons = allLessonIds.length || course.totalLessons || 0;
   let progressPercentage =
-    totalLessons > 0 ? Math.round((completedLessons.length / totalLessons) * 100) : 0;
-  let status = enrollment.status;
-  let completedAt = enrollment.completedAt;
+    totalLessons > 0
+      ? Math.min(100, Math.round((completedLessons.length / totalLessons) * 100))
+      : 0;
 
-  if (progressPercentage >= 100) {
+  if (progressPercentage >= 100 || req.body.completedCourse === true) {
     status = 'completed';
+    progressPercentage = 100;
     if (!completedAt) completedAt = new Date();
   } else if (status === 'completed' && progressPercentage < 100) {
     status = 'active';
