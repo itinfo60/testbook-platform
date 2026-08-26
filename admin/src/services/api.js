@@ -53,7 +53,7 @@ api.interceptors.request.use(
       config.headers['X-Tenant-Subdomain'] = subdomain;
     } else {
       const tenantId = localStorage.getItem('adminTenantId');
-      const devTenantId = import.meta.env.VITE_TENANT_ID;
+      const devTenantId = import.meta.env.VITE_TENANT_ID || '6a82a18008198c8684413371';
       const devTenantSubdomain = import.meta.env.VITE_TENANT_SUBDOMAIN;
 
       if (tenantId) {

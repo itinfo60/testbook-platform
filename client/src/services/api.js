@@ -58,8 +58,8 @@ api.interceptors.request.use(
       // Running on a real subdomain (e.g. demo.localhost or abc.platform.com)
       config.headers['X-Tenant-Subdomain'] = subdomain;
     } else {
-      // Dev fallback: use explicit env vars so plain localhost:5173 works
-      const devTenantId = import.meta.env.VITE_TENANT_ID;
+      // Fallback: use explicit env vars or primary default institute ID
+      const devTenantId = import.meta.env.VITE_TENANT_ID || '6a82a18008198c8684413371';
       const devTenantSubdomain = import.meta.env.VITE_TENANT_SUBDOMAIN;
       if (devTenantId) {
         config.headers['X-Tenant-Id'] = devTenantId;

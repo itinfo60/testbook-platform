@@ -125,6 +125,20 @@ export const tenantIdentification = catchAsync(async (req, res, next) => {
     }
   }
 
+  // Fallback to default active institute for apex/custom domains (e.g. civicsedu.com)
+  if (!tenant) {
+    tenant = await getTenantFromCache('default_institute');
+    if (!tenant) {
+      tenant = await prisma.institute.findFirst({
+        where: { isActive: true },
+      });
+      if (tenant) {
+        tenant._id = tenant.id;
+        await setTenantCache('default_institute', tenant);
+      }
+    }
+  }
+
   if (tenant) {
     tenant._id = tenant.id;
     // 1. Verify active status
