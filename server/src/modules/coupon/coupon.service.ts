@@ -211,11 +211,13 @@ export class CouponService {
     }
   }
 
-  async recordUsage(code: string, userId?: string): Promise<void> {
-    if (!code) return;
-    const cleanCode = code.toUpperCase().trim();
+  async recordUsage(codeOrId: string, userId?: string): Promise<void> {
+    if (!codeOrId) return;
+    const cleanStr = String(codeOrId).trim();
     const coupon = await prisma.coupon.findFirst({
-      where: { code: cleanCode },
+      where: {
+        OR: [{ code: { equals: cleanStr, mode: 'insensitive' } }, { id: cleanStr }],
+      },
     });
     if (!coupon) return;
 

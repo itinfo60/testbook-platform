@@ -202,6 +202,11 @@ export class PaymentController extends BaseController {
       },
     });
 
+    if (couponCode) {
+      const couponService = new CouponService();
+      await couponService.recordUsage(couponCode, req.userId).catch(() => {});
+    }
+
     // Create Enrollment (only for courses — Prisma schema requires courseId)
     let enrollment: any = null;
     if (courseId) {
@@ -215,11 +220,6 @@ export class PaymentController extends BaseController {
           amount: finalAmount,
         },
       });
-
-      if (couponCode) {
-        const couponService = new CouponService();
-        await couponService.recordUsage(couponCode, req.userId).catch(() => {});
-      }
 
       await redis.delPattern('courses:*');
       await notificationQueue

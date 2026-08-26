@@ -201,23 +201,45 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
       throw ApiError.badRequest('Payment record not found');
     }
 
+    let prevNotes: Record<string, any> = {};
+    if (typeof existingPayment.notes === 'string') {
+      try {
+        prevNotes = JSON.parse(existingPayment.notes);
+      } catch (e) {
+        prevNotes = {};
+      }
+    } else if (typeof existingPayment.notes === 'object' && existingPayment.notes !== null) {
+      prevNotes = existingPayment.notes as Record<string, any>;
+    }
+
+    const mergedNotes = {
+      ...prevNotes,
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature,
+    };
+
     const payment = await prisma.payment.update({
       where: { id: existingPayment.id },
       data: {
         transactionId: razorpay_payment_id,
         status: 'completed',
-        notes: {
-          ...(typeof existingPayment.notes === 'object' && existingPayment.notes !== null
-            ? (existingPayment.notes as object)
-            : {}),
-          paymentId: razorpay_payment_id,
-          signature: razorpay_signature,
-        },
+        notes: mergedNotes,
       },
     });
 
+    // Record Coupon Usage if coupon was applied
+    const appliedCouponCode =
+      mergedNotes.couponCode || mergedNotes.coupon || prevNotes.couponCode || prevNotes.coupon;
+
+    if (appliedCouponCode) {
+      try {
+        const couponService = new CouponService();
+        await couponService.recordUsage(appliedCouponCode, userId).catch(() => {});
+      } catch (e) {}
+    }
+
     // Process Purchase Activation
-    const paymentNotes = (payment.notes || {}) as Record<string, any>;
+    const paymentNotes = mergedNotes;
     const targetCourseId = paymentNotes.courseId;
     const targetTestId = paymentNotes.testId;
 
@@ -245,13 +267,6 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
           paymentId: payment.id,
         },
       });
-
-      if (paymentNotes.couponCode) {
-        try {
-          const couponService = new CouponService();
-          await couponService.recordUsage(paymentNotes.couponCode, userId).catch(() => {});
-        } catch (e) {}
-      }
 
       await redis.delPattern('courses:*');
       await redis.delPattern('admin:dashboard:*').catch(() => {});

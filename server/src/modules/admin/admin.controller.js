@@ -2454,13 +2454,17 @@ function formatAdminCouponData(body) {
 
 function mapAdminCouponResponse(coupon) {
   if (!coupon) return coupon;
+  const usedCount = coupon.usedCount ?? coupon.usageCount ?? 0;
   return {
     ...coupon,
     discountValue:
       coupon.discountType === 'percentage' ? coupon.discountPercent : coupon.discountAmount,
     startDate: coupon.validFrom,
     endDate: coupon.validUntil,
+    expiresAt: coupon.validUntil,
     maxUsage: coupon.maxUses,
+    usedCount,
+    usageCount: usedCount,
   };
 }
 
