@@ -34,6 +34,7 @@ export default function BlogDetail() {
   const { slug } = useParams();
   const dispatch = useDispatch();
   const { currentBlog, loading, error } = useSelector((state) => state.blogs);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     dispatch(fetchBlogBySlug(slug));
@@ -59,8 +60,6 @@ export default function BlogDetail() {
   const isJobAlert = currentBlog.type === 'job_alert';
   const jobAlert = currentBlog.jobAlert || {};
   const blog = currentBlog;
-
-  const [copied, setCopied] = useState(false);
 
   const getShareUrl = () => {
     return typeof window !== 'undefined' ? window.location.href : '';
