@@ -66,7 +66,9 @@ const enrollmentSlice = createSlice({
       state.error = null;
     },
     markLessonDone: (state, action) => {
-      if (!state.currentProgress) return;
+      if (!state.currentProgress) {
+        state.currentProgress = { completedLessons: [], progress: [] };
+      }
       const { lessonId: payloadLessonId, completed = true } =
         typeof action.payload === 'object'
           ? action.payload
@@ -129,17 +131,18 @@ const enrollmentSlice = createSlice({
         state.currentProgress = action.payload.enrollment || action.payload;
       })
       .addCase(completeLesson.fulfilled, (state, action) => {
-        if (state.currentProgress) {
-          const payload = action.payload?.enrollment || action.payload;
-          if (Array.isArray(payload?.completedLessons)) {
-            state.currentProgress.completedLessons = payload.completedLessons;
-          }
-          if (payload?.progress !== undefined || payload?.progressPercentage !== undefined) {
-            state.currentProgress.progressPercentage =
-              payload.progress ??
-              payload.progressPercentage ??
-              state.currentProgress.progressPercentage;
-          }
+        const payload = action.payload?.enrollment || action.payload || {};
+        if (!state.currentProgress) {
+          state.currentProgress = { completedLessons: [], progress: [] };
+        }
+        if (Array.isArray(payload.completedLessons)) {
+          state.currentProgress.completedLessons = payload.completedLessons;
+        }
+        if (payload.progress !== undefined || payload.progressPercentage !== undefined) {
+          state.currentProgress.progressPercentage =
+            payload.progress ??
+            payload.progressPercentage ??
+            state.currentProgress.progressPercentage;
         }
       });
   },

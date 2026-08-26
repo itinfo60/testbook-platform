@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { HiLockClosed, HiShieldCheck, HiCheckCircle } from 'react-icons/hi';
 import { fetchCourseById } from '@/features/course/courseSlice';
 import { fetchTestById } from '@/features/test/testSlice';
-import { enrollInCourse } from '@/features/enrollment/enrollmentSlice';
+import { enrollInCourse, fetchMyEnrollments } from '@/features/enrollment/enrollmentSlice';
+import { getProfile } from '@/features/auth/authSlice';
 import {
   createOrder,
   verifyPayment,
@@ -13,7 +14,7 @@ import {
   clearPaymentState,
   clearCoupon,
 } from '@/features/payment/paymentSlice';
-import api, { enrollmentAPI, paymentAPI } from '@/services/api';
+import api, { enrollmentAPI, paymentAPI, clearApiCache } from '@/services/api';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import PriceTag from '@/components/common/PriceTag';
 import toast from 'react-hot-toast';
@@ -210,6 +211,11 @@ export default function Checkout() {
     const resolvedId = item?.id || item?._id || id;
     try {
       await dispatch(enrollInCourse({ courseId: resolvedId })).unwrap();
+      clearApiCache('courses');
+      clearApiCache('enrollment');
+      clearApiCache('tests');
+      dispatch(fetchMyEnrollments());
+      dispatch(getProfile());
       toast.success('Enrolled successfully!');
       navigate('/checkout/success', {
         state: { courseId: resolvedId, itemName: item?.title, free: true, isTest: false },
@@ -236,6 +242,11 @@ export default function Checkout() {
       // ── MOCK / DEMO path ─────────────────────────────────────────────────
       if (ALLOW_MOCK) {
         await dispatch(dummyCheckout(payload)).unwrap();
+        clearApiCache('courses');
+        clearApiCache('enrollment');
+        clearApiCache('tests');
+        dispatch(fetchMyEnrollments());
+        dispatch(getProfile());
         toast.success('Payment successful!');
         navigate('/checkout/success', {
           state: isTest
@@ -301,6 +312,13 @@ export default function Checkout() {
                   dbPaymentId,
                 })
               ).unwrap();
+
+              clearApiCache('courses');
+              clearApiCache('enrollment');
+              clearApiCache('tests');
+              dispatch(fetchMyEnrollments());
+              dispatch(getProfile());
+
               toast.success('Payment verified! You are now enrolled.');
 
               const successState = isTest

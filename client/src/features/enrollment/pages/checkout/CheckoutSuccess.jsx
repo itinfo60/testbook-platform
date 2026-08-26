@@ -1,11 +1,24 @@
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { HiCheckCircle, HiArrowRight, HiPlay, HiBookOpen, HiAcademicCap } from 'react-icons/hi';
+import { clearApiCache } from '@/services/api';
+import { fetchMyEnrollments } from '@/features/enrollment/enrollmentSlice';
+import { getProfile } from '@/features/auth/authSlice';
 
 export default function CheckoutSuccess() {
+  const dispatch = useDispatch();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    clearApiCache('courses');
+    clearApiCache('enrollment');
+    clearApiCache('tests');
+    dispatch(fetchMyEnrollments());
+    dispatch(getProfile());
+  }, [dispatch]);
 
   const checkoutData = useMemo(() => {
     // 1. Check location state

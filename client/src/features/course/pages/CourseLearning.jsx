@@ -193,6 +193,8 @@ export default function CourseLearning() {
       const targetLessonId = String(currentLesson.id || currentLesson._id || '').trim();
       const courseLookupId = course?.id || course?._id?.toString() || id;
       setCompleting(true);
+      // Optimistic update: toggle UI state immediately (0ms)
+      dispatch(markLessonDone({ lessonId: targetLessonId, completed: targetCompletedState }));
       try {
         await dispatch(
           completeLesson({
@@ -202,10 +204,10 @@ export default function CourseLearning() {
             completed: targetCompletedState,
           })
         ).unwrap();
-        // Optimistically mark done in local progress
-        dispatch(markLessonDone({ lessonId: targetLessonId, completed: targetCompletedState }));
-        toast.success(targetCompletedState ? 'Lesson marked as complete!' : 'Lesson unmarked');
+        toast.success(targetCompletedState ? 'Lesson marked as completed! ✓' : 'Lesson unmarked');
       } catch (err) {
+        // Rollback state if server request fails
+        dispatch(markLessonDone({ lessonId: targetLessonId, completed: !targetCompletedState }));
         toast.error(err || 'Failed to update progress');
       } finally {
         setCompleting(false);
@@ -486,67 +488,27 @@ export default function CourseLearning() {
               to={`/courses/${course?.slug || id}`}
               className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-3 sm:px-4 rounded-lg shadow-xs transition-all text-[11px] sm:text-xs shrink-0"
             >
-              <span className="hidden sm:inline">Enroll to Unlock</span>
-              <span className="sm:hidden">Enroll</span>
+              <span>Enroll to Unlock</span>
             </Link>
-          ) : currentLesson ? (
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <button
-                onClick={() => handleLessonComplete(!isCurrentCompleted)}
-                disabled={completing}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
-                  isCurrentCompleted
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                }`}
-                title={isCurrentCompleted ? 'Click to unmark' : 'Mark this lesson complete'}
-              >
-                <HiCheck className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">
-                  {completing ? 'Saving...' : isCurrentCompleted ? 'Completed' : 'Mark as Complete'}
+          ) : (
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Progress Counter */}
+              <div className="flex flex-col items-end pl-2 sm:pl-3 border-l border-slate-200 dark:border-dark-800">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Progress
                 </span>
-                <span className="sm:hidden">
-                  {completing ? '...' : isCurrentCompleted ? 'Done' : 'Complete'}
+                <span className="text-xs font-extrabold text-emerald-600">
+                  {totalCompleted}/{totalLessons} (
+                  {Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)}%)
                 </span>
-              </button>
-
-              {hasNext() ? (
-                <button
-                  onClick={goToNext}
-                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold py-1.5 px-2.5 sm:px-3.5 rounded-lg shadow-xs transition-all flex items-center gap-1 text-xs cursor-pointer active:scale-95 shrink-0"
-                  title="Next Lesson"
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <HiArrowRight className="h-3.5 w-3.5" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleMarkCourseComplete}
-                  disabled={completingCourse}
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-1.5 px-2.5 sm:px-3 rounded-lg shadow-xs text-xs cursor-pointer active:scale-95 shrink-0"
-                  title="Mark Entire Course as Completed"
-                >
-                  <span>🎉 {isAllCompleted ? 'Finished' : 'Finish'}</span>
-                </button>
-              )}
+              </div>
             </div>
-          ) : null}
-
-          {/* Desktop Progress Counter */}
-          <div className="hidden md:flex flex-col items-end pl-2 border-l border-slate-200 dark:border-dark-800">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Progress
-            </span>
-            <span className="text-xs font-extrabold text-emerald-600">
-              {totalCompleted}/{totalLessons} (
-              {Math.round(totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0)}%)
-            </span>
-          </div>
+          )}
 
           {/* Mobile sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-100 transition-colors shrink-0"
+            className="lg:hidden flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
             title="Course Contents"
           >
             <HiMenu className="h-4 w-4 sm:h-5 sm:w-5" />

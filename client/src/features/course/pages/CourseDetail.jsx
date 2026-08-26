@@ -41,18 +41,46 @@ export default function CourseDetail() {
     currentCourseIsEnrolled: courseSaysEnrolled,
     loading,
   } = useSelector((state) => state.courses);
+  const { enrollments } = useSelector((state) => state.enrollments);
   const { reviews } = useSelector((state) => state.reviews);
   const { wishlistMap } = useSelector((state) => state.wishlist);
   const { isAuthenticated, user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [enrollmentChecked, setEnrollmentChecked] = useState(false);
-  // Two independent sources say whether the viewer has access: the course
-  // payload and the dedicated check endpoint. Trust either one, so a
-  // disagreement can never downgrade a paying user to "Buy Course Now".
-  const isEnrolled = courseSaysEnrolled || enrollmentChecked;
-  // Start in checking state if user is authenticated so button doesn't flash "Buy Course Now"
-  const [checkingEnrollment, setCheckingEnrollment] = useState(true);
-  const enrollmentCheckedRef = useRef(false);
+
+  // Check enrollment from all available sources (API check, Redux store, User profile, Course payload)
+  const userHasEnrollment = useMemo(() => {
+    if (!isAuthenticated) return false;
+    const cid = (course?.id || course?._id || id)?.toString();
+    const cslug = course?.slug || id;
+
+    if (Array.isArray(enrollments)) {
+      const match = enrollments.some((e) => {
+        const eCourseId = (e.courseId || e.course?.id || e.course?._id || e.course)?.toString();
+        const eCourseSlug = e.course?.slug;
+        const eStatus = e.status;
+        return (
+          eStatus !== 'cancelled' &&
+          eStatus !== 'pending' &&
+          ((cid && eCourseId === cid) || (cslug && eCourseSlug === cslug))
+        );
+      });
+      if (match) return true;
+    }
+
+    if (Array.isArray(user?.enrolledCourses)) {
+      const match = user.enrolledCourses.some((c) => {
+        const uCid = (c.id || c._id || c)?.toString();
+        return cid && uCid === cid;
+      });
+      if (match) return true;
+    }
+
+    return false;
+  }, [isAuthenticated, course, id, enrollments, user]);
+
+  const isEnrolled = courseSaysEnrolled || enrollmentChecked || userHasEnrollment;
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
 
   const instructorsList = useMemo(() => {
     const list = [];
@@ -168,16 +196,9 @@ export default function CourseDetail() {
       return;
     }
 
-    const courseIdString = (course.id || course.id || course._id).toString();
-    const courseMatchesUrl = courseIdString === id || course.slug === id;
+    const courseId = (course.id || course._id).toString();
+    const courseMatchesUrl = courseId === id || course.slug === id;
     if (!courseMatchesUrl) return;
-
-    const courseId = courseIdString;
-
-    // Avoid duplicate calls for the same course + auth state
-    const checkKey = `${courseId}:${isAuthenticated}`;
-    if (enrollmentCheckedRef.current === checkKey) return;
-    enrollmentCheckedRef.current = checkKey;
 
     dispatch(checkWishlist(courseId));
 
