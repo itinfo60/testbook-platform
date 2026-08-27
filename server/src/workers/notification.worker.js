@@ -5,47 +5,53 @@ import logger from '../utils/logger.js';
 import { queueConnection } from '../queues/index.js';
 import { runWithTenant } from '../utils/TenantContext.js';
 
-const notificationWorker = new Worker(
-  'notification',
-  async (job) => {
-    const { type, userId, tenantId, title, message, data } = job.data;
-    logger.info(`Processing notification job [${job.id}] type=${type}`);
+const dummyWorker = { close: async () => {} };
 
-    await runWithTenant(tenantId, false, async () => {
-      // Save in-app notification
-      await prisma.notification.create({
-        data: {
-          userId,
-          tenantId,
-          type,
-          title,
-          message,
-          data: data || {},
-        },
-      });
+const notificationWorker = queueConnection
+  ? new Worker(
+      'notification',
+      async (job) => {
+        const { type, userId, tenantId, title, message, data } = job.data;
+        logger.info(`Processing notification job [${job.id}] type=${type}`);
 
-      // Send FCM push if user has tokens
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { fcmTokens: true },
-      });
-      if (user?.fcmTokens?.length) {
-        await sendMulticastPush({ tokens: user.fcmTokens, title, body: message, data });
+        await runWithTenant(tenantId, false, async () => {
+          // Save in-app notification
+          await prisma.notification.create({
+            data: {
+              userId,
+              tenantId,
+              type,
+              title,
+              message,
+              data: data || {},
+            },
+          });
+
+          // Send FCM push if user has tokens
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { fcmTokens: true },
+          });
+          if (user?.fcmTokens?.length) {
+            await sendMulticastPush({ tokens: user.fcmTokens, title, body: message, data });
+          }
+        });
+      },
+      {
+        connection: queueConnection,
+        concurrency: 10,
       }
-    });
-  },
-  {
-    connection: queueConnection,
-    concurrency: 10,
-  }
-);
+    )
+  : dummyWorker;
 
-notificationWorker.on('completed', (job) => {
-  logger.info(`Notification job [${job.id}] completed`);
-});
+if (notificationWorker?.on) {
+  notificationWorker.on('completed', (job) => {
+    logger.info(`Notification job [${job.id}] completed`);
+  });
 
-notificationWorker.on('failed', (job, err) => {
-  logger.error(`Notification job [${job?.id}] failed: ${err.message}`);
-});
+  notificationWorker.on('failed', (job, err) => {
+    logger.error(`Notification job [${job?.id}] failed: ${err.message}`);
+  });
+}
 
 export default notificationWorker;

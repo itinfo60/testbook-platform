@@ -52,28 +52,33 @@ const startServer = async () => {
     await redis.connect();
 
     // Set up Socket.IO Redis adapter for multi-instance support
-    try {
-      const redisUrl = config.redis.url || `redis://${config.redis.host}:${config.redis.port}`;
-      const pubClient = createClient({
-        url: redisUrl,
-        password: config.redis.password || undefined,
-      });
-      const subClient = pubClient.duplicate();
-      await Promise.all([pubClient.connect(), subClient.connect()]);
-      io.adapter(createAdapter(pubClient, subClient));
-      logger.info('Socket.IO Redis adapter connected');
-    } catch (err) {
-      logger.warn(
-        'Socket.IO Redis adapter failed, using in-memory (single instance only):',
-        err.message
-      );
+    if (config.redis.enabled) {
+      try {
+        const redisUrl = config.redis.url || `redis://${config.redis.host}:${config.redis.port}`;
+        const pubClient = createClient({
+          url: redisUrl,
+          password: config.redis.password || undefined,
+        });
+        const subClient = pubClient.duplicate();
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+        io.adapter(createAdapter(pubClient, subClient));
+        logger.info('Socket.IO Redis adapter connected');
+      } catch (err) {
+        logger.warn(
+          'Socket.IO Redis adapter failed, using in-memory (single instance only):',
+          err.message
+        );
+      }
     }
 
     // Initialize Socket.IO
     initializeSocket(io);
 
-    // Start BullMQ workers (log startup, workers are self-managing)
-    logger.info(`BullMQ workers started: email, notification, certificate, drip, reminder`);
+    if (config.redis.enabled) {
+      logger.info(`BullMQ workers started: email, notification, certificate, drip, reminder`);
+    } else {
+      logger.info(`Direct in-memory queue runners active: email, notification, certificate`);
+    }
 
     // Start live class auto-transition cron (scheduled→live→ended)
     startLiveClassCron();

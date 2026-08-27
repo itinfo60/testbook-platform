@@ -47,19 +47,26 @@ const processEmail = async (job) => {
   }
 };
 
-export const transactionalEmailWorker = new Worker('transactional_email', processEmail, {
-  connection: queueConnection,
-  concurrency: 5,
-  limiter: { max: 100, duration: 10000 }, // High priority: 100 emails/10 sec
-});
+const dummyWorker = { close: async () => {} };
 
-export const bulkEmailWorker = new Worker('bulk_email', processEmail, {
-  connection: queueConnection,
-  concurrency: 2,
-  limiter: { max: 10, duration: 60000 }, // Low priority bulk: 10 emails/min
-});
+export const transactionalEmailWorker = queueConnection
+  ? new Worker('transactional_email', processEmail, {
+      connection: queueConnection,
+      concurrency: 5,
+      limiter: { max: 100, duration: 10000 },
+    })
+  : dummyWorker;
+
+export const bulkEmailWorker = queueConnection
+  ? new Worker('bulk_email', processEmail, {
+      connection: queueConnection,
+      concurrency: 2,
+      limiter: { max: 10, duration: 60000 },
+    })
+  : dummyWorker;
 
 const attachListeners = (worker) => {
+  if (!worker?.on) return;
   worker.on('completed', (job) => {
     logger.info(
       `[Email] ✅ Job [${job.id}] type=${job.data.type} queue=${job.queueName} completed`
@@ -74,5 +81,7 @@ const attachListeners = (worker) => {
   });
 };
 
-attachListeners(transactionalEmailWorker);
-attachListeners(bulkEmailWorker);
+if (queueConnection) {
+  attachListeners(transactionalEmailWorker);
+  attachListeners(bulkEmailWorker);
+}

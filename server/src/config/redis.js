@@ -9,8 +9,14 @@ class RedisClient {
   }
 
   async connect() {
+    if (!config.redis.enabled) {
+      logger.info('⚡ Standalone mode active: Redis disabled (0 background requests).');
+      this.isConnected = false;
+      return null;
+    }
+
     try {
-      const redisOptions = config.redis.url 
+      const redisOptions = config.redis.url
         ? { url: config.redis.url }
         : {
             socket: {

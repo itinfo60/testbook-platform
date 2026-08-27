@@ -88,9 +88,9 @@ app.use((req, _res, next) => {
 });
 
 // ===== BULL BOARD (Queue Monitor) =====
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath('/admin/queues');
-if (process.env.NODE_ENV !== 'test') {
+if (config.redis.enabled && process.env.NODE_ENV !== 'test') {
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath('/admin/queues');
   createBullBoard({
     queues: [
       new BullMQAdapter(transactionalEmailQueue),
@@ -104,29 +104,30 @@ if (process.env.NODE_ENV !== 'test') {
     ],
     serverAdapter,
   });
+
+  // Protected by basic auth in production
+  app.use(
+    '/admin/queues',
+    (req, res, next) => {
+      if (config.env !== 'production') return next();
+      const auth = req.headers.authorization;
+      if (!auth || !auth.startsWith('Basic ')) {
+        res.set('WWW-Authenticate', 'Basic realm="Queue Monitor"');
+        return res.status(401).send('Authentication required');
+      }
+      const [, b64] = auth.split(' ');
+      const [user, pass] = Buffer.from(b64, 'base64').toString().split(':');
+      if (
+        user !== (process.env.QUEUE_ADMIN_USER || 'admin') ||
+        pass !== process.env.QUEUE_ADMIN_PASS
+      ) {
+        return res.status(403).send('Forbidden');
+      }
+      next();
+    },
+    serverAdapter.getRouter()
+  );
 }
-// Protected by basic auth in production
-app.use(
-  '/admin/queues',
-  (req, res, next) => {
-    if (config.env !== 'production') return next();
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Basic ')) {
-      res.set('WWW-Authenticate', 'Basic realm="Queue Monitor"');
-      return res.status(401).send('Authentication required');
-    }
-    const [, b64] = auth.split(' ');
-    const [user, pass] = Buffer.from(b64, 'base64').toString().split(':');
-    if (
-      user !== (process.env.QUEUE_ADMIN_USER || 'admin') ||
-      pass !== process.env.QUEUE_ADMIN_PASS
-    ) {
-      return res.status(403).send('Forbidden');
-    }
-    next();
-  },
-  serverAdapter.getRouter()
-);
 
 // ===== TENANT ISOLATION =====
 app.use(tenantIdentification);

@@ -78,19 +78,25 @@ export async function runTransitions() {
   }
 }
 
-export const liveClassWorker = new Worker(
-  'liveclass',
-  async (job) => {
-    if (job.name === 'auto_transition') {
-      await runTransitions();
-    }
-  },
-  { connection: queueConnection }
-);
+const dummyWorker = { close: async () => {} };
 
-liveClassWorker.on('failed', (job, err) => {
-  logger.error(`[LiveClass Worker] Job failed: ${err.message}`);
-});
+export const liveClassWorker = queueConnection
+  ? new Worker(
+      'liveclass',
+      async (job) => {
+        if (job.name === 'auto_transition') {
+          await runTransitions();
+        }
+      },
+      { connection: queueConnection }
+    )
+  : dummyWorker;
+
+if (liveClassWorker?.on) {
+  liveClassWorker.on('failed', (job, err) => {
+    logger.error(`[LiveClass Worker] Job failed: ${err.message}`);
+  });
+}
 
 export function startLiveClassCron() {
   // Run immediately on boot

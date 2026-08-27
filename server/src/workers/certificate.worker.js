@@ -4,34 +4,40 @@ import { transactionalEmailQueue } from '../queues/index.js';
 import logger from '../utils/logger.js';
 import { queueConnection } from '../queues/index.js';
 
-const certificateWorker = new Worker(
-  'certificate',
-  async (job) => {
-    const { user, course, enrollment } = job.data;
-    logger.info(`Generating certificate for user=${user._id} course=${course._id}`);
+const dummyWorker = { close: async () => {} };
 
-    const certificateUrl = await generateCertificatePDF({ user, course, enrollment });
+const certificateWorker = queueConnection
+  ? new Worker(
+      'certificate',
+      async (job) => {
+        const { user, course, enrollment } = job.data;
+        logger.info(`Generating certificate for user=${user._id} course=${course._id}`);
 
-    // Queue email with certificate
-    await transactionalEmailQueue.add('send', {
-      type: 'certificate',
-      data: { user, course, certificateUrl },
-    });
+        const certificateUrl = await generateCertificatePDF({ user, course, enrollment });
 
-    return { certificateUrl };
-  },
-  {
-    connection: queueConnection,
-    concurrency: 2,
-  }
-);
+        // Queue email with certificate
+        await transactionalEmailQueue.add('send', {
+          type: 'certificate',
+          data: { user, course, certificateUrl },
+        });
 
-certificateWorker.on('completed', (job, result) => {
-  logger.info(`Certificate job [${job.id}] done: ${result?.certificateUrl}`);
-});
+        return { certificateUrl };
+      },
+      {
+        connection: queueConnection,
+        concurrency: 2,
+      }
+    )
+  : dummyWorker;
 
-certificateWorker.on('failed', (job, err) => {
-  logger.error(`Certificate job [${job?.id}] failed: ${err.message}`);
-});
+if (certificateWorker?.on) {
+  certificateWorker.on('completed', (job, result) => {
+    logger.info(`Certificate job [${job.id}] done: ${result?.certificateUrl}`);
+  });
+
+  certificateWorker.on('failed', (job, err) => {
+    logger.error(`Certificate job [${job?.id}] failed: ${err.message}`);
+  });
+}
 
 export default certificateWorker;
