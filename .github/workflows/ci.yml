@@ -41,6 +41,9 @@ jobs:
           npm ci --legacy-peer-deps
           npx prisma generate
         working-directory: ./server
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/testbook_test
+          DIRECT_URL: postgresql://postgres:password@localhost:5432/testbook_test
 
       - name: Run server tests
         run: npm test || true
