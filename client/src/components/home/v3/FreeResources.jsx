@@ -77,7 +77,7 @@ export default function FreeResources() {
             {resources.map((resource) => (
               <Link
                 key={resource._id || resource.id}
-                to="/free-resources"
+                to={`/free-resources?id=${resource._id || resource.id}`}
                 className="bg-white rounded-3xl p-6 border border-navy-100 hover:border-navy-300 hover:shadow-xl hover:-translate-y-1 transition-all shadow-sm flex flex-col justify-between group cursor-pointer"
               >
                 <div>

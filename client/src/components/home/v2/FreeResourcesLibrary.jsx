@@ -140,7 +140,7 @@ export default function FreeResourcesLibrary() {
                       PDF Document
                     </span>
                     <Link
-                      to="/free-resources"
+                      to={`/free-resources?id=${resource._id || resource.id}`}
                       className="text-sm font-semibold text-accent-600 hover:text-accent-700 flex items-center gap-1 group-hover:bg-accent-50 px-3 py-1.5 rounded transition-colors"
                     >
                       <HiDocumentDownload className="h-4 w-4" /> View

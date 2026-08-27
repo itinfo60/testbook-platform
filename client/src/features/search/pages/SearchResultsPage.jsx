@@ -218,18 +218,21 @@ export default function SearchResultsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {results.resources.map((res) => (
-                    <a
+                    <Link
                       key={res.id || res._id}
-                      href={res.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-purple-500 transition-all"
+                      to={`/free-resources?id=${res.id || res._id}`}
+                      className="flex items-start gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-purple-500 hover:shadow-md transition-all group"
                     >
-                      <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 text-purple-600">
+                      <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 text-purple-600 group-hover:scale-105 transition-transform">
                         <HiOutlineDocumentText className="h-6 w-6" />
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-slate-900 dark:text-white">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                            Free Study Material
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors">
                           {res.title}
                         </h4>
                         {res.description && (
@@ -237,8 +240,11 @@ export default function SearchResultsPage() {
                             {res.description}
                           </p>
                         )}
+                        <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 mt-2 inline-flex items-center gap-1">
+                          View & Download PDF →
+                        </span>
                       </div>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </section>
