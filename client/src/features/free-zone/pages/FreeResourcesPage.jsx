@@ -750,17 +750,11 @@ export default function FreeResourcesPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => {
-                  const url = getResourceShareUrl(selectedResource);
-                  const text = `Check out this free study material on CivicsEdu:\n\n*${selectedResource.title}*\n\nDirect Download Link: ${url}`;
-                  window.open(
-                    `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
-                    '_blank'
-                  );
-                }}
+                onClick={() => handleShare(selectedResource)}
                 className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs px-4 py-2.5 rounded-xl border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <span>💬 Share on WhatsApp</span>
+                <HiShare className="h-4 w-4" />
+                <span>Share</span>
               </button>
 
               <div className="flex items-center gap-2">
