@@ -113,11 +113,14 @@ export default function FreeResourcesPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('latest');
   const [selectedResource, setSelectedResource] = useState(null);
+  const [highlightedResourceId, setHighlightedResourceId] = useState(null);
 
   const [resources, setResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const targetResourceId = searchParams.get('id') || searchParams.get('resource');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -144,12 +147,72 @@ export default function FreeResourcesPage() {
     fetchData();
   }, []);
 
+  // Deep-link auto selector: if URL contains ?id=... or ?resource=... or #resource-...
+  useEffect(() => {
+    if (!loading && resources.length > 0) {
+      let target = null;
+      if (targetResourceId) {
+        target = resources.find(
+          (r) =>
+            (r.id || r._id) === targetResourceId ||
+            (r.slug && r.slug === targetResourceId) ||
+            (r.title && r.title.toLowerCase().includes(targetResourceId.toLowerCase()))
+        );
+      } else if (window.location.hash) {
+        const hashId = window.location.hash.replace('#resource-', '').replace('#', '');
+        if (hashId) {
+          target = resources.find(
+            (r) => (r.id || r._id) === hashId || (r.slug && r.slug === hashId)
+          );
+        }
+      }
+
+      if (target) {
+        const targetId = target.id || target._id;
+        setSelectedResource(target);
+        setHighlightedResourceId(targetId);
+
+        // Ensure category or tab filters don't hide the target resource
+        if (activeTab !== 'all') setActiveTab('all');
+        if (activeCategory !== 'all') setActiveCategory('all');
+
+        setTimeout(() => {
+          const el = document.getElementById(`resource-${targetId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 400);
+      }
+    }
+  }, [loading, resources, targetResourceId]);
+
   useEffect(() => {
     const tabParam = searchParams.get('tab') || 'all';
     setActiveTab(tabParam);
     const catParam = searchParams.get('category') || 'all';
     setActiveCategory(catParam);
   }, [searchParams]);
+
+  const handleSelectResource = (resource) => {
+    setSelectedResource(resource);
+    if (resource) {
+      const resId = resource.id || resource._id;
+      setHighlightedResourceId(resId);
+      const params = new URLSearchParams(searchParams);
+      params.set('id', resId);
+      setSearchParams(params, { replace: true });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedResource(null);
+    const params = new URLSearchParams(searchParams);
+    if (params.has('id') || params.has('resource')) {
+      params.delete('id');
+      params.delete('resource');
+      setSearchParams(params, { replace: true });
+    }
+  };
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -288,18 +351,30 @@ export default function FreeResourcesPage() {
     }
   };
 
+  const getResourceShareUrl = (resource) => {
+    const resId = resource.id || resource._id;
+    return `${window.location.origin}/free-resources?id=${encodeURIComponent(resId)}`;
+  };
+
   const handleShare = (resource) => {
+    const shareUrl = getResourceShareUrl(resource);
+    const shareTitle = resource.title;
+    const catName =
+      typeof resource.category === 'object'
+        ? resource.category?.name
+        : resource.category || 'Competitive Exams';
+
     if (navigator.share) {
       navigator
         .share({
-          title: resource.title,
-          text: `Free Study Material for ${resource.category?.name || 'Competitive Exams'}: ${resource.title}`,
-          url: window.location.href,
+          title: shareTitle,
+          text: `Free Study Material (${catName}): ${shareTitle}`,
+          url: shareUrl,
         })
         .catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied to clipboard!');
+      navigator.clipboard.writeText(shareUrl);
+      toast.success('Resource direct link copied to clipboard!');
     }
   };
 
@@ -503,8 +578,13 @@ export default function FreeResourcesPage() {
                   return (
                     <div
                       key={resource.id || resource._id}
-                      onClick={() => setSelectedResource(resource)}
-                      className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-400 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col justify-between group cursor-pointer"
+                      id={`resource-${resource.id || resource._id}`}
+                      onClick={() => handleSelectResource(resource)}
+                      className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border transition-all flex flex-col justify-between group cursor-pointer ${
+                        highlightedResourceId === (resource.id || resource._id)
+                          ? 'border-emerald-500 dark:border-emerald-400 ring-2 ring-emerald-400/50 shadow-xl'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-400 shadow-sm hover:shadow-xl hover:-translate-y-1'
+                      }`}
                     >
                       <div>
                         {/* Header Badge */}
@@ -562,8 +642,8 @@ export default function FreeResourcesPage() {
                               e.stopPropagation();
                               handleShare(resource);
                             }}
-                            title="Share Link"
-                            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Copy direct share link for this resource"
+                            className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors cursor-pointer"
                           >
                             <HiShare className="h-4 w-4" />
                           </button>
@@ -592,7 +672,7 @@ export default function FreeResourcesPage() {
       {selectedResource && (
         <Modal
           isOpen={!!selectedResource}
-          onClose={() => setSelectedResource(null)}
+          onClose={handleCloseModal}
           title="Free Study Resource"
           size="lg"
         >
@@ -623,6 +703,23 @@ export default function FreeResourcesPage() {
               </p>
             </div>
 
+            {/* Direct Sharable Link Box */}
+            <div className="p-3 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <HiShare className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span className="text-[11px] font-mono text-slate-600 dark:text-slate-300 truncate select-all">
+                  {getResourceShareUrl(selectedResource)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleShare(selectedResource)}
+                className="bg-white dark:bg-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm shrink-0 transition-colors cursor-pointer"
+              >
+                Copy Link
+              </button>
+            </div>
+
             {/* Specification Highlights */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
@@ -650,22 +747,40 @@ export default function FreeResourcesPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
-                onClick={() => setSelectedResource(null)}
-                className="btn-outline text-xs px-4 py-2.5"
-              >
-                Close
-              </button>
-              <button
+                type="button"
                 onClick={() => {
-                  handleDownload(selectedResource);
-                  setSelectedResource(null);
+                  const url = getResourceShareUrl(selectedResource);
+                  const text = `Check out this free study material on CivicsEdu:\n\n*${selectedResource.title}*\n\nDirect Download Link: ${url}`;
+                  window.open(
+                    `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
+                    '_blank'
+                  );
                 }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-6 py-2.5 rounded-xl transition-all shadow-lg flex items-center gap-1.5 cursor-pointer"
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs px-4 py-2.5 rounded-xl border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <HiDownload className="h-4 w-4" /> Download PDF File
+                <span>💬 Share on WhatsApp</span>
               </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="btn-outline text-xs px-4 py-2.5"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDownload(selectedResource);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-6 py-2.5 rounded-xl transition-all shadow-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  <HiDownload className="h-4 w-4" /> Download PDF File
+                </button>
+              </div>
             </div>
           </div>
         </Modal>
