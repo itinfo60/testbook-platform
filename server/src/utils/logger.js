@@ -52,13 +52,11 @@ if (process.env.NODE_ENV === 'test') {
     new winston.transports.File({ filename: path.join(logsDir, 'rejections.log') })
   );
 
-  if (process.env.NODE_ENV !== 'production') {
-    transports.push(
-      new winston.transports.Console({
-        format: winston.format.combine(winston.format.colorize({ all: true }), format),
-      })
-    );
-  }
+  transports.push(
+    new winston.transports.Console({
+      format: winston.format.combine(winston.format.colorize({ all: true }), format),
+    })
+  );
 }
 
 const logger = winston.createLogger({

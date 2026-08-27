@@ -45,10 +45,22 @@ app.set('io', io);
 // ===== STARTUP =====
 const startServer = async () => {
   try {
+    // Start listening on 0.0.0.0 immediately so cloud port scanners (Render/Railway) detect the port instantly
+    server.listen(config.port, '0.0.0.0', () => {
+      logger.info('═══════════════════════════════════════════');
+      logger.info(`🚀 CivicsEdu Server v2.0.0`);
+      logger.info(`📡 Environment: ${config.env}`);
+      logger.info(`🌐 Server: http://0.0.0.0:${config.port}`);
+      logger.info(`📋 API: http://0.0.0.0:${config.port}/api/v1`);
+      logger.info(`❤️  Health: http://0.0.0.0:${config.port}/health`);
+      logger.info(`🔌 WebSocket: ws://0.0.0.0:${config.port}`);
+      logger.info('═══════════════════════════════════════════');
+    });
+
     // Connect to PostgreSQL (Prisma)
     await database.connect();
 
-    // Connect to Redis
+    // Connect to Redis (if enabled)
     await redis.connect();
 
     // Set up Socket.IO Redis adapter for multi-instance support
@@ -85,18 +97,6 @@ const startServer = async () => {
 
     // Drain stale zombie jobs from Redis on startup (dev only)
     await drainFailedJobs();
-
-    // Start server
-    server.listen(config.port, () => {
-      logger.info('═══════════════════════════════════════════');
-      logger.info(`🚀 CivicsEdu Server v2.0.0`);
-      logger.info(`📡 Environment: ${config.env}`);
-      logger.info(`🌐 Server: http://localhost:${config.port}`);
-      logger.info(`📋 API: http://localhost:${config.port}/api/v1`);
-      logger.info(`❤️  Health: http://localhost:${config.port}/health`);
-      logger.info(`🔌 WebSocket: ws://localhost:${config.port}`);
-      logger.info('═══════════════════════════════════════════');
-    });
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
