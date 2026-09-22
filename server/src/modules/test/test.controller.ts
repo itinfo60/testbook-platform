@@ -23,7 +23,11 @@ export class TestController extends BaseController {
   });
 
   getTestById = this.catchAsync(async (req: CustomRequest, res: Response) => {
-    const result = await this.testService.getTestById(req.params.id, req.userId || undefined);
+    const result = await this.testService.getTestById(
+      req.params.id,
+      req.userId || undefined,
+      req.user?.role === 'admin' || req.user?.role === 'super_admin'
+    );
     return this.ok(res, result);
   });
 
@@ -106,7 +110,11 @@ export class TestController extends BaseController {
     if (!req.userId) {
       throw ApiError.unauthorized('Authentication required to delete a test');
     }
-    await this.testService.deleteTest(req.params.id, req.userId);
+    await this.testService.deleteTest(
+      req.params.id,
+      req.userId,
+      req.user?.role === 'admin' || req.user?.role === 'super_admin'
+    );
     return this.ok(res, null, 'Test deleted successfully');
   });
 

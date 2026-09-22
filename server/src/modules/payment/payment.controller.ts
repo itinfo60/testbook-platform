@@ -147,16 +147,16 @@ export class PaymentController extends BaseController {
       });
       if (existing) throw ApiError.conflict('Already enrolled in this course');
     } else {
-      item = await prisma.test.findFirst({ where: { OR: [{ id: testId }, { slug: testId }] } });
+      item = await prisma.test.findFirst({ where: { id: testId } });
       if (!item)
         item = await prisma.testSeries.findFirst({
-          where: { OR: [{ id: testId }, { slug: testId }] },
+          where: { id: testId },
         });
       if (!item || !item.isPublished) throw ApiError.notFound('Test or Test Series not found');
       amount = item.price || 0;
     }
 
-    const basePrice = item.price || 0;
+    const basePrice = item.settings?.price ?? item.price ?? 0;
 
     // Apply Coupon
     let discount = 0;
@@ -191,6 +191,8 @@ export class PaymentController extends BaseController {
         status: 'completed',
         notes: {
           demo: true,
+          courseId: courseId ? item.id : null,
+          testId: testId ? item.id : null,
           itemTitle: item.title,
           basePrice,
           discount,

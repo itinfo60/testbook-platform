@@ -17,16 +17,16 @@ export async function scheduleDripContent({ enrollment, course, tenantId }) {
         dripQueue.add(
           'unlock',
           {
-            enrollmentId: enrollment._id.toString(),
-            lessonId: lesson._id.toString(),
-            sectionId: section._id.toString(),
+            enrollmentId: String(enrollment.id || enrollment._id),
+            lessonId: String(lesson.id || lesson._id),
+            sectionId: String(section.id || section._id),
             lessonTitle: lesson.title,
             courseTitle: course.title,
             tenantId,
           },
           {
             delay: delayMs,
-            jobId: `drip_${enrollment._id}_${lesson._id}`,
+            jobId: `drip_${enrollment.id || enrollment._id}_${lesson.id || lesson._id}`,
             removeOnComplete: true,
           }
         )

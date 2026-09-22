@@ -27,12 +27,13 @@ const normalizeQuestion = (q) => {
   }
 
   return {
+    id: q.id || q._id,
     question: q.question || q.text || '',
     options: options.length >= 4 ? options : [...options, '', '', '', ''].slice(0, 4),
     correctAnswer,
     explanation: q.explanation || '',
     marks: q.marks || 2,
-    negativeMark: q.negativeMark || 0.66,
+    negativeMark: q.negativeMarks ?? q.negativeMark ?? 0.66,
   };
 };
 
@@ -171,6 +172,7 @@ export default function TeacherTestForm() {
       // passingMarks defaults to 40% of totalMarks if not specified
       passingMarks: Math.ceil((Number(formData.totalMarks) || formData.questions.length * 2) * 0.4),
       questions: formData.questions.map((q) => ({
+        id: q.id,
         question: q.question.trim(),
         // Schema requires a `type` field
         type: 'mcq',
@@ -181,7 +183,7 @@ export default function TeacherTestForm() {
         explanation: q.explanation?.trim() || '',
         marks: Number(q.marks) || 2,
         // API field is `negativeMarks`, not `negativeMark`
-        negativeMarks: Number(q.negativeMark) || 0.66,
+        negativeMarks: Number(q.negativeMark ?? 0.66),
       })),
     };
 

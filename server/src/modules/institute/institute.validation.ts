@@ -57,7 +57,7 @@ export const onboardInstituteSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/, 'Subdomain can only contain lowercase letters, numbers, and hyphens'),
   adminName: z.string().trim().min(2, 'Admin name must be at least 2 characters').max(50),
-  adminEmail: z.string().email('Please enter a valid email').lowercase().trim(),
+  adminEmail: z.string().trim().toLowerCase().email('Please enter a valid email'),
   adminPassword: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -71,12 +71,12 @@ export const createInstituteSchema = onboardInstituteSchema.extend({
   customDomain: z
     .string()
     .trim()
-    .lowercase()
+    .toLowerCase()
     .regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/, {
       message: 'Must be a valid domain name (e.g. academy.com)',
     })
     .optional(),
-  subscriptionPlanName: z.string().trim().lowercase().optional(),
+  subscriptionPlanName: z.string().trim().toLowerCase().optional(),
 });
 
 export const updateInstituteSchema = z.object({
@@ -84,7 +84,7 @@ export const updateInstituteSchema = z.object({
   customDomain: z
     .string()
     .trim()
-    .lowercase()
+    .toLowerCase()
     .regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/)
     .optional()
     .nullable(),

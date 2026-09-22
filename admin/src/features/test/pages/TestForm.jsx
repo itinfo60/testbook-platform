@@ -22,12 +22,13 @@ const normalizeQuestion = (q) => {
   }
 
   return {
+    id: q.id || q._id,
     question: q.question || q.text || '',
     options: options.length >= 4 ? options : [...options, '', '', '', ''].slice(0, 4),
     correctAnswer,
     explanation: q.explanation || '',
     marks: q.marks || 2,
-    negativeMark: q.negativeMarks || q.negativeMark || 0.66,
+    negativeMark: q.negativeMarks ?? q.negativeMark ?? 0.66,
   };
 };
 
@@ -231,6 +232,7 @@ export default function TestForm() {
       totalMarks: Number(formData.totalMarks) || formData.questions.length * 2,
       passingMarks: Math.ceil((Number(formData.totalMarks) || formData.questions.length * 2) * 0.4),
       questions: formData.questions.map((q) => ({
+        id: q.id,
         question: q.question.trim(),
         type: 'mcq',
         options: q.options.map((opt, idx) => ({
@@ -239,7 +241,7 @@ export default function TestForm() {
         })),
         explanation: q.explanation?.trim() || '',
         marks: Number(q.marks) || 2,
-        negativeMarks: Number(q.negativeMark) || 0.66,
+        negativeMarks: Number(q.negativeMark ?? 0.66),
       })),
     };
 

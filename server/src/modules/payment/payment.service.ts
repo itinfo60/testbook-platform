@@ -21,9 +21,10 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
 
   constructor(repository: PaymentRepository = new PaymentRepository()) {
     super(repository);
-    this.razorpay = config.razorpay.keyId
-      ? new Razorpay({ key_id: config.razorpay.keyId, key_secret: config.razorpay.keySecret })
-      : null;
+    this.razorpay =
+      config.razorpay.keyId && config.razorpay.keySecret
+        ? new Razorpay({ key_id: config.razorpay.keyId, key_secret: config.razorpay.keySecret })
+        : null;
   }
 
   async createCheckoutOrder(userId: string, tenantId: string | null, data: ICreateOrderDto) {
@@ -49,7 +50,7 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
         item = await prisma.testSeries.findFirst({ where: { id: testId } });
       }
       if (!item || !item.isPublished) throw ApiError.notFound('Test or Test Series not found');
-      basePrice = item.price || 0;
+      basePrice = item.settings?.price ?? item.price ?? 0;
     }
 
     if (!item) throw ApiError.badRequest('No valid item to purchase');
@@ -148,8 +149,8 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
         notes: {
           razorpayOrderId: orderId,
           itemTitle: item.title,
-          courseId: courseId || (item.sections ? item.id : null),
-          testId: testId || (!item.sections ? item.id : null),
+          courseId: courseId ? item.id : null,
+          testId: testId ? item.id : null,
           basePrice,
           discount,
           gstAmount,
@@ -173,11 +174,14 @@ export class PaymentService extends BaseService<IPayment, PaymentRepository> {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planId } = data;
 
     const isMock =
-      process.env.ALLOW_MOCK_PAYMENTS === 'true' ||
-      razorpay_order_id.startsWith('order_mock_') ||
+      process.env.ALLOW_MOCK_PAYMENTS === 'true' &&
+      razorpay_order_id.startsWith('order_mock_') &&
       razorpay_signature === 'mock_signature';
 
-    if (!isMock && config.razorpay.keySecret) {
+    if (!isMock) {
+      if (!config.razorpay.keySecret) {
+        throw ApiError.serviceUnavailable('Payment gateway not configured');
+      }
       const expectedSig = crypto
         .createHmac('sha256', config.razorpay.keySecret)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)

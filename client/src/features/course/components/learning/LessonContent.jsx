@@ -1,15 +1,5 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  HiExternalLink,
-  HiDownload,
-  HiPlay,
-  HiCheckCircle,
-  HiDocumentText,
-  HiArrowRight,
-  HiCheck,
-  HiAcademicCap,
-} from 'react-icons/hi';
+import { HiExternalLink, HiDownload, HiPlay } from 'react-icons/hi';
 import VideoPlayer from './VideoPlayer';
 
 function TextContent({ content }) {
@@ -127,6 +117,7 @@ export default function LessonContent({
         <div className="w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-900/10 dark:border-white/10 bg-black aspect-video relative flex items-center justify-center group ring-1 ring-black/5 dark:ring-white/5">
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-10"></div>
           <VideoPlayer
+            key={lesson.id || lesson._id || lesson.videoUrl}
             ref={playerRef}
             url={lesson.videoUrl}
             onProgress={onProgress}

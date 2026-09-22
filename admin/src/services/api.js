@@ -216,7 +216,7 @@ export const testsAPI = {
 // ══════════════════════════════════════════════
 export const quizzesAPI = {
   getAll: (params) => api.get(`/admin/quizzes${qs(params)}`),
-  getById: (id) => api.get(`/quizzes/${id}`),
+  getById: (id) => api.get(`/quizzes/teacher/${id}`),
   create: (data) => api.post('/quizzes', data),
   update: (id, data) => api.put(`/quizzes/${id}`, data),
   delete: (id) => api.delete(`/admin/quizzes/${id}`),

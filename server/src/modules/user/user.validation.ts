@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const adminCreateUserSchema = z.object({
   name: z.string().trim().min(2).max(50),
-  email: z.string().email().lowercase().trim(),
+  email: z.string().trim().toLowerCase().email(),
   password: z
     .string()
     .min(8)
@@ -16,7 +16,7 @@ export const adminCreateUserSchema = z.object({
 
 export const adminUpdateUserSchema = z.object({
   name: z.string().trim().min(2).max(50).optional(),
-  email: z.string().email().lowercase().trim().optional(),
+  email: z.string().trim().toLowerCase().email().optional(),
   role: z.enum(['student', 'teacher', 'admin']).optional(),
   isActive: z.boolean().optional(),
   phone: z

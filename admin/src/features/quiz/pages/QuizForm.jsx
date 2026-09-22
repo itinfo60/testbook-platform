@@ -29,6 +29,7 @@ const normalizeQuestion = (q) => {
     }
   }
   return {
+    id: q.id || q._id,
     question: q.question || '',
     options: options.length >= 4 ? options : [...options, '', '', '', ''].slice(0, 4),
     correctAnswer,
@@ -97,14 +98,15 @@ export default function QuizForm() {
         setFormData({
           title: quiz.title || '',
           description: quiz.description || '',
-          type: quiz.type || (quiz.course ? 'course' : 'daily'),
+          type: quiz.type || (quiz.courseId || quiz.course ? 'course' : 'daily'),
           courseId:
+            quiz.courseId ||
             quiz.course?.id ||
             quiz.course?._id ||
             (typeof quiz.course === 'string' ? quiz.course : ''),
           teacherId: quiz.teacher?.id || quiz.teacher?._id || quiz.teacherId || '',
           examCategory: quiz.examCategory?._id || quiz.examCategory?.id || quiz.examCategory || '',
-          duration: quiz.duration || 10,
+          duration: quiz.timeLimit ?? quiz.duration ?? 10,
           passingScore: quiz.passingScore ?? 60,
           isPublished: quiz.isPublished !== false,
           questions:
@@ -167,6 +169,7 @@ export default function QuizForm() {
       passingScore: Number(formData.passingScore) || 60,
       isPublished: formData.isPublished,
       questions: formData.questions.map((q) => ({
+        id: q.id,
         question: q.question.trim(),
         options: q.options.map((text, i) => ({
           text: text.trim(),

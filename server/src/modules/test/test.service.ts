@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'node:crypto';
 import { BaseService } from '../../core/base.service.js';
 import {
   ITest,
@@ -44,6 +44,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
       instructions: data.instructions || '',
       randomizeQuestions: data.randomizeQuestions ?? false,
       randomizeOptions: data.randomizeOptions ?? false,
+      maxAttempts: data.maxAttempts ?? 0,
       teacherId: (data as any).teacherId || teacherId,
     };
 
@@ -89,8 +90,28 @@ export class TestService extends BaseService<ITest, TestRepository> {
     if (!test) {
       throw ApiError.notFound('Test not found or unauthorized');
     }
+    if (!isAdmin && (test as any).settings?.teacherId !== teacherId) {
+      throw ApiError.forbidden('Not authorized to edit this test');
+    }
 
     const updateData: any = {};
+    const settings = { ...((test as any).settings || {}) };
+    for (const key of [
+      'isFree',
+      'price',
+      'difficulty',
+      'instructions',
+      'randomizeQuestions',
+      'randomizeOptions',
+      'maxAttempts',
+    ]) {
+      if ((data as any)[key] !== undefined) settings[key] = (data as any)[key];
+    }
+    updateData.settings = settings;
+    if (data.status !== undefined) updateData.isPublished = data.status === 'published';
+    if ((data.passingMarks ?? test.passingMarks) > (data.totalMarks ?? test.totalMarks)) {
+      throw ApiError.badRequest('Passing marks cannot exceed total marks');
+    }
     if (data.title) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.duration !== undefined) updateData.duration = Number(data.duration);
@@ -129,10 +150,13 @@ export class TestService extends BaseService<ITest, TestRepository> {
     return updated;
   }
 
-  async deleteTest(id: string, teacherId: string): Promise<ITest | null> {
+  async deleteTest(id: string, teacherId: string, isAdmin = false): Promise<ITest | null> {
     const test = await this.repository.findById(id);
     if (!test) {
       throw ApiError.notFound('Test not found');
+    }
+    if (!isAdmin && (test as any).settings?.teacherId !== teacherId) {
+      throw ApiError.forbidden('Not authorized to delete this test');
     }
     return this.repository.deleteById(id);
   }
@@ -246,7 +270,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
     return { docs: results, page, limit, total };
   }
 
-  async getTestById(id: string, userId?: string) {
+  async getTestById(id: string, userId?: string, isAdmin = false) {
     const test = (await prisma.test.findFirst({
       where: this.repository['getScopedFilter']({ id }),
       include: {
@@ -254,17 +278,18 @@ export class TestService extends BaseService<ITest, TestRepository> {
       },
     })) as any;
 
-    if (!test || (!test.isPublished && (!userId || test.teacherId !== userId))) {
+    const isAuthor = isAdmin || (!!userId && test?.settings?.teacherId === userId);
+    if (!test || (!test.isPublished && !isAuthor)) {
       throw ApiError.notFound('Test not found');
     }
 
     // Strip answers if not teacher or if not already graded
-    if (!userId || test.teacherId !== userId) {
+    if (!isAuthor) {
       if (test.questions) {
         let qs = typeof test.questions === 'string' ? JSON.parse(test.questions) : test.questions;
         test.questions = qs.map((q: any) => {
           const strippedOptions = q.options?.map((o: any) => ({ id: o.id, text: o.text }));
-          const { correctAnswer, explanation, ...rest } = q;
+          const { correctAnswer, correctOption, explanation, ...rest } = q;
           return { ...rest, options: strippedOptions };
         });
       }
@@ -336,6 +361,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
 
     const enrichedTest = {
       ...test,
+      ...test.settings,
       isFree,
       price: isFree ? 0 : price,
       associatedSeries,
@@ -410,7 +436,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
       await this.submitAttemptDirect(prev, true).catch(() => {});
     }
 
-    if (test.maxAttempts > 0) {
+    if (test.settings?.maxAttempts > 0) {
       const attemptsCount = await prisma.testAttempt.count({
         where: {
           userId,
@@ -418,8 +444,10 @@ export class TestService extends BaseService<ITest, TestRepository> {
           status: 'completed',
         },
       });
-      if (attemptsCount >= test.maxAttempts) {
-        throw ApiError.forbidden(`Maximum attempts (${test.maxAttempts}) reached for this test.`);
+      if (attemptsCount >= test.settings.maxAttempts) {
+        throw ApiError.forbidden(
+          `Maximum attempts (${test.settings.maxAttempts}) reached for this test.`
+        );
       }
     }
 
@@ -448,7 +476,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
       order: q.order,
     }));
 
-    if (test.randomizeQuestions) {
+    if (test.settings?.randomizeQuestions) {
       const sectionsMap = new Map<string, typeof questions>();
       questions.forEach((q: any) => {
         const sec = q.sectionName || 'General';
@@ -528,7 +556,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
       duration: test.duration,
       totalMarks: test.totalMarks,
       title: test.title,
-      instructions: test.instructions,
+      instructions: test.settings?.instructions || '',
     };
   }
 
@@ -766,6 +794,8 @@ export class TestService extends BaseService<ITest, TestRepository> {
         answers: attempt.answers,
         score: attempt.score,
         percentage: attempt.percentage,
+        isPassed: attempt.isPassed,
+        gradingStatus: containsSubjective ? 'pending_manual' : 'auto_graded',
         status: attempt.status,
         completedAt: attempt.completedAt,
         timeTaken: attempt.timeTaken,
@@ -1005,7 +1035,7 @@ export class TestService extends BaseService<ITest, TestRepository> {
     const test = (await prisma.test.findFirst({
       where: this.repository['getScopedFilter']({
         id: attempt.testId,
-        teacherId,
+        settings: { path: ['teacherId'], equals: teacherId },
       }),
     })) as any;
     if (!test) {
@@ -1146,9 +1176,9 @@ export class TestService extends BaseService<ITest, TestRepository> {
   }
 
   async getTeacherTests(teacherId: string, query: any) {
-    const filter: any = { teacherId };
+    const filter: any = { settings: { path: ['teacherId'], equals: teacherId } };
 
-    if (query.status) filter.status = query.status;
+    if (query.status) filter.isPublished = query.status === 'published';
     if (query.category) filter.categoryId = query.category;
     if (query.search) {
       filter.title = { contains: query.search, mode: 'insensitive' };
@@ -1164,21 +1194,21 @@ export class TestService extends BaseService<ITest, TestRepository> {
       prisma.test.findMany({
         where,
         include: { category: { select: { name: true } } },
-        orderBy: { startedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
       prisma.test.count({ where }),
     ]);
 
-    return { docs, page, limit, total };
+    return { docs: docs.map((doc: any) => ({ ...doc, ...doc.settings })), page, limit, total };
   }
 
   async getTestAnalytics(testId: string, teacherId: string) {
     const test = (await prisma.test.findFirst({
       where: this.repository['getScopedFilter']({
         id: testId,
-        teacherId,
+        settings: { path: ['teacherId'], equals: teacherId },
       }),
     })) as any;
 

@@ -1,9 +1,20 @@
+import { randomUUID } from 'node:crypto';
 import { CourseRepository } from './course.repository.js';
 import { CreateCourseInput, UpdateCourseInput, CourseQueryInput } from './course.validation.js';
 import { ApiError } from '../../core/api-error.js';
 import redis from '../../config/redis.js';
 import { generateSlug } from '../../utils/helpers.js';
 import prisma from '../../config/prisma.js';
+
+const normalizeSections = (sections: any[]) =>
+  sections.map((section) => ({
+    ...section,
+    id: section.id || section._id || randomUUID(),
+    lessons: (section.lessons || []).map((lesson: any) => ({
+      ...lesson,
+      id: lesson.id || lesson._id || randomUUID(),
+    })),
+  }));
 
 export class CourseService {
   private readonly courseRepository: CourseRepository;
@@ -214,7 +225,7 @@ export class CourseService {
     const categoryId =
       (input as any).categoryId || (input as any).category || (input as any).examCategory || null;
 
-    const sections = input.sections || [];
+    const sections = normalizeSections(input.sections || []);
     let totalLessons = 0;
     let totalDuration = 0;
     sections.forEach((sec: any) => {
@@ -303,7 +314,7 @@ export class CourseService {
       updateData.instructors = (input as any).instructors;
     }
     if (input.sections !== undefined) {
-      updateData.sections = input.sections;
+      updateData.sections = normalizeSections(input.sections);
       let totalLessons = 0;
       let totalDuration = 0;
       input.sections.forEach((sec: any) => {

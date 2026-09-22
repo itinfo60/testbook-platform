@@ -1,392 +1,827 @@
-import { forwardRef, useRef, useState, useEffect, useImperativeHandle } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  HiArrowPath,
+  HiArrowsPointingIn,
+  HiArrowsPointingOut,
+  HiPause,
+  HiPlay,
+  HiSpeakerWave,
+  HiSpeakerXMark,
+} from 'react-icons/hi2';
+import YouTubeSurface from './YouTubeSurface';
+import { getVideoSource } from './videoSource';
 
-export function isYouTubeUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i.test(url.trim());
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const COMPLETION_RATIO = 0.95;
+const CONTROLS_IDLE_MS = 2500;
+const SEEK_STEP_SECONDS = 5;
+const EXPANDED_Z_INDEX = '2147483000';
+// After every start/resume YouTube shows its own round play/pause icon in the
+// centre of the frame for about three seconds, even with controls disabled.
+const YOUTUBE_ICON_COVER_MS = 3500;
+// YouTube draws its title, channel avatar, "More videos" and logo along the
+// frame's top and bottom edges. The frame is taller than the visible stage, so
+// YouTube letterboxes a 16:9 video into exactly the visible area and all of
+// that chrome lands in the clipped overflow, in every state and at every size.
+const YOUTUBE_OVERSCAN = 'calc(max(100px, 15%) * -1)';
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function formatTime(value) {
+  const total = Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = String(total % 60).padStart(2, '0');
+  return hours
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}`
+    : `${minutes}:${seconds}`;
 }
 
-export function extractYouTubeId(url) {
-  if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
+function getFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
 }
 
-const VideoPlayer = forwardRef(({ url, autoPlay = false, onProgress, onComplete }, ref) => {
-  const containerRef = useRef(null);
-  const iframeRef = useRef(null);
-  const videoElRef = useRef(null);
-  const hideTimeoutRef = useRef(null);
-  const isPlayingRef = useRef(false);
-  const isHoveredRef = useRef(false);
+function errorMessage(error) {
+  if (typeof error === 'string' && error) return error;
+  return error?.message || 'The video could not be played. Please retry.';
+}
 
-  const isYouTube = isYouTubeUrl(url);
-  const youtubeId = isYouTube ? extractYouTubeId(url) : null;
+function PlayerMessage({ children }) {
+  return (
+    <div
+      role="region"
+      aria-label="Video player"
+      className="relative flex w-full aspect-video items-center justify-center bg-black text-center text-slate-400"
+    >
+      <div>
+        <div className="text-4xl mb-2" aria-hidden="true">
+          🎬
+        </div>
+        <p className="font-semibold text-sm">{children}</p>
+      </div>
+    </div>
+  );
+}
 
-  // Mask state (ONLY used for YouTube videos)
-  const [activeMasks, setActiveMasks] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
+function Spinner() {
+  return (
+    <span className="block h-12 w-12 rounded-full border-4 border-white/25 border-t-amber-400 animate-spin" />
+  );
+}
+
+function CenterBadge({ children }) {
+  return (
+    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-950 text-white shadow-2xl ring-1 ring-white/20 sm:h-20 sm:w-20">
+      {children}
+    </span>
+  );
+}
+
+const PlayerSession = forwardRef(function PlayerSession(
+  { source, autoPlay = false, onProgress, onComplete },
+  ref
+) {
+  const isYouTube = source.type === 'youtube';
+  const regionRef = useRef(null);
+  const videoRef = useRef(null);
+  const surfaceRef = useRef(null);
+  const fullscreenButtonRef = useRef(null);
+  const callbacksRef = useRef({});
+  callbacksRef.current = { onProgress, onComplete };
+  const completedRef = useRef(false);
+  const pendingSeekRef = useRef(null);
+  const autoplayTriedRef = useRef(false);
+  const scrubbingRef = useRef(false);
+  const idleTimerRef = useRef(null);
+  const iconCoverTimerRef = useRef(null);
+  const resumeAtRef = useRef(0);
+  const pointerTypeRef = useRef('mouse');
+
+  const [attempt, setAttempt] = useState(0);
+  const [ready, setReady] = useState(!isYouTube);
+  // idle | playing | paused | buffering | ended
+  const [playback, setPlayback] = useState('idle');
+  const [hasStarted, setHasStarted] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [rate, setRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [coverYouTubeIcon, setCoverYouTubeIcon] = useState(false);
 
-  // Expose imperative player methods on ref (e.g. seekTo)
-  useImperativeHandle(
-    ref,
-    () => ({
-      seekTo: (seconds) => {
-        if (isYouTube && iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage(
-            JSON.stringify({
-              event: 'command',
-              func: 'seekTo',
-              args: [seconds, true],
-            }),
-            '*'
-          );
-        } else if (videoElRef.current) {
-          videoElRef.current.currentTime = seconds;
-        }
-      },
-      play: () => {
-        if (videoElRef.current) {
-          videoElRef.current.play().catch(() => {});
-        } else if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage(
-            JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
-            '*'
-          );
-        }
-      },
-      pause: () => {
-        if (videoElRef.current) {
-          videoElRef.current.pause();
-        } else if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage(
-            JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
-            '*'
-          );
-        }
-      },
-    }),
-    [isYouTube]
+  const isActive = playback === 'playing' || playback === 'buffering';
+  const canPlay = ready && !error;
+  const immersive = isFullscreen || expanded;
+  const controlsShown = controlsVisible || playback !== 'playing' || Boolean(error);
+
+  const markComplete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    callbacksRef.current.onComplete?.();
+  }, []);
+
+  const handleProgress = useCallback(
+    ({ played, playedSeconds, duration: total, loaded }) => {
+      if (!scrubbingRef.current) setCurrentTime(playedSeconds);
+      if (total > 0) setDuration(total);
+      if (Number.isFinite(loaded)) setBuffered(loaded);
+      callbacksRef.current.onProgress?.({ played, playedSeconds, duration: total, loaded });
+      if (played >= COMPLETION_RATIO) markComplete();
+    },
+    [markComplete]
   );
 
-  // Sync ref with state
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_IDLE_MS);
+  }, []);
+
+  const coverIconBriefly = useCallback(() => {
+    setCoverYouTubeIcon(true);
+    clearTimeout(iconCoverTimerRef.current);
+    iconCoverTimerRef.current = setTimeout(() => setCoverYouTubeIcon(false), YOUTUBE_ICON_COVER_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      clearTimeout(idleTimerRef.current);
+      clearTimeout(iconCoverTimerRef.current);
+    },
+    []
+  );
+
+  // ---- Playback commands -------------------------------------------------
+
+  const playNative = (video) =>
+    Promise.resolve(video.play()).catch(() => {
+      // Autoplay policies reject without a pause event; leave a usable Play button.
+      if (video.paused) setPlayback((prev) => (prev === 'ended' ? prev : 'paused'));
+    });
+
+  const seek = (seconds) => {
+    if (!Number.isFinite(seconds)) return;
+    const target = Math.max(0, duration > 0 ? Math.min(seconds, duration) : seconds);
+    setCurrentTime(target);
+    if (playback === 'ended' && target < duration) setPlayback('paused');
+    if (isYouTube) {
+      surfaceRef.current?.seekTo(target);
+      return;
+    }
+    const video = videoRef.current;
+    if (video && video.readyState >= 1) video.currentTime = target;
+    else pendingSeekRef.current = target;
+  };
+  const seekRef = useRef(seek);
+  seekRef.current = seek;
+
+  const play = () => {
+    if (!canPlay) return Promise.resolve();
+    if (playback === 'ended') seek(0);
+    if (isYouTube) return Promise.resolve(surfaceRef.current?.play()).catch(() => {});
+    const video = videoRef.current;
+    return video ? playNative(video) : Promise.resolve();
+  };
+
+  const pause = () => {
+    if (isYouTube) {
+      surfaceRef.current?.pause();
+      // Cover the frame immediately instead of waiting for YouTube's state event.
+      setPlayback((prev) => (prev === 'ended' ? prev : 'paused'));
+      return;
+    }
+    videoRef.current?.pause();
+  };
+
+  const togglePlay = () => (isActive ? pause() : play());
+
+  const changeVolume = (value) => {
+    if (!Number.isFinite(value)) return;
+    const next = clamp(value, 0, 1);
+    const nextMuted = next === 0;
+    setVolume(next);
+    setMuted(nextMuted);
+    if (isYouTube) {
+      surfaceRef.current?.setVolume(next);
+      if (muted !== nextMuted) surfaceRef.current?.setMuted(nextMuted);
+    } else if (videoRef.current) {
+      videoRef.current.volume = next;
+      videoRef.current.muted = nextMuted;
+    }
+  };
+
+  const toggleMute = () => {
+    if (muted && volume === 0) {
+      changeVolume(0.5);
+      return;
+    }
+    const next = !muted;
+    setMuted(next);
+    if (isYouTube) surfaceRef.current?.setMuted(next);
+    else if (videoRef.current) videoRef.current.muted = next;
+  };
+
+  const changeRate = (value) => {
+    if (!SPEEDS.includes(value)) return;
+    setRate(value);
+    if (isYouTube) surfaceRef.current?.setPlaybackRate(value);
+    else if (videoRef.current) videoRef.current.playbackRate = value;
+  };
+
+  const retry = () => {
+    resumeAtRef.current = currentTime;
+    if (!isYouTube && currentTime > 0) pendingSeekRef.current = currentTime;
+    setError(null);
+    setReady(!isYouTube);
+    setPlayback('idle');
+    setAttempt((value) => value + 1);
+  };
+
+  // A retried YouTube session is a fresh SDK player; resume where it failed.
   useEffect(() => {
-    isPlayingRef.current = isPlaying;
-  }, [isPlaying]);
-
-  // Turn off captions on YouTube iframe
-  const enforceCaptionsOff = () => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(
-        JSON.stringify({ event: 'command', func: 'unloadModule', args: ['captions'] }),
-        '*'
-      );
-      iframeRef.current.contentWindow.postMessage(
-        JSON.stringify({ event: 'command', func: 'setOption', args: ['captions', 'track', {}] }),
-        '*'
-      );
+    if (attempt > 0 && isYouTube && resumeAtRef.current > 0) {
+      surfaceRef.current?.seekTo(resumeAtRef.current);
     }
-  };
+  }, [attempt, isYouTube]);
 
-  /**
-   * Hover & Visibility State (ONLY applies to YouTube overlays):
-   */
-  const handleMouseEnter = () => {
-    if (!isYouTube) return;
-    isHoveredRef.current = true;
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-    setActiveMasks(true);
-  };
+  // ---- Fullscreen ----------------------------------------------------------
 
-  const handleMouseMove = () => {
-    if (!isYouTube) return;
-    isHoveredRef.current = true;
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-    setActiveMasks(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isYouTube) return;
-    isHoveredRef.current = false;
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-
-    if (isPlayingRef.current) {
-      hideTimeoutRef.current = setTimeout(() => {
-        if (!isHoveredRef.current && isPlayingRef.current) {
-          setActiveMasks(false);
+  useEffect(() => {
+    const sync = () => {
+      const active = getFullscreenElement() === regionRef.current;
+      setIsFullscreen(active);
+      if (isYouTube) coverIconBriefly();
+      if (!active) {
+        try {
+          window.screen?.orientation?.unlock?.();
+        } catch {
+          // Orientation lock is only available in some mobile browsers.
         }
-      }, 5000);
-    } else {
-      setActiveMasks(true);
-    }
-  };
+      }
+    };
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync);
+    };
+  }, [isYouTube, coverIconBriefly]);
 
-  // Subscribe to YouTube state & Progress telemetry
-  useEffect(() => {
-    if (!isYouTube) return;
-
-    const handleMessage = (event) => {
+  // Only the player container ever goes fullscreen. The media element or the
+  // YouTube frame going fullscreen on its own would bring back the provider's
+  // controls, so browsers that refuse (iPhone Safari) get an in-page overlay.
+  const enterFullscreen = async () => {
+    const region = regionRef.current;
+    if (!region) return;
+    const request = region.requestFullscreen || region.webkitRequestFullscreen;
+    if (request) {
       try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (!data) return;
-
-        if (data.event === 'infoDelivery' && data.info) {
-          // Play state detection
-          if (typeof data.info.playerState === 'number') {
-            const state = data.info.playerState;
-            if (state === 1) {
-              // 1 = Playing
-              setIsPlaying(true);
-              isPlayingRef.current = true;
-              enforceCaptionsOff();
-
-              if (!isHoveredRef.current) {
-                if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-                hideTimeoutRef.current = setTimeout(() => {
-                  if (!isHoveredRef.current && isPlayingRef.current) {
-                    setActiveMasks(false);
-                  }
-                }, 5000);
-              }
-            } else {
-              // 2 = Paused, 0 = Ended, -1 = Unstarted
-              setIsPlaying(false);
-              isPlayingRef.current = false;
-              if (hideTimeoutRef.current) {
-                clearTimeout(hideTimeoutRef.current);
-                hideTimeoutRef.current = null;
-              }
-              setActiveMasks(true);
-              if (state === 0) onComplete?.();
-            }
-          }
-
-          // Progress tracking callback
-          if (typeof data.info.currentTime === 'number' && typeof data.info.duration === 'number') {
-            const duration = data.info.duration;
-            const current = data.info.currentTime;
-            if (duration > 0) {
-              const played = current / duration;
-              onProgress?.({ played, playedSeconds: current, loaded: 1 });
-              if (played >= 0.95) onComplete?.();
-            }
-          }
+        await request.call(region);
+        if (window.matchMedia?.('(pointer: coarse)').matches) {
+          window.screen?.orientation?.lock?.('landscape')?.catch?.(() => {});
         }
+        return;
       } catch {
-        // Ignore non-json window postMessage events
+        // Fall through to the in-page overlay.
       }
-    };
+    }
+    setExpanded(true);
+  };
 
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    };
-  }, [isYouTube, onProgress, onComplete]);
-
-  // Window-level mouse position tracking for Fullscreen & Hover (for YouTube)
-  useEffect(() => {
-    if (!isYouTube) return;
-
-    const handleWindowMouseMove = (e) => {
-      const isCurrentlyFS = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-
-      if (isCurrentlyFS) {
-        handleMouseEnter();
-      } else if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const isInside =
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom;
-
-        if (isInside) {
-          handleMouseEnter();
-        } else if (isHoveredRef.current) {
-          handleMouseLeave();
-        }
+  const exitFullscreen = async () => {
+    if (getFullscreenElement() === regionRef.current) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      try {
+        await exit?.call(document);
+      } catch {
+        // The browser already left fullscreen.
       }
-    };
-
-    const handleFSChange = () => {
-      const isCurrentlyFS = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-      setIsFullscreen(isCurrentlyFS);
-      handleMouseEnter();
-    };
-
-    window.addEventListener('mousemove', handleWindowMouseMove);
-    document.addEventListener('fullscreenchange', handleFSChange);
-    document.addEventListener('webkitfullscreenchange', handleFSChange);
-
-    return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove);
-      document.removeEventListener('fullscreenchange', handleFSChange);
-      document.removeEventListener('webkitfullscreenchange', handleFSChange);
-    };
-  }, [isYouTube]);
-
-  const toggleFullscreen = () => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-      if (container.requestFullscreen) {
-        container.requestFullscreen();
-      } else if (container.webkitRequestFullscreen) {
-        container.webkitRequestFullscreen();
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      }
+    }
+    if (expanded) {
+      setExpanded(false);
+      fullscreenButtonRef.current?.focus();
     }
   };
 
-  if (!url) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-dark-400 bg-black aspect-video rounded-2xl">
-        <div className="text-center">
-          <div className="text-4xl mb-2">🎬</div>
-          <p className="font-semibold text-sm">No lecture video available</p>
-        </div>
-      </div>
+  const toggleFullscreen = () => (immersive ? exitFullscreen() : enterFullscreen());
+
+  useEffect(() => {
+    if (isYouTube) coverIconBriefly();
+    if (!expanded) return undefined;
+    const { body } = document;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
+    // A positioned ancestor with a z-index would trap the overlay beneath the
+    // sticky navbar; lift that ancestor chain while expanded.
+    const lifted = [];
+    for (let el = regionRef.current?.parentElement; el && el !== body; el = el.parentElement) {
+      const style = window.getComputedStyle(el);
+      if (style.position !== 'static' && style.zIndex !== 'auto') {
+        lifted.push([el, el.style.zIndex]);
+        el.style.zIndex = EXPANDED_Z_INDEX;
+      }
+    }
+    const handleKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setExpanded(false);
+      fullscreenButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      body.style.overflow = previousOverflow;
+      lifted.forEach(([el, zIndex]) => {
+        el.style.zIndex = zIndex;
+      });
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [expanded, isYouTube, coverIconBriefly]);
+
+  useImperativeHandle(ref, () => ({
+    play,
+    pause,
+    seekTo: (seconds) => seek(Number(seconds)),
+    requestFullscreen: enterFullscreen,
+    exitFullscreen,
+  }));
+
+  // ---- Source events -------------------------------------------------------
+
+  const youtubeHandlers = {
+    onReady: () => {
+      setReady(true);
+      surfaceRef.current?.setVolume(volume);
+      surfaceRef.current?.setMuted(muted);
+      if (rate !== 1) surfaceRef.current?.setPlaybackRate(rate);
+    },
+    onStateChange: (state) => {
+      if (state === 'playing') {
+        setHasStarted(true);
+        setPlayback('playing');
+        coverIconBriefly();
+      } else if (state === 'ended') {
+        setPlayback('ended');
+        markComplete();
+      } else if (state === 'ready') {
+        setPlayback('idle');
+      } else {
+        setPlayback(state);
+      }
+    },
+    onProgress: handleProgress,
+    onComplete: markComplete,
+    onError: (err) => {
+      setError(errorMessage(err));
+      setReady(false);
+      setPlayback('idle');
+    },
+    onAutoplayBlocked: () => setPlayback('paused'),
+  };
+
+  const nativeHandlers = {
+    onLoadedMetadata: (event) => {
+      const video = event.currentTarget;
+      const total = Number.isFinite(video.duration) ? video.duration : 0;
+      setDuration(total);
+      video.volume = volume;
+      video.muted = muted;
+      video.playbackRate = rate;
+      if (pendingSeekRef.current !== null) {
+        const target = total > 0 ? Math.min(pendingSeekRef.current, total) : pendingSeekRef.current;
+        pendingSeekRef.current = null;
+        video.currentTime = target;
+        setCurrentTime(target);
+      }
+      if (autoPlay && !autoplayTriedRef.current) {
+        autoplayTriedRef.current = true;
+        playNative(video);
+      }
+    },
+    onDurationChange: (event) => {
+      const total = event.currentTarget.duration;
+      if (Number.isFinite(total)) setDuration(total);
+    },
+    onTimeUpdate: (event) => {
+      const video = event.currentTarget;
+      const total = Number.isFinite(video.duration) ? video.duration : 0;
+      if (total <= 0) return;
+      const ranges = video.buffered;
+      const loaded = ranges?.length ? clamp(ranges.end(ranges.length - 1) / total, 0, 1) : 0;
+      handleProgress({
+        played: clamp(video.currentTime / total, 0, 1),
+        playedSeconds: video.currentTime,
+        duration: total,
+        loaded,
+      });
+    },
+    onProgress: (event) => {
+      const video = event.currentTarget;
+      const ranges = video.buffered;
+      if (video.duration > 0 && ranges?.length) {
+        setBuffered(clamp(ranges.end(ranges.length - 1) / video.duration, 0, 1));
+      }
+    },
+    onPlay: () => {
+      setHasStarted(true);
+      setPlayback('playing');
+    },
+    onPlaying: () => setPlayback('playing'),
+    onWaiting: () => setPlayback('buffering'),
+    onPause: (event) => {
+      if (!event.currentTarget.ended) setPlayback('paused');
+    },
+    onEnded: () => {
+      setPlayback('ended');
+      markComplete();
+    },
+    onVolumeChange: (event) => {
+      setVolume(event.currentTarget.volume);
+      setMuted(event.currentTarget.muted);
+    },
+    onError: (event) => {
+      // MEDIA_ERR_SRC_NOT_SUPPORTED also covers a missing or forbidden file.
+      setError(
+        event.currentTarget.error?.code === 4
+          ? 'This video is unavailable right now. Please try again later.'
+          : 'This video could not be loaded. Please check your connection and retry.'
+      );
+      setPlayback('idle');
+    },
+  };
+
+  // ---- Pointer & keyboard ------------------------------------------------
+
+  const handleStageClick = () => {
+    const wasHidden = !controlsShown;
+    showControls();
+    // The first tap on a touch screen only reveals the controls.
+    if (pointerTypeRef.current === 'touch' && wasHidden) return;
+    if (canPlay) togglePlay();
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    const tag = event.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (tag === 'BUTTON' && (event.key === ' ' || event.key === 'Enter')) return;
+    switch (event.key) {
+      case ' ':
+      case 'k':
+        if (canPlay) togglePlay();
+        break;
+      case 'ArrowLeft':
+        seek(currentTime - SEEK_STEP_SECONDS);
+        break;
+      case 'ArrowRight':
+        seek(currentTime + SEEK_STEP_SECONDS);
+        break;
+      case 'm':
+        toggleMute();
+        break;
+      case 'f':
+        toggleFullscreen();
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    showControls();
+  };
+
+  const startScrub = (event) => {
+    const input = event.currentTarget;
+    const startValue = Number(input.value);
+    scrubbingRef.current = true;
+    const finish = () => {
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+      scrubbingRef.current = false;
+      const value = Number(input.value);
+      if (value !== startValue) seekRef.current(value);
+    };
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+  };
+
+  // ---- Render --------------------------------------------------------------
+
+  const seekMax = duration > 0 ? duration : 0;
+  const seekValue = Math.min(currentTime, seekMax);
+  const playedPercent = seekMax > 0 ? (seekValue / seekMax) * 100 : 0;
+  const bufferedPercent = clamp(buffered * 100, playedPercent, 100);
+  const playLabel = playback === 'ended' ? 'Replay' : isActive ? 'Pause' : 'Play';
+  const PlayIcon = playback === 'ended' ? HiArrowPath : isActive ? HiPause : HiPlay;
+
+  // YouTube is only uncovered while it is actually playing: every other state
+  // (loading, cued, paused, buffering, ended, error) is covered by our shield.
+  const shieldVisible = isYouTube && (!ready || Boolean(error) || playback !== 'playing');
+  const showPoster = isYouTube && (!hasStarted || playback === 'ended' || Boolean(error));
+  const shieldTone =
+    error || showPoster ? 'bg-black' : playback === 'buffering' ? 'bg-black/50' : 'bg-black/30';
+
+  let centerContent = null;
+  if (error) centerContent = null;
+  else if ((isYouTube && !ready) || playback === 'buffering') centerContent = <Spinner />;
+  else if (playback === 'ended')
+    centerContent = (
+      <CenterBadge>
+        <HiArrowPath className="h-8 w-8" />
+      </CenterBadge>
     );
-  }
+  else if (!isActive)
+    centerContent = (
+      <CenterBadge>
+        <HiPlay className="h-8 w-8 translate-x-0.5" />
+      </CenterBadge>
+    );
+  else if (isYouTube && coverYouTubeIcon)
+    centerContent = (
+      <CenterBadge>
+        <HiPause className="h-8 w-8" />
+      </CenterBadge>
+    );
 
   return (
     <div
-      ref={containerRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className={`relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-800 ${
-        isFullscreen ? '!w-screen !h-screen !max-w-none !rounded-none !border-none' : ''
-      }`}
-    >
-      {/* Option A: YouTube Video (with clean protective ribbons only for YouTube) */}
-      {isYouTube && youtubeId ? (
-        <>
-          <iframe
-            ref={iframeRef}
-            src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&autoplay=${
-              autoPlay ? 1 : 0
-            }&color=white&controls=1&rel=0&modestbranding=1&fs=0&iv_load_policy=3&cc_load_policy=0&cc_lang_pref=none&hl=en&playsinline=1`}
-            title="Course Video Player"
-            className="w-full h-full border-none block"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            onLoad={() => {
-              if (iframeRef.current?.contentWindow) {
-                iframeRef.current.contentWindow.postMessage(
-                  JSON.stringify({ event: 'listening' }),
-                  '*'
-                );
-                enforceCaptionsOff();
-              }
-            }}
-          />
-
-          {/* Top Solid Black Ribbon (Only for YouTube) */}
-          <div
-            className={`absolute top-0 left-0 right-0 w-full h-[70px] z-10 pointer-events-auto cursor-default bg-black ${
-              activeMasks ? 'block opacity-100' : 'hidden opacity-0 pointer-events-none'
-            }`}
-          />
-
-          {/* Bottom Solid Black Ribbon (Only for YouTube) */}
-          <div
-            className={`absolute bottom-0 left-0 right-0 w-full h-[62px] z-10 pointer-events-auto cursor-default bg-black ${
-              activeMasks ? 'block opacity-100' : 'hidden opacity-0 pointer-events-none'
-            }`}
-          />
-
-          {/* Fullscreen Button (For YouTube) */}
-          <button
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            className={`absolute bottom-2 right-2.5 w-9 h-9 bg-neutral-900 hover:bg-blue-600 border border-white/20 hover:border-blue-600 text-white rounded-lg flex items-center justify-center z-20 cursor-pointer ${
-              activeMasks ? 'block opacity-100' : 'hidden opacity-0 pointer-events-none'
-            }`}
-          >
-            {isFullscreen ? (
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 4l5 5m0 0H4m5 0V4m11 0l-5 5m0 0h5m-5 0V4M4 20l5-5m0 0H4m5 0v5m11 0l-5-5m0 0h5m-5 0v5"
-                />
-              </svg>
-            ) : (
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                />
-              </svg>
-            )}
-          </button>
-        </>
-      ) : (
-        /* Option B: Direct Video Files (MP4, WebM, HLS, Cloudinary, S3, etc.) - NO upper or lower black masks & non-downloadable */
-        <video
-          ref={videoElRef}
-          src={url}
-          controls
-          controlsList="nodownload"
-          disableRemotePlayback
-          onContextMenu={(e) => e.preventDefault()}
-          playsInline
-          autoPlay={autoPlay}
-          className="w-full h-full object-contain bg-black select-none"
-          onTimeUpdate={(e) => {
-            const current = e.currentTarget.currentTime;
-            const duration = e.currentTarget.duration;
-            if (duration > 0) {
-              const played = current / duration;
-              onProgress?.({ played, playedSeconds: current, loaded: 1 });
-              if (played >= 0.95) onComplete?.();
+      ref={regionRef}
+      role="region"
+      aria-label="Video player"
+      tabIndex={0}
+      data-fullscreen={isFullscreen ? 'true' : 'false'}
+      data-expanded={expanded ? 'true' : 'false'}
+      onKeyDown={handleKeyDown}
+      onPointerMove={showControls}
+      onPointerDown={(event) => {
+        pointerTypeRef.current = event.pointerType || 'mouse';
+      }}
+      onFocus={showControls}
+      onContextMenu={(event) => event.preventDefault()}
+      style={
+        expanded
+          ? {
+              position: 'fixed',
+              inset: 0,
+              zIndex: EXPANDED_Z_INDEX,
+              width: '100vw',
+              height: '100dvh',
             }
-          }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnded={() => {
-            setIsPlaying(false);
-            onComplete?.();
-          }}
-        />
-      )}
+          : undefined
+      }
+      className={`group/player relative isolate w-full overflow-hidden bg-black text-white select-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400 ${
+        immersive ? 'flex h-full items-center justify-center' : 'aspect-video'
+      } ${controlsShown ? '' : 'cursor-none'}`}
+    >
+      <div
+        className={
+          immersive
+            ? 'relative aspect-video w-[min(100%,calc(100dvh*16/9))] max-h-full overflow-hidden'
+            : 'absolute inset-0 overflow-hidden'
+        }
+      >
+        {isYouTube ? (
+          <div
+            className="absolute inset-x-0"
+            style={{ top: YOUTUBE_OVERSCAN, bottom: YOUTUBE_OVERSCAN }}
+          >
+            <YouTubeSurface
+              key={attempt}
+              ref={surfaceRef}
+              videoId={source.videoId}
+              autoPlay={autoPlay}
+              {...youtubeHandlers}
+            />
+          </div>
+        ) : (
+          <video
+            key={attempt}
+            ref={videoRef}
+            src={source.url}
+            preload="metadata"
+            playsInline
+            disablePictureInPicture
+            disableRemotePlayback
+            controlsList="nodownload noremoteplayback nofullscreen noplaybackrate"
+            x-webkit-airplay="deny"
+            className="absolute inset-0 h-full w-full object-contain bg-black"
+            {...nativeHandlers}
+          />
+        )}
+
+        {/* Click/tap target: the media below never receives pointer input. */}
+        <div aria-hidden="true" className="absolute inset-0 z-10" onClick={handleStageClick} />
+
+        {isYouTube && (
+          <>
+            <div
+              data-video-mask="top"
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300 ${
+                controlsShown ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+            <div
+              data-video-mask="bottom"
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 h-24 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${
+                controlsShown ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </>
+        )}
+
+        {shieldVisible && (
+          <div
+            data-playback-shield="true"
+            className={`pointer-events-none absolute inset-0 z-20 ${shieldTone}`}
+          >
+            {showPoster && (
+              <img
+                src={`https://i.ytimg.com/vi/${encodeURIComponent(source.videoId)}/hqdefault.jpg`}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-cover opacity-60"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {!isYouTube && !error && playback !== 'playing' && hasStarted && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-20 bg-black/20"
+          />
+        )}
+
+        {centerContent && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+          >
+            {centerContent}
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black p-4 text-center">
+            <div role="alert" className="max-w-sm">
+              <p className="text-sm font-semibold text-slate-200">{error}</p>
+              <button
+                type="button"
+                onClick={retry}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-navy-950 hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <HiArrowPath className="h-4 w-4" aria-hidden="true" />
+                Retry video
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`absolute inset-x-0 bottom-0 z-40 px-3 pb-2 pt-6 transition-opacity duration-300 sm:px-4 ${
+          isYouTube ? '' : 'bg-gradient-to-t from-black/80 to-transparent'
+        } ${controlsShown ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+      >
+        <div className="group/seek relative flex h-4 items-center">
+          <input
+            type="range"
+            aria-label="Seek"
+            aria-valuetext={`${formatTime(seekValue)} of ${formatTime(seekMax)}`}
+            min={0}
+            max={seekMax}
+            step="any"
+            value={seekValue}
+            disabled={!canPlay || seekMax <= 0}
+            onPointerDown={startScrub}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              if (scrubbingRef.current) setCurrentTime(value);
+              else seek(value);
+            }}
+            className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
+          />
+          <div className="pointer-events-none relative h-1 w-full overflow-hidden rounded-full bg-white/25 transition-[height] group-hover/seek:h-1.5 peer-focus-visible:h-1.5">
+            <div
+              className="absolute inset-y-0 left-0 bg-white/35"
+              style={{ width: `${bufferedPercent}%` }}
+            />
+            <div
+              className="absolute inset-y-0 left-0 bg-amber-500"
+              style={{ width: `${playedPercent}%` }}
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 scale-0 rounded-full bg-amber-400 shadow transition-transform group-hover/seek:scale-100 peer-focus-visible:scale-100 peer-focus-visible:ring-2 peer-focus-visible:ring-white"
+            style={{ left: `${playedPercent}%` }}
+          />
+        </div>
+
+        <div className="mt-1.5 flex items-center gap-1 sm:gap-2">
+          <button
+            type="button"
+            aria-label={playLabel}
+            title={playLabel}
+            disabled={!canPlay}
+            onClick={togglePlay}
+            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-white/15 disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+          >
+            <PlayIcon className="h-5 w-5" aria-hidden="true" />
+          </button>
+
+          <div className="flex items-center">
+            <button
+              type="button"
+              aria-label={muted ? 'Unmute' : 'Mute'}
+              title={muted ? 'Unmute' : 'Mute'}
+              onClick={toggleMute}
+              className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              {muted ? (
+                <HiSpeakerXMark className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <HiSpeakerWave className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+            <input
+              type="range"
+              aria-label="Volume"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              onChange={(event) => changeVolume(Number(event.target.value))}
+              className="hidden h-1 w-20 cursor-pointer accent-amber-500 sm:block"
+            />
+          </div>
+
+          <span className="ml-1 whitespace-nowrap text-xs font-semibold tabular-nums text-slate-200">
+            {formatTime(seekValue)} / {formatTime(seekMax)}
+          </span>
+
+          <div className="ml-auto flex items-center gap-1">
+            <select
+              aria-label="Playback speed"
+              title="Playback speed"
+              value={rate}
+              onChange={(event) => changeRate(Number(event.target.value))}
+              className="h-8 cursor-pointer rounded-lg border-0 bg-transparent px-1.5 text-xs font-bold text-white hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              {SPEEDS.map((speed) => (
+                <option key={speed} value={speed} className="bg-slate-900 text-white">
+                  {speed}x
+                </option>
+              ))}
+            </select>
+            <button
+              ref={fullscreenButtonRef}
+              type="button"
+              aria-label={immersive ? 'Exit fullscreen' : 'Fullscreen'}
+              title={immersive ? 'Exit fullscreen' : 'Fullscreen'}
+              onClick={toggleFullscreen}
+              className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              {immersive ? (
+                <HiArrowsPointingIn className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <HiArrowsPointingOut className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 });
 
-VideoPlayer.displayName = 'VideoPlayer';
+const VideoPlayer = forwardRef(function VideoPlayer({ url, ...props }, ref) {
+  const source = useMemo(() => getVideoSource(url), [url]);
+  if (source.type === 'empty')
+    return <PlayerMessage>No video available for this lesson.</PlayerMessage>;
+  if (source.type === 'invalid') return <PlayerMessage>{source.error}</PlayerMessage>;
+  // Every source gets a fresh session: progress, completion and media never
+  // leak from one lesson into the next.
+  const sessionKey =
+    source.type === 'youtube' ? `youtube:${source.videoId}` : `direct:${source.url}`;
+  return <PlayerSession key={sessionKey} ref={ref} source={source} {...props} />;
+});
 
 export default VideoPlayer;

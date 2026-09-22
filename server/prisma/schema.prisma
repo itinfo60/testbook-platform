@@ -171,6 +171,8 @@ model Enrollment {
 // TEST
 // ─────────────────────────────────────────────────────────────────
 model Test {
+  averageScore Float @default(0)
+  passRate     Float @default(0)
   id              String   @id @default(uuid())
   title           String
   description     String?
@@ -196,6 +198,10 @@ model Test {
 // TEST ATTEMPT
 // ─────────────────────────────────────────────────────────────────
 model TestAttempt {
+  palette          Json    @default("[]")
+  windowViolations Int     @default(0)
+  isPassed         Boolean @default(false)
+  gradingStatus    String  @default("auto_graded")
   id          String   @id @default(uuid())
   score       Float    @default(0)
   totalMarks  Float    @default(0)
@@ -264,6 +270,11 @@ model TestSeriesEnrollment {
 // QUIZ
 // ─────────────────────────────────────────────────────────────────
 model Quiz {
+  teacherId   String?
+  courseId    String?
+  type        String   @default("daily")
+  examCategory String?
+  passingScore Int     @default(60)
   id          String   @id @default(uuid())
   title       String
   description String?

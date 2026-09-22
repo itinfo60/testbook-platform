@@ -19,7 +19,14 @@ const registerSchema = z
       .string()
       .optional()
       .refine((val) => !val || /^\d{10}$/.test(val), 'Phone must be exactly 10 digits'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(128)
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+        'Password must have at least one uppercase letter, one lowercase letter, and one number'
+      ),
     confirmPassword: z.string().min(6, 'Please confirm your password'),
     role: z.string().default('student'),
   })

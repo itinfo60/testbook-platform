@@ -11,19 +11,19 @@ const passwordSchema = z
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(50),
-  email: z.string().email('Please enter a valid email').lowercase().trim(),
+  email: z.string().trim().toLowerCase().email('Please enter a valid email'),
   password: passwordSchema,
   role: z.enum(['student', 'teacher']).default('student'),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email').lowercase().trim(),
+  email: z.string().trim().toLowerCase().email('Please enter a valid email'),
   password: z.string().min(1, 'Password is required'),
   rememberMe: z.boolean().optional(),
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email('Please enter a valid email').lowercase().trim(),
+  email: z.string().trim().toLowerCase().email('Please enter a valid email'),
 });
 
 export const resetPasswordSchema = z.object({

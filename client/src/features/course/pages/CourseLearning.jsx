@@ -1,15 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  HiArrowLeft,
-  HiArrowRight,
-  HiCheck,
-  HiDownload,
-  HiMenu,
-  HiTrash,
-  HiX,
-} from 'react-icons/hi';
+import { HiArrowLeft, HiArrowRight, HiCheck, HiDownload, HiMenu, HiX } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 import { fetchCourseById } from '@/features/course/courseSlice';
@@ -18,9 +10,8 @@ import {
   completeLesson,
   markLessonDone,
 } from '@/features/enrollment/enrollmentSlice';
-import { fetchNotes, createNote, deleteNote } from '@/features/note/noteSlice';
+import { fetchNotes, createNote } from '@/features/note/noteSlice';
 import { fetchDiscussions, createDiscussion } from '@/features/discussion/discussionSlice';
-import { enrollmentAPI } from '@/services/api';
 
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Tabs from '@/components/common/Tabs';
@@ -100,8 +91,8 @@ export default function CourseLearning() {
   const playerRef = useRef(null);
   const [videoTime, setVideoTime] = useState(0);
   const [attachTimestamp, setAttachTimestamp] = useState(true);
-  const sessionWatchTime = useRef(0);
-  const lastHeartbeatTime = useRef(0);
+  const pendingCompletions = useRef(new Set());
+  const completionQueue = useRef(Promise.resolve());
   const [completing, setCompleting] = useState(false);
   const [completingCourse, setCompletingCourse] = useState(false);
 
@@ -190,74 +181,61 @@ export default function CourseLearning() {
     setActiveTab('content');
     setSidebarOpen(false);
     setVideoTime(0);
-    sessionWatchTime.current = 0;
-    lastHeartbeatTime.current = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const handleVideoProgress = useCallback(
-    (state) => {
-      setVideoTime(state.playedSeconds);
-
-      // Accumulate session watch time
-      sessionWatchTime.current += 1;
-
-      // Heartbeat every 30 seconds of active watching
-      if (sessionWatchTime.current - lastHeartbeatTime.current >= 30) {
-        const activeLessonId = currentLesson?._id || currentLesson?.id;
-        const progressRecord = currentProgress?.progress?.find(
-          (p) => String(p.lessonId || p.lesson) === String(activeLessonId)
-        );
-        const initialWatchTime = progressRecord?.watchTime || 0;
-
-        enrollmentAPI
-          .updateProgress(courseId, {
-            sectionId: currentSection?._id || currentSection?.id,
-            lessonId: activeLessonId,
-            watchTime: initialWatchTime + sessionWatchTime.current,
-            lastPosition: Math.floor(state.playedSeconds),
-            completed: false,
-          })
-          .catch((err) => console.error('Heartbeat progress save failed:', err));
-
-        lastHeartbeatTime.current = sessionWatchTime.current;
-      }
-    },
-    [courseId, currentSection, currentLesson, currentProgress]
-  );
+  const handleVideoProgress = useCallback((state) => {
+    if (Number.isFinite(state.playedSeconds)) setVideoTime(state.playedSeconds);
+    // The enrollment endpoint only saves completion; playback heartbeats sent
+    // there with completed:false would undo a previously completed lesson.
+  }, []);
 
   const handleLessonComplete = useCallback(
     async (targetCompletedState = true) => {
-      if (!currentLesson || completing) return;
+      if (!isEnrolled || !currentLesson || currentLesson.dripLocked) return;
       const targetLessonId = String(currentLesson.id || currentLesson._id || '').trim();
+      if (!targetLessonId) return;
       const courseLookupId = course?.id || course?._id?.toString() || id;
+      const requestKey = `${courseLookupId}:${targetLessonId}`;
+      if (pendingCompletions.current.has(requestKey)) return;
+      pendingCompletions.current.add(requestKey);
       setCompleting(true);
       // Optimistic update: toggle UI state immediately (0ms)
       dispatch(markLessonDone({ lessonId: targetLessonId, completed: targetCompletedState }));
+
+      // A learner can finish another lesson while a save is pending. Serialize
+      // writes because the endpoint updates the course's full completion list.
+      const save = completionQueue.current
+        .catch(() => {})
+        .then(() =>
+          dispatch(
+            completeLesson({
+              courseId: courseLookupId,
+              lessonId: targetLessonId,
+              sectionId: currentSection?.id || currentSection?._id,
+              completed: targetCompletedState,
+            })
+          ).unwrap()
+        );
+      completionQueue.current = save;
       try {
-        await dispatch(
-          completeLesson({
-            courseId: courseLookupId,
-            lessonId: targetLessonId,
-            sectionId: currentSection?.id || currentSection?._id,
-            completed: targetCompletedState,
-          })
-        ).unwrap();
+        await save;
         toast.success(targetCompletedState ? 'Lesson marked as completed! ✓' : 'Lesson unmarked');
       } catch (err) {
         // Rollback state if server request fails
         dispatch(markLessonDone({ lessonId: targetLessonId, completed: !targetCompletedState }));
         toast.error(err || 'Failed to update progress');
       } finally {
-        setCompleting(false);
+        pendingCompletions.current.delete(requestKey);
+        setCompleting(pendingCompletions.current.size > 0);
       }
     },
-    [dispatch, course?.id, course?._id, id, currentLesson, currentSection, completing]
+    [dispatch, course?.id, course?._id, id, currentLesson, currentSection, isEnrolled]
   );
 
   const handleVideoComplete = useCallback(async () => {
     const activeLessonId = String(currentLesson?.id || currentLesson?._id || '').trim();
-    if (!currentLesson || !activeLessonId) return;
+    if (!isEnrolled || !currentLesson || !activeLessonId) return;
     const isCompleted =
       completedLessonIds.includes(activeLessonId) ||
       (currentProgress?.progress || [])
@@ -266,7 +244,7 @@ export default function CourseLearning() {
         .includes(activeLessonId);
     if (isCompleted) return;
     await handleLessonComplete(true);
-  }, [currentLesson, completedLessonIds, currentProgress, handleLessonComplete]);
+  }, [currentLesson, completedLessonIds, currentProgress, handleLessonComplete, isEnrolled]);
 
   const handleAddNote = async (e) => {
     e.preventDefault();

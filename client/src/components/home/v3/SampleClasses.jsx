@@ -21,10 +21,11 @@ export default function SampleClasses() {
       try {
         const response = await courseAPI.getSamples();
         if (response.data?.data?.samples) {
-          // Add a stable id for UI rendering
+          // Add a stable id for UI rendering. The same lesson can be a demo in
+          // several courses, so the course is part of the id.
           const mappedSamples = response.data.data.samples.map((s, index) => ({
             ...s,
-            id: s.id || s._id || s.videoUrl || `sample-${index}`,
+            id: `${s.courseId || s.courseSlug || 'course'}:${s.id || s._id || s.videoUrl || `sample-${index}`}`,
             topic: s.courseTitle,
             faculty: s.teacher?.name || 'Expert Faculty',
             role: 'Senior Educator',
@@ -49,25 +50,11 @@ export default function SampleClasses() {
 
   const handlePlay = (id) => {
     setActiveVideoId(id);
-    setTimeout(() => {
-      if (videoRefs.current[id]) {
-        videoRefs.current[id].play().catch(() => {});
-      }
-    }, 100);
   };
 
   const handleFullScreen = (id, e) => {
     e.stopPropagation();
-    const videoEl = videoRefs.current[id];
-    if (videoEl) {
-      if (videoEl.requestFullscreen) {
-        videoEl.requestFullscreen();
-      } else if (videoEl.webkitRequestFullscreen) {
-        videoEl.webkitRequestFullscreen();
-      } else if (videoEl.msRequestFullscreen) {
-        videoEl.msRequestFullscreen();
-      }
-    }
+    videoRefs.current[id]?.requestFullscreen()?.catch(() => {});
   };
 
   return (
@@ -121,11 +108,20 @@ export default function SampleClasses() {
                   <div className="aspect-video relative overflow-hidden bg-black flex items-center justify-center">
                     {isPlaying ? (
                       <div className="relative w-full h-full">
-                        <VideoPlayer url={cls.videoUrl} autoPlay={true} />
+                        <VideoPlayer
+                          ref={(player) => {
+                            if (player) videoRefs.current[cls.id] = player;
+                            else delete videoRefs.current[cls.id];
+                          }}
+                          url={cls.videoUrl}
+                          autoPlay={true}
+                        />
                       </div>
                     ) : (
-                      <div
+                      <button
+                        type="button"
                         onClick={() => handlePlay(cls.id)}
+                        aria-label={`Play ${cls.title}`}
                         className="relative w-full h-full cursor-pointer overflow-hidden"
                       >
                         <img
@@ -164,7 +160,7 @@ export default function SampleClasses() {
                             Click to Play
                           </span>
                         </div>
-                      </div>
+                      </button>
                     )}
                   </div>
 

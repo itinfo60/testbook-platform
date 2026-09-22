@@ -39,9 +39,20 @@ export const enrollInCourse = catchAsync(async (req, res) => {
   if (course.price > 0) {
     if (!paymentId) throw ApiError.badRequest('Payment required for paid courses');
     const payment = await prisma.payment.findFirst({
-      where: { id: paymentId, status: 'completed' },
+      where: { id: paymentId, userId: req.userId, status: 'completed' },
     });
     if (!payment) throw ApiError.badRequest('Valid completed payment required');
+    let notes = payment.notes;
+    if (typeof notes === 'string') {
+      try {
+        notes = JSON.parse(notes);
+      } catch {
+        notes = {};
+      }
+    }
+    if (notes?.courseId !== course.id && notes?.courseId !== course.slug) {
+      throw ApiError.badRequest('Payment does not belong to this course');
+    }
   }
 
   const enrollment = await prisma.enrollment.create({
@@ -54,7 +65,7 @@ export const enrollInCourse = catchAsync(async (req, res) => {
     },
   });
 
-  await scheduleDripContent(req.userId, course.id);
+  await scheduleDripContent({ enrollment, course, tenantId: req.tenantId });
   await redis.delPattern('admin:dashboard:*').catch(() => {});
 
   ApiResponse.created(res, { enrollment }, 'Enrolled successfully');
@@ -267,6 +278,11 @@ export const updateProgress = catchAsync(async (req, res) => {
     .flatMap((s) => (s.lessons || []).map((l) => String(l.id || l._id || '').trim()))
     .filter((id) => id.length > 0);
 
+  completedLessons = [...new Set(completedLessons.filter((id) => allLessonIds.includes(id)))];
+  if (lessonId != null && !allLessonIds.includes(String(lessonId).trim())) {
+    throw ApiError.badRequest('Lesson does not belong to this course');
+  }
+
   let status = enrollment.status;
   let completedAt = enrollment.completedAt;
 
@@ -320,7 +336,7 @@ export const updateProgress = catchAsync(async (req, res) => {
       status,
       completedLessons,
       completedLessonsCount: completedLessons.length,
-      totalLessons: course.totalLessons,
+      totalLessons,
     },
     'Progress updated'
   );

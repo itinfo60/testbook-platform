@@ -8,7 +8,7 @@
     "dev": "NODE_ENV=development nodemon -e js,ts,json,mjs,cjs --import tsx src/server.js",
     "build": "npx prisma generate",
     "start": "NODE_ENV=production node --import tsx src/server.js",
-    "start:cluster": "NODE_ENV=production node src/cluster.js",
+    "start:cluster": "NODE_ENV=production node --import tsx src/cluster.js",
     "seed": "node --import tsx scripts/seed.ts",
     "seed:admin": "node scripts/seedAdmin.js",
     "test": "NODE_ENV=test vitest run",
