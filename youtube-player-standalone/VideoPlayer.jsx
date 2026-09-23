@@ -176,10 +176,39 @@ const PlayerSession = forwardRef(function PlayerSession(
           const exit = document.exitFullscreen || document.webkitExitFullscreen;
           Promise.resolve(exit?.call(document)).catch(() => {});
           window.screen?.orientation?.unlock?.();
-        } catch { /* The browser may already have exited. */ }
+        } catch {
+          /* The browser may already have exited. */
+        }
       }
     };
   }, []);
+
+  // When switching tabs, browsers or YouTube may throttle/pause the stream.
+  // We keep track of active playback and automatically resume when returning to the tab.
+  const wasPlayingOnHideRef = useRef(false);
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (playback === 'playing') {
+          wasPlayingOnHideRef.current = true;
+          if (isYouTube) {
+            surfaceRef.current?.play()?.catch?.(() => {});
+          }
+        }
+      } else {
+        if (wasPlayingOnHideRef.current) {
+          wasPlayingOnHideRef.current = false;
+          if (isYouTube) {
+            surfaceRef.current?.play()?.catch?.(() => {});
+          } else if (videoRef.current && videoRef.current.paused) {
+            playNative(videoRef.current);
+          }
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [playback, isYouTube]);
 
   // ---- Playback commands -------------------------------------------------
 
@@ -211,12 +240,13 @@ const PlayerSession = forwardRef(function PlayerSession(
   const play = () => {
     if (!canPlay) return Promise.resolve();
     if (playback === 'ended') seek(0);
-    if (isYouTube) return Promise.resolve(surfaceRef.current?.play()).catch((err) => {
-      if (lifetimeRef.current.active) {
-        setError(errorMessage(err));
-        setPlayback('paused');
-      }
-    });
+    if (isYouTube)
+      return Promise.resolve(surfaceRef.current?.play()).catch((err) => {
+        if (lifetimeRef.current.active) {
+          setError(errorMessage(err));
+          setPlayback('paused');
+        }
+      });
     const video = videoRef.current;
     return video ? playNative(video) : Promise.resolve();
   };
@@ -371,7 +401,9 @@ const PlayerSession = forwardRef(function PlayerSession(
         region.setAttribute('popover', 'manual');
         region.showPopover();
         topLayer = true;
-      } catch { region.removeAttribute('popover'); }
+      } catch {
+        region.removeAttribute('popover');
+      }
     }
     // A positioned ancestor with a z-index would trap the overlay beneath the
     // sticky navbar; lift that ancestor chain while expanded.
@@ -389,12 +421,18 @@ const PlayerSession = forwardRef(function PlayerSession(
         setExpanded(false);
         fullscreenButtonRef.current?.focus();
       } else if (event.key === 'Tab') {
-        const focusable = [...region.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled)')]
-          .filter((el) => window.getComputedStyle(el).display !== 'none');
+        const focusable = [
+          ...region.querySelectorAll(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled)'
+          ),
+        ].filter((el) => window.getComputedStyle(el).display !== 'none');
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
         const current = document.activeElement;
-        if (!region.contains(current) || (event.shiftKey && (current === first || current === region))) {
+        if (
+          !region.contains(current) ||
+          (event.shiftKey && (current === first || current === region))
+        ) {
           event.preventDefault();
           (event.shiftKey ? last : first)?.focus();
         } else if (!event.shiftKey && current === last) {
@@ -407,7 +445,11 @@ const PlayerSession = forwardRef(function PlayerSession(
     fullscreenButtonRef.current?.focus();
     return () => {
       if (topLayer) {
-        try { region.hidePopover(); } catch { /* Already closed on removal. */ }
+        try {
+          region.hidePopover();
+        } catch {
+          /* Already closed on removal. */
+        }
         region.removeAttribute('popover');
       }
       body.style.overflow = previousOverflow;
@@ -542,6 +584,24 @@ const PlayerSession = forwardRef(function PlayerSession(
   };
 
   const handleKeyDown = (event) => {
+    // Intercept common DevTools and source inspection hotkeys
+    if (event.key === 'F12') {
+      event.preventDefault();
+      return;
+    }
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.shiftKey &&
+      ['I', 'J', 'C'].includes(event.key.toUpperCase())
+    ) {
+      event.preventDefault();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toUpperCase() === 'U') {
+      event.preventDefault();
+      return;
+    }
+
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const tag = event.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
@@ -600,11 +660,18 @@ const PlayerSession = forwardRef(function PlayerSession(
   const playLabel = playback === 'ended' ? 'Replay' : isActive ? 'Pause' : 'Play';
   const PlayIcon = playback === 'ended' ? HiArrowPath : isActive ? HiPause : HiPlay;
 
-  // YouTube is only uncovered while it is actually playing: every other state
-  // (loading, cued, paused, buffering, ended, error) is covered by our shield.
-  const shieldVisible = isYouTube && (!ready || Boolean(error) || playback !== 'playing');
+  // Shields:
+  // - Full opaque poster: before playback starts, when ended, or on error.
+  // - Loading: when player is not ready yet.
+  // - Paused / buffering: subtle semi-transparent overlay so the frozen video frame remains visible!
   const showPoster = isYouTube && (!hasStarted || playback === 'ended' || Boolean(error));
-  const shieldTone = 'bg-black';
+  const shieldVisible = isYouTube && (!ready || Boolean(error) || playback !== 'playing');
+  const shieldTone =
+    Boolean(error) || showPoster || !ready
+      ? 'bg-black'
+      : playback === 'buffering'
+        ? 'bg-black/50'
+        : 'bg-black/20';
 
   let centerContent = null;
   if (error) centerContent = null;
