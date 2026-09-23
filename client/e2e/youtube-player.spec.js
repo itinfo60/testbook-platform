@@ -63,21 +63,33 @@ test('blocks frame popups and top navigation, even if its script attempts them',
   await expect(page.locator('iframe')).toHaveCSS('pointer-events', 'none');
 });
 
-test('uses opaque paused/buffering shields and keeps keyboard focus outside the iframe', async ({
+test('keeps shields active on paused/buffering and keeps keyboard focus outside the iframe', async ({
   page,
 }) => {
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('[data-playback-shield]')).toHaveCount(0);
-  for (const state of [2, 3, 0]) {
-    await page.evaluate(
-      (data) => window.testPlayer.events.onStateChange({ data, target: window.testPlayer }),
-      state
-    );
-    await expect(page.locator('[data-playback-shield]')).toHaveCSS(
-      'background-color',
-      'rgb(0, 0, 0)'
-    );
-  }
+
+  // Paused (state 2): subtle overlay so the frame is not completely blank
+  await page.evaluate(() =>
+    window.testPlayer.events.onStateChange({ data: 2, target: window.testPlayer })
+  );
+  await expect(page.locator('[data-playback-shield]')).toBeVisible();
+
+  // Buffering (state 3)
+  await page.evaluate(() =>
+    window.testPlayer.events.onStateChange({ data: 3, target: window.testPlayer })
+  );
+  await expect(page.locator('[data-playback-shield]')).toBeVisible();
+
+  // Ended (state 0): full black poster shield
+  await page.evaluate(() =>
+    window.testPlayer.events.onStateChange({ data: 0, target: window.testPlayer })
+  );
+  await expect(page.locator('[data-playback-shield]')).toHaveCSS(
+    'background-color',
+    'rgb(0, 0, 0)'
+  );
+
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press('Tab');
     expect(await page.evaluate(() => document.activeElement.tagName)).not.toBe('IFRAME');

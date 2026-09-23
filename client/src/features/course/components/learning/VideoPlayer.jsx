@@ -183,6 +183,33 @@ const PlayerSession = forwardRef(function PlayerSession(
     };
   }, []);
 
+  // When switching tabs, browsers or YouTube may throttle/pause the stream.
+  // We keep track of active playback and automatically resume when returning to the tab.
+  const wasPlayingOnHideRef = useRef(false);
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (playback === 'playing') {
+          wasPlayingOnHideRef.current = true;
+          if (isYouTube) {
+            surfaceRef.current?.play()?.catch?.(() => {});
+          }
+        }
+      } else {
+        if (wasPlayingOnHideRef.current) {
+          wasPlayingOnHideRef.current = false;
+          if (isYouTube) {
+            surfaceRef.current?.play()?.catch?.(() => {});
+          } else if (videoRef.current && videoRef.current.paused) {
+            playNative(videoRef.current);
+          }
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [playback, isYouTube]);
+
   // ---- Playback commands -------------------------------------------------
 
   const playNative = async (video) => {
@@ -557,6 +584,24 @@ const PlayerSession = forwardRef(function PlayerSession(
   };
 
   const handleKeyDown = (event) => {
+    // Intercept common DevTools and source inspection hotkeys
+    if (event.key === 'F12') {
+      event.preventDefault();
+      return;
+    }
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.shiftKey &&
+      ['I', 'J', 'C'].includes(event.key.toUpperCase())
+    ) {
+      event.preventDefault();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toUpperCase() === 'U') {
+      event.preventDefault();
+      return;
+    }
+
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const tag = event.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
@@ -615,11 +660,18 @@ const PlayerSession = forwardRef(function PlayerSession(
   const playLabel = playback === 'ended' ? 'Replay' : isActive ? 'Pause' : 'Play';
   const PlayIcon = playback === 'ended' ? HiArrowPath : isActive ? HiPause : HiPlay;
 
-  // YouTube is only uncovered while it is actually playing: every other state
-  // (loading, cued, paused, buffering, ended, error) is covered by our shield.
-  const shieldVisible = isYouTube && (!ready || Boolean(error) || playback !== 'playing');
+  // Shields:
+  // - Full opaque poster: before playback starts, when ended, or on error.
+  // - Loading: when player is not ready yet.
+  // - Paused / buffering: subtle semi-transparent overlay so the frozen video frame remains visible!
   const showPoster = isYouTube && (!hasStarted || playback === 'ended' || Boolean(error));
-  const shieldTone = 'bg-black';
+  const shieldVisible = isYouTube && (!ready || Boolean(error) || playback !== 'playing');
+  const shieldTone =
+    Boolean(error) || showPoster || !ready
+      ? 'bg-black'
+      : playback === 'buffering'
+        ? 'bg-black/50'
+        : 'bg-black/20';
 
   let centerContent = null;
   if (error) centerContent = null;
