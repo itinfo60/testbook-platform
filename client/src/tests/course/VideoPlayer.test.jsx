@@ -390,6 +390,44 @@ describe('VideoPlayer', () => {
     expect(document.body.style.overflow).toBe('auto');
   });
 
+  it('does not hide controls while a keyboard user is interacting with them', () => {
+    vi.useFakeTimers();
+    render(<VideoPlayer url={YOUTUBE_URL} />);
+    youtubeReady();
+    youtubeState('playing');
+    const pauseButton = screen.getByRole('button', { name: 'Pause' });
+    act(() => pauseButton.focus());
+    act(() => vi.advanceTimersByTime(10000));
+    expect(pauseButton).toBeVisible();
+  });
+
+  it('ignores a late fullscreen rejection after the player has been unmounted', async () => {
+    let reject;
+    const { unmount } = render(<VideoPlayer url={VIDEO_URL} />);
+    const region = screen.getByRole('region', { name: 'Video player' });
+    region.requestFullscreen = () =>
+      new Promise((_, fail) => {
+        reject = fail;
+      });
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+    unmount();
+    await act(async () => reject(new Error('Delayed rejection')));
+    expect(document.body.style.overflow).toBe(originalBodyOverflow);
+  });
+
+  it('removes pending scrub listeners when the source changes', () => {
+    const remove = vi.spyOn(window, 'removeEventListener');
+    const { container, rerender } = render(<VideoPlayer url={VIDEO_URL} />);
+    loadMetadata(videoElement(container));
+    fireEvent.pointerDown(screen.getByRole('slider', { name: 'Seek' }));
+    fireEvent.change(screen.getByRole('slider', { name: 'Seek' }), { target: { value: '42' } });
+    rerender(<VideoPlayer url={YOUTUBE_URL} />);
+    expect(remove).toHaveBeenCalledWith('pointerup', expect.any(Function));
+    expect(remove).toHaveBeenCalledWith('pointercancel', expect.any(Function));
+    fireEvent.pointerUp(window);
+    expect(youtube.seekTo).not.toHaveBeenCalled();
+  });
+
   it.each(['', 'javascript:alert(1)', 'https://www.youtube.com/watch?v=bad'])(
     'shows a local unavailable state without a redirect for invalid source %j',
     (url) => {

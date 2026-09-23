@@ -198,8 +198,26 @@ export const getCategoryBySlug = catchAsync(async (req, res) => {
     async () => {
       return Promise.all([
         prisma.course.findMany({
-          where: { categoryId: { in: catIds } },
-          include: {
+          where: { categoryId: { in: catIds }, isPublished: true },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            thumbnail: true,
+            description: true,
+            price: true,
+            discountPrice: true,
+            level: true,
+            language: true,
+            rating: true,
+            totalRatings: true,
+            totalLessons: true,
+            totalDuration: true,
+            isPublished: true,
+            featured: true,
+            createdAt: true,
+            updatedAt: true,
+            categoryId: true,
             teacher: { select: { id: true, name: true, email: true, avatar: true } },
             _count: { select: { enrollments: true, reviews: true } },
           },

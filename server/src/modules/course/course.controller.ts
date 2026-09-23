@@ -23,6 +23,7 @@ export class CourseController extends BaseController {
   });
 
   getCourseBySlug = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    res.setHeader('Cache-Control', 'private, no-store');
     const { slug } = req.params;
     if (!slug) {
       throw ApiError.badRequest('Slug parameter is required');
@@ -36,6 +37,7 @@ export class CourseController extends BaseController {
   });
 
   getCourseById = this.catchAsync(async (req: CustomRequest, res: Response) => {
+    res.setHeader('Cache-Control', 'private, no-store');
     const result = await this.courseService.getCourseById(
       req.params.id,
       req.userId || null,

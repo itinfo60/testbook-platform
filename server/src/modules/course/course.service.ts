@@ -24,7 +24,17 @@ export class CourseService {
   }
 
   async getCourses(query: CourseQueryInput): Promise<{ docs: any[]; total: number }> {
-    return this.courseRepository.paginateCourses(query);
+    // This route is public and shared-cacheable, even when a token is sent.
+    const result = await this.courseRepository.paginateCourses({ ...query, status: 'published' });
+    return {
+      ...result,
+      docs: result.docs.map((course) =>
+        this.applyLessonVisibility(
+          { ...course },
+          { isAuthor: false, isEnrolled: false, enrollment: null }
+        )
+      ),
+    };
   }
 
   private isCourseAuthor(course: any, userId: string | null, role: string | null): boolean {
@@ -83,6 +93,7 @@ export class CourseService {
           dripLocked,
           content: dripLocked ? undefined : lesson.content,
           videoUrl: dripLocked ? undefined : lesson.videoUrl,
+          resources: dripLocked ? undefined : lesson.resources,
         };
       }),
     }));
@@ -94,10 +105,7 @@ export class CourseService {
     userId: string | null,
     role: string | null = null
   ): Promise<any> {
-    const cacheKey = `course:${slug}:${userId || 'anon'}`;
-    const cached = await redis.get(cacheKey);
-    if (cached) return cached;
-
+    // Re-check publication and enrollment on every protected detail request.
     const course = await prisma.course.findFirst({
       where: { slug, isPublished: true },
       include: {
@@ -135,7 +143,6 @@ export class CourseService {
       { isAuthor, isEnrolled, enrollment }
     );
     const result = { course: courseObj, reviews, isEnrolled: isEnrolled || isAuthor };
-    if (!isAuthor) await redis.set(cacheKey, result, 300);
     return result;
   }
 
@@ -421,7 +428,7 @@ export class CourseService {
   }
 
   async getFeaturedCourses(): Promise<any[]> {
-    const cacheKey = 'courses:featured';
+    const cacheKey = 'courses:featured:visibility-v2';
     const cached = await redis.get(cacheKey);
     if (cached) return (cached as any).courses;
 
@@ -435,8 +442,14 @@ export class CourseService {
       take: 8,
     });
 
-    await redis.set(cacheKey, { courses }, 1800);
-    return courses;
+    const publicCourses = courses.map((course) =>
+      this.applyLessonVisibility(
+        { ...course },
+        { isAuthor: false, isEnrolled: false, enrollment: null }
+      )
+    );
+    await redis.set(cacheKey, { courses: publicCourses }, 1800);
+    return publicCourses;
   }
 
   async getSampleClasses(): Promise<any[]> {

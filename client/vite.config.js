@@ -67,8 +67,14 @@ export default defineConfig({
             },
           },
           {
+            // Course details contain enrollment-gated media. Never serve a
+            // previous user's response from the service worker after logout.
+            urlPattern: /\/api\/v1\/courses(?:\/|\?|$)/i,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern:
-              /\/api\/v1\/(courses|categories|exam-categories|test-series|tests|blogs|library|quizzes|institutes).*/i,
+              /\/api\/v1\/(categories|exam-categories|test-series|tests|blogs|library|quizzes|institutes).*/i,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-catalog-cache',

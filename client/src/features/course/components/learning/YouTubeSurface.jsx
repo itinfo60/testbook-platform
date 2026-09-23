@@ -124,11 +124,27 @@ const YouTubeSurface = forwardRef(function YouTubeSurface(
     session.disposed = false;
     session.error = null;
 
+    if (!/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) {
+      const error = new Error('This YouTube video link is invalid.');
+      session.error = error;
+      session.waitingPlays.splice(0).forEach(({ reject }) => reject(error));
+      callbacks.current.onError?.(error);
+      return undefined;
+    }
+
     const fail = (error) => {
       if (!active || session.error) return;
       session.error = error;
+      session.ready = false;
       clearTimeout(readyTimeout);
       clearInterval(interval);
+      // Do not leave a failed player streaming behind the error screen.
+      try {
+        ownedPlayer?.destroy();
+      } catch {
+        /* Partially initialized SDK. */
+      }
+      iframe.remove();
       session.waitingPlays.splice(0).forEach(({ reject }) => reject(error));
       callbacks.current.onError?.(error);
     };
@@ -137,8 +153,10 @@ const YouTubeSurface = forwardRef(function YouTubeSurface(
       if (!active || !session.ready || session.error) return;
       // Metadata can be temporarily unavailable while a stream starts/buffers.
       try {
-        const duration = Math.max(0, Number(session.player.getDuration()) || 0);
-        const current = Math.max(0, Number(session.player.getCurrentTime()) || 0);
+        const rawDuration = Number(session.player.getDuration());
+        const rawCurrent = Number(session.player.getCurrentTime());
+        const duration = Number.isFinite(rawDuration) ? Math.max(0, rawDuration) : 0;
+        const current = Number.isFinite(rawCurrent) ? Math.max(0, rawCurrent) : 0;
         callbacks.current.onProgress?.({
           played: duration > 0 ? clamp(current / duration, 0, 1) : 0,
           playedSeconds: duration > 0 ? Math.min(current, duration) : current,

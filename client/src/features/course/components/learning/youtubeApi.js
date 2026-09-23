@@ -1,4 +1,5 @@
 let pendingApi;
+const failedScripts = new WeakSet();
 
 // One request for every mounted player. A failed request is discarded so an
 // in-player retry can recover without reloading the entire learning page.
@@ -7,7 +8,9 @@ export function loadYouTubeApi() {
   if (pendingApi) return pendingApi;
 
   pendingApi = new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+    const existing = [
+      ...document.querySelectorAll('script[src="https://www.youtube.com/iframe_api"]'),
+    ].find((element) => !failedScripts.has(element));
     const script = existing || document.createElement('script');
     const previousReady = window.onYouTubeIframeAPIReady;
     let settled = false;
@@ -22,6 +25,7 @@ export function loadYouTubeApi() {
         window.onYouTubeIframeAPIReady = previousReady;
       }
       if (error) {
+        failedScripts.add(script);
         if (!existing) script.remove();
         reject(error);
       } else {
@@ -32,6 +36,8 @@ export function loadYouTubeApi() {
     const ready = () => {
       try {
         if (typeof previousReady === 'function') previousReady();
+      } catch {
+        // A different widget's callback must not break our own player load.
       } finally {
         if (window.YT?.Player) finish();
         else fail();
@@ -46,9 +52,8 @@ export function loadYouTubeApi() {
       script.async = true;
       document.head.appendChild(script);
     }
-  }).catch((error) => {
+  }).finally(() => {
     pendingApi = undefined;
-    throw error;
   });
   return pendingApi;
 }

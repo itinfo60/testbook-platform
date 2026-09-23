@@ -130,8 +130,11 @@ export const getMyEnrollments = catchAsync(async (req, res) => {
         ? enrollment.progressPercentage
         : computedProgress;
 
+    const { sections: _omitSections, ...safeCourse } = course;
+
     return {
       ...enrollment,
+      course: safeCourse,
       progressPercentage,
       progress: progressPercentage,
     };
@@ -234,7 +237,7 @@ export const getEnrollmentProgress = catchAsync(async (req, res) => {
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { userId: req.userId, courseId: course.id },
-    include: { course: { select: { title: true, sections: true, totalLessons: true } } },
+    include: { course: { select: { title: true, totalLessons: true } } },
   });
 
   if (!enrollment) throw ApiError.notFound('Enrollment not found');

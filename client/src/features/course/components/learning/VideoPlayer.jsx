@@ -27,10 +27,9 @@ const EXPANDED_Z_INDEX = '2147483000';
 // After every start/resume YouTube shows its own round play/pause icon in the
 // centre of the frame for about three seconds, even with controls disabled.
 const YOUTUBE_ICON_COVER_MS = 3500;
-// YouTube draws its title, channel avatar, "More videos" and logo along the
-// frame's top and bottom edges. The frame is taller than the visible stage, so
-// YouTube letterboxes a 16:9 video into exactly the visible area and all of
-// that chrome lands in the clipped overflow, in every state and at every size.
+// Overscan reduces provider chrome for typical 16:9 videos. This is cosmetic,
+// not access control: YouTube can change its UI and the source ID stays public
+// to the viewing browser. Non-playing frames are covered opaquely below.
 const YOUTUBE_OVERSCAN = 'calc(max(100px, 15%) * -1)';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -94,6 +93,9 @@ const PlayerSession = forwardRef(function PlayerSession(
   const videoRef = useRef(null);
   const surfaceRef = useRef(null);
   const fullscreenButtonRef = useRef(null);
+  const controlsRef = useRef(null);
+  const scrubCleanupRef = useRef(null);
+  const lifetimeRef = useRef({ active: true, requestingFullscreen: false });
   const callbacksRef = useRef({});
   callbacksRef.current = { onProgress, onComplete };
   const completedRef = useRef(false);
@@ -147,7 +149,11 @@ const PlayerSession = forwardRef(function PlayerSession(
   const showControls = useCallback(() => {
     setControlsVisible(true);
     clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_IDLE_MS);
+    idleTimerRef.current = setTimeout(() => {
+      if (!scrubbingRef.current && !controlsRef.current?.contains(document.activeElement)) {
+        setControlsVisible(false);
+      }
+    }, CONTROLS_IDLE_MS);
   }, []);
 
   const coverIconBriefly = useCallback(() => {
@@ -156,21 +162,37 @@ const PlayerSession = forwardRef(function PlayerSession(
     iconCoverTimerRef.current = setTimeout(() => setCoverYouTubeIcon(false), YOUTUBE_ICON_COVER_MS);
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const lifetime = lifetimeRef.current;
+    const region = regionRef.current;
+    lifetime.active = true;
+    return () => {
+      lifetime.active = false;
+      scrubCleanupRef.current?.();
       clearTimeout(idleTimerRef.current);
       clearTimeout(iconCoverTimerRef.current);
-    },
-    []
-  );
+      if (getFullscreenElement() === region) {
+        try {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          Promise.resolve(exit?.call(document)).catch(() => {});
+          window.screen?.orientation?.unlock?.();
+        } catch {
+          /* The browser may already have exited. */
+        }
+      }
+    };
+  }, []);
 
   // ---- Playback commands -------------------------------------------------
 
-  const playNative = (video) =>
-    Promise.resolve(video.play()).catch(() => {
+  const playNative = async (video) => {
+    try {
+      await video.play();
+    } catch {
       // Autoplay policies reject without a pause event; leave a usable Play button.
       if (video.paused) setPlayback((prev) => (prev === 'ended' ? prev : 'paused'));
-    });
+    }
+  };
 
   const seek = (seconds) => {
     if (!Number.isFinite(seconds)) return;
@@ -191,7 +213,13 @@ const PlayerSession = forwardRef(function PlayerSession(
   const play = () => {
     if (!canPlay) return Promise.resolve();
     if (playback === 'ended') seek(0);
-    if (isYouTube) return Promise.resolve(surfaceRef.current?.play()).catch(() => {});
+    if (isYouTube)
+      return Promise.resolve(surfaceRef.current?.play()).catch((err) => {
+        if (lifetimeRef.current.active) {
+          setError(errorMessage(err));
+          setPlayback('paused');
+        }
+      });
     const video = videoRef.current;
     return video ? playNative(video) : Promise.resolve();
   };
@@ -242,6 +270,7 @@ const PlayerSession = forwardRef(function PlayerSession(
   };
 
   const retry = () => {
+    autoplayTriedRef.current = false;
     resumeAtRef.current = currentTime;
     if (!isYouTube && currentTime > 0) pendingSeekRef.current = currentTime;
     setError(null);
@@ -285,20 +314,32 @@ const PlayerSession = forwardRef(function PlayerSession(
   // controls, so browsers that refuse (iPhone Safari) get an in-page overlay.
   const enterFullscreen = async () => {
     const region = regionRef.current;
-    if (!region) return;
+    const lifetime = lifetimeRef.current;
+    if (!region || immersive || lifetime.requestingFullscreen) return;
+    lifetime.requestingFullscreen = true;
     const request = region.requestFullscreen || region.webkitRequestFullscreen;
     if (request) {
       try {
         await request.call(region);
+        if (!lifetime.active) {
+          if (getFullscreenElement() === region) {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen;
+            await exit?.call(document);
+          }
+          return;
+        }
         if (window.matchMedia?.('(pointer: coarse)').matches) {
           window.screen?.orientation?.lock?.('landscape')?.catch?.(() => {});
         }
         return;
       } catch {
         // Fall through to the in-page overlay.
+      } finally {
+        lifetime.requestingFullscreen = false;
       }
     }
-    setExpanded(true);
+    lifetime.requestingFullscreen = false;
+    if (lifetime.active) setExpanded(true);
   };
 
   const exitFullscreen = async () => {
@@ -322,8 +363,21 @@ const PlayerSession = forwardRef(function PlayerSession(
     if (isYouTube) coverIconBriefly();
     if (!expanded) return undefined;
     const { body } = document;
+    const region = regionRef.current;
     const previousOverflow = body.style.overflow;
     body.style.overflow = 'hidden';
+    // The popover top layer escapes transformed/clipped ancestors without
+    // moving or remounting the iframe (which would restart playback).
+    let topLayer = false;
+    if (region?.showPopover) {
+      try {
+        region.setAttribute('popover', 'manual');
+        region.showPopover();
+        topLayer = true;
+      } catch {
+        region.removeAttribute('popover');
+      }
+    }
     // A positioned ancestor with a z-index would trap the overlay beneath the
     // sticky navbar; lift that ancestor chain while expanded.
     const lifted = [];
@@ -335,13 +389,42 @@ const PlayerSession = forwardRef(function PlayerSession(
       }
     }
     const handleKeyDown = (event) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      setExpanded(false);
-      fullscreenButtonRef.current?.focus();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setExpanded(false);
+        fullscreenButtonRef.current?.focus();
+      } else if (event.key === 'Tab') {
+        const focusable = [
+          ...region.querySelectorAll(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled)'
+          ),
+        ].filter((el) => window.getComputedStyle(el).display !== 'none');
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const current = document.activeElement;
+        if (
+          !region.contains(current) ||
+          (event.shiftKey && (current === first || current === region))
+        ) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        } else if (!event.shiftKey && current === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
+    fullscreenButtonRef.current?.focus();
     return () => {
+      if (topLayer) {
+        try {
+          region.hidePopover();
+        } catch {
+          /* Already closed on removal. */
+        }
+        region.removeAttribute('popover');
+      }
       body.style.overflow = previousOverflow;
       lifted.forEach(([el, zIndex]) => {
         el.style.zIndex = zIndex;
@@ -356,6 +439,7 @@ const PlayerSession = forwardRef(function PlayerSession(
     seekTo: (seconds) => seek(Number(seconds)),
     requestFullscreen: enterFullscreen,
     exitFullscreen,
+    toggleFullscreen,
   }));
 
   // ---- Source events -------------------------------------------------------
@@ -502,16 +586,22 @@ const PlayerSession = forwardRef(function PlayerSession(
   };
 
   const startScrub = (event) => {
+    scrubCleanupRef.current?.();
     const input = event.currentTarget;
     const startValue = Number(input.value);
     scrubbingRef.current = true;
-    const finish = () => {
+    const cleanup = () => {
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
       scrubbingRef.current = false;
+    };
+    const finish = (endEvent) => {
+      cleanup();
+      if (!lifetimeRef.current.active || endEvent.type === 'pointercancel') return;
       const value = Number(input.value);
       if (value !== startValue) seekRef.current(value);
     };
+    scrubCleanupRef.current = cleanup;
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
   };
@@ -529,8 +619,7 @@ const PlayerSession = forwardRef(function PlayerSession(
   // (loading, cued, paused, buffering, ended, error) is covered by our shield.
   const shieldVisible = isYouTube && (!ready || Boolean(error) || playback !== 'playing');
   const showPoster = isYouTube && (!hasStarted || playback === 'ended' || Boolean(error));
-  const shieldTone =
-    error || showPoster ? 'bg-black' : playback === 'buffering' ? 'bg-black/50' : 'bg-black/30';
+  const shieldTone = 'bg-black';
 
   let centerContent = null;
   if (error) centerContent = null;
@@ -577,6 +666,11 @@ const PlayerSession = forwardRef(function PlayerSession(
               zIndex: EXPANDED_Z_INDEX,
               width: '100vw',
               height: '100dvh',
+              maxWidth: 'none',
+              maxHeight: 'none',
+              margin: 0,
+              padding: 0,
+              border: 0,
             }
           : undefined
       }
@@ -686,7 +780,7 @@ const PlayerSession = forwardRef(function PlayerSession(
               <button
                 type="button"
                 onClick={retry}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-navy-950 hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <HiArrowPath className="h-4 w-4" aria-hidden="true" />
                 Retry video
@@ -697,6 +791,8 @@ const PlayerSession = forwardRef(function PlayerSession(
       </div>
 
       <div
+        ref={controlsRef}
+        onBlur={showControls}
         className={`absolute inset-x-0 bottom-0 z-40 px-3 pb-2 pt-6 transition-opacity duration-300 sm:px-4 ${
           isYouTube ? '' : 'bg-gradient-to-t from-black/80 to-transparent'
         } ${controlsShown ? 'opacity-100' : 'pointer-events-none opacity-0'}`}

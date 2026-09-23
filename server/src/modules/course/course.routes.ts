@@ -11,7 +11,7 @@ const controller = new CourseController();
 // Public routes
 router.get(
   '/',
-  cacheMiddleware('courses', 300),
+  cacheMiddleware('courses:public-v2', 300),
   validate(courseQuerySchema, 'query'),
   controller.getCourses
 );
