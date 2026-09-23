@@ -24,9 +24,6 @@ const COMPLETION_RATIO = 0.95;
 const CONTROLS_IDLE_MS = 2500;
 const SEEK_STEP_SECONDS = 5;
 const EXPANDED_Z_INDEX = '2147483000';
-// After every start/resume YouTube shows its own round play/pause icon in the
-// centre of the frame for about three seconds, even with controls disabled.
-const YOUTUBE_ICON_COVER_MS = 3500;
 // Overscan reduces provider chrome for typical 16:9 videos. This is cosmetic,
 // not access control: YouTube can change its UI and the source ID stays public
 // to the viewing browser. Non-playing frames are covered opaquely below.
@@ -103,7 +100,6 @@ const PlayerSession = forwardRef(function PlayerSession(
   const autoplayTriedRef = useRef(false);
   const scrubbingRef = useRef(false);
   const idleTimerRef = useRef(null);
-  const iconCoverTimerRef = useRef(null);
   const resumeAtRef = useRef(0);
   const pointerTypeRef = useRef('mouse');
 
@@ -122,7 +118,6 @@ const PlayerSession = forwardRef(function PlayerSession(
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [coverYouTubeIcon, setCoverYouTubeIcon] = useState(false);
 
   const isActive = playback === 'playing' || playback === 'buffering';
   const canPlay = ready && !error;
@@ -156,12 +151,6 @@ const PlayerSession = forwardRef(function PlayerSession(
     }, CONTROLS_IDLE_MS);
   }, []);
 
-  const coverIconBriefly = useCallback(() => {
-    setCoverYouTubeIcon(true);
-    clearTimeout(iconCoverTimerRef.current);
-    iconCoverTimerRef.current = setTimeout(() => setCoverYouTubeIcon(false), YOUTUBE_ICON_COVER_MS);
-  }, []);
-
   useEffect(() => {
     const lifetime = lifetimeRef.current;
     const region = regionRef.current;
@@ -170,7 +159,6 @@ const PlayerSession = forwardRef(function PlayerSession(
       lifetime.active = false;
       scrubCleanupRef.current?.();
       clearTimeout(idleTimerRef.current);
-      clearTimeout(iconCoverTimerRef.current);
       if (getFullscreenElement() === region) {
         try {
           const exit = document.exitFullscreen || document.webkitExitFullscreen;
@@ -319,7 +307,6 @@ const PlayerSession = forwardRef(function PlayerSession(
     const sync = () => {
       const active = getFullscreenElement() === regionRef.current;
       setIsFullscreen(active);
-      if (isYouTube) coverIconBriefly();
       if (!active) {
         try {
           window.screen?.orientation?.unlock?.();
@@ -334,7 +321,7 @@ const PlayerSession = forwardRef(function PlayerSession(
       document.removeEventListener('fullscreenchange', sync);
       document.removeEventListener('webkitfullscreenchange', sync);
     };
-  }, [isYouTube, coverIconBriefly]);
+  }, []);
 
   // Only the player container ever goes fullscreen. The media element or the
   // YouTube frame going fullscreen on its own would bring back the provider's
@@ -387,7 +374,6 @@ const PlayerSession = forwardRef(function PlayerSession(
   const toggleFullscreen = () => (immersive ? exitFullscreen() : enterFullscreen());
 
   useEffect(() => {
-    if (isYouTube) coverIconBriefly();
     if (!expanded) return undefined;
     const { body } = document;
     const region = regionRef.current;
@@ -458,7 +444,7 @@ const PlayerSession = forwardRef(function PlayerSession(
       });
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [expanded, isYouTube, coverIconBriefly]);
+  }, [expanded]);
 
   useImperativeHandle(ref, () => ({
     play,
@@ -482,7 +468,6 @@ const PlayerSession = forwardRef(function PlayerSession(
       if (state === 'playing') {
         setHasStarted(true);
         setPlayback('playing');
-        coverIconBriefly();
       } else if (state === 'ended') {
         setPlayback('ended');
         markComplete();
@@ -686,12 +671,6 @@ const PlayerSession = forwardRef(function PlayerSession(
     centerContent = (
       <CenterBadge>
         <HiPlay className="h-8 w-8 translate-x-0.5" />
-      </CenterBadge>
-    );
-  else if (isYouTube && coverYouTubeIcon)
-    centerContent = (
-      <CenterBadge>
-        <HiPause className="h-8 w-8" />
       </CenterBadge>
     );
 
