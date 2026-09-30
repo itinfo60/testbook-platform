@@ -20,6 +20,7 @@ vi.mock('../../src/config/redis.js', () => ({
     delPattern: vi.fn(),
   },
 }));
+import { Prisma } from '@prisma/client';
 import prisma from '../../src/config/prisma.js';
 import redis from '../../src/config/redis.js';
 import { CourseService } from '../../src/modules/course/course.service.js';
@@ -208,5 +209,14 @@ describe('video URL access boundaries', () => {
       })
     );
     expect(JSON.stringify(sentJson)).not.toContain(paidUrl);
+    const select = db.course.findMany.mock.calls[0][0].select;
+    const fields = new Set(
+      Prisma.dmmf.datamodel.models
+        .find((model) => model.name === 'Course')!
+        .fields.map((field) => field.name)
+    );
+    const unknown = Object.keys(select).filter((key) => key !== '_count' && !fields.has(key));
+    expect(unknown).toEqual([]);
+    expect(select.isFeatured).toBe(true);
   });
 });

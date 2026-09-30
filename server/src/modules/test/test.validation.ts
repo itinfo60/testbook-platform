@@ -59,7 +59,39 @@ export const createTestSchema = testBodySchema.refine(
   { message: 'Passing marks cannot exceed total marks', path: ['passingMarks'] }
 );
 
-export const updateTestSchema = testBodySchema.partial();
+// Do not derive updates with `.partial()` from `testBodySchema`: Zod defaults
+// still run for optional keys and turn a title-only edit into a request that
+// resets price, attempt limits, randomization and publication status.
+export const updateTestSchema = z.object({
+  title: z.string().min(3).max(200).optional(),
+  description: z.string().max(2000).optional(),
+  instructions: z.string().max(2000).optional(),
+  category: z.string().optional(),
+  categoryId: z.string().optional(),
+  examCategory: z.string().optional(),
+  testSeries: z.string().optional(),
+  sectionTag: z.string().optional(),
+  subjectTag: z.string().optional(),
+  questions: z
+    .array(questionValidationSchema)
+    .min(1, 'At least one question is required')
+    .optional(),
+  duration: z.number().min(1).optional(),
+  totalMarks: z.number().min(1).optional(),
+  passingMarks: z.number().min(0).optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'easy', 'medium', 'hard']).optional(),
+  maxAttempts: z.number().optional(),
+  isFree: z.boolean().optional(),
+  isPublished: z.boolean().optional(),
+  price: z.number().min(0).optional(),
+  randomizeQuestions: z.boolean().optional(),
+  randomizeOptions: z.boolean().optional(),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+  scheduledAt: z.preprocess(
+    (arg) => (typeof arg === 'string' || arg instanceof Date ? new Date(arg) : undefined),
+    z.date().optional()
+  ),
+});
 
 export const autoSaveSchema = z.object({
   answers: z

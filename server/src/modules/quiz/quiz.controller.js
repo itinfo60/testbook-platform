@@ -238,6 +238,9 @@ export const submitQuiz = catchAsync(async (req, res) => {
     });
   }
 
+  // Return solutions only after access checks and, for signed-in users,
+  // successful attempt persistence. Public reads still strip these fields.
+
   ApiResponse.ok(
     res,
     {
@@ -246,6 +249,7 @@ export const submitQuiz = catchAsync(async (req, res) => {
       percentage,
       isPassed,
       answers: gradedAnswers,
+      questions: qs,
     },
     'Quiz submitted'
   );

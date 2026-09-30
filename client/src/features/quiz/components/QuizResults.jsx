@@ -22,7 +22,9 @@ export default function QuizResults({ result, quiz, userAnswers = {}, onRetry })
   const isPassed = result?.isPassed ?? percentage >= (quiz?.passingScore || 50);
   const gradedAnswers = result?.answers || [];
 
-  const questions = quiz?.questions || [];
+  // Public quiz reads omit solutions; use the post-submission questions for
+  // review, with a fallback for older result responses.
+  const questions = Array.isArray(result?.questions) ? result.questions : quiz?.questions || [];
 
   // Helper to determine question result
   const getQuestionStatus = (q, index) => {

@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { authenticate, authorize, optionalAuth } from '../../src/middleware/auth.js';
 import ApiError from '../../src/utils/ApiError.js';
 import redis from '../../src/config/redis.js';
-import config from '../../src/config/index.js';
 import { prisma } from '../../src/config/prisma.js';
 
 vi.mock('jsonwebtoken');
@@ -21,6 +20,7 @@ vi.mock('../../src/config/index.js', () => ({
 vi.mock('../../src/config/prisma.js', () => ({
   prisma: {
     user: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
     },
   },
@@ -95,11 +95,11 @@ describe('Auth Middleware', () => {
 
       const dbUser = { id: 'user1', password: 'secret', isActive: true };
       const expectedCached = { id: 'user1', _id: 'user1', isActive: true };
-      prisma.user.findUnique.mockResolvedValueOnce(dbUser);
+      prisma.user.findFirst.mockResolvedValueOnce(dbUser);
 
       await authenticate(mockReq, mockRes, mockNext);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'user1' } });
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({ where: { OR: [{ id: 'user1' }] } });
       expect(redis.set).toHaveBeenCalledWith('user_user1', expectedCached, 300);
       expect(mockReq.user).toEqual(expectedCached);
     });
@@ -110,7 +110,7 @@ describe('Auth Middleware', () => {
       jwt.verify.mockReturnValueOnce({ id: 'user1' });
       redis.get.mockResolvedValueOnce(null);
 
-      prisma.user.findUnique.mockResolvedValueOnce(null);
+      prisma.user.findFirst.mockResolvedValueOnce(null);
 
       await authenticate(mockReq, mockRes, mockNext);
 

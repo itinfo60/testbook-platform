@@ -105,9 +105,7 @@ describe('QuizPage', () => {
 
     renderQuizPage();
     // Loading state should appear initially
-    expect(
-      screen.getByRole('main') || document.querySelector('[class*="loading"]') || document.body
-    ).toBeInTheDocument();
+    expect(screen.getByText('Loading quiz...')).toBeInTheDocument();
   });
 
   it('loads and displays quiz questions from API', async () => {
@@ -171,7 +169,27 @@ describe('QuizPage', () => {
 
   it('shows quiz results after submission', async () => {
     const { quizAPI } = await import('@/services/api');
-    quizAPI.submit.mockResolvedValue({ data: { data: mockResultData } });
+    quizAPI.submit.mockResolvedValue({
+      data: {
+        data: {
+          score: 2,
+          percentage: 100,
+          totalQuestions: 2,
+          questions: mockQuizData.questions.map((q, index) => ({
+            ...q,
+            explanation: `Solution for question ${index + 1}`,
+            options: q.options.map((option, optionIndex) => ({
+              ...option,
+              isCorrect: optionIndex === (index === 0 ? 0 : 2),
+            })),
+          })),
+          answers: [
+            { questionId: 'q1', selectedOption: 0, isCorrect: true },
+            { questionId: 'q2', selectedOption: 2, isCorrect: true },
+          ],
+        },
+      },
+    });
 
     renderQuizPage({
       quizzes: {
@@ -185,15 +203,21 @@ describe('QuizPage', () => {
 
     await screen.findByText(/What is the capital of Rajasthan/i);
 
-    // Find and click submit button
-    const submitBtn = screen.queryByRole('button', { name: /submit/i });
-    if (submitBtn) {
-      await userEvent.click(submitBtn);
-      // After submission via API, result should show
-      await waitFor(() => {
-        expect(quizAPI.submit).toHaveBeenCalled();
-      });
-    }
+    expect(screen.queryByText('Solution for question 1')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /save & next/i }));
+    await userEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm submission/i }));
+
+    expect(await screen.findByText('Solution for question 1')).toBeInTheDocument();
+    expect(screen.getByText('Solution for question 2')).toBeInTheDocument();
+    expect(screen.getAllByText('Correct Answer')).toHaveLength(2);
+    expect(quizAPI.submit).toHaveBeenCalledWith('quiz1', {
+      quizId: 'quiz1',
+      answers: [
+        { questionId: 'q1', selectedOption: 0 },
+        { questionId: 'q2', selectedOption: 2 },
+      ],
+    });
   });
 
   it('displays pre-loaded result state correctly', async () => {

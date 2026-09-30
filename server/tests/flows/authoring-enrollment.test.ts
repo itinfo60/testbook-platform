@@ -74,6 +74,7 @@ import { PaymentService } from '../../src/modules/payment/payment.service.js';
 import { PaymentController } from '../../src/modules/payment/payment.controller.js';
 import { createCourseSchema } from '../../src/modules/course/course.validation.js';
 import { registerSchema } from '../../src/modules/auth/auth.validation.js';
+import { createTestSchema, updateTestSchema } from '../../src/modules/test/test.validation.js';
 import redis from '../../src/config/redis.js';
 import { dripQueue } from '../../src/queues/index.js';
 
@@ -169,6 +170,7 @@ describe('Quiz authoring, reading and grading', () => {
     db.quiz.findUnique.mockResolvedValue(quiz);
     const publicResult = await invoke(quizzes.getQuizById);
     expect(publicResult.data.quiz.questions[0]).not.toHaveProperty('correctOption');
+    expect(publicResult.data.quiz.questions[0]).not.toHaveProperty('explanation');
     expect(publicResult.data.quiz.questions[0].options[1]).not.toHaveProperty('isCorrect');
     const authorResult = await invoke(quizzes.getTeacherQuizById);
     expect(authorResult.data.quiz.questions[0].options[1].isCorrect).toBe(true);
@@ -185,6 +187,54 @@ describe('Quiz authoring, reading and grading', () => {
     });
     expect(result.next).not.toHaveBeenCalled();
     expect(result.data).toMatchObject({ score: 1, percentage: 100, isPassed: true });
+  });
+  it('returns explanations and answer keys only after a successful submission, including skipped questions', async () => {
+    db.quiz.findUnique.mockResolvedValue({
+      id: 'quiz',
+      isPublished: true,
+      questions: [
+        { ...question(), id: 'answered', explanation: 'B is correct because...' },
+        { ...question(), id: 'skipped', explanation: 'Review the skipped question too.' },
+      ],
+    });
+    const result = await invoke(quizzes.submitQuiz, {
+      quizId: 'quiz',
+      answers: [{ questionId: 'answered', selectedOption: 0 }],
+    });
+    expect(result.next).not.toHaveBeenCalled();
+    expect(db.quizAttempt.create).toHaveBeenCalledOnce();
+    expect(result.data.questions).toMatchObject([
+      {
+        id: 'answered',
+        explanation: 'B is correct because...',
+        options: [{ isCorrect: false }, { isCorrect: true }],
+      },
+      { id: 'skipped', explanation: 'Review the skipped question too.' },
+    ]);
+  });
+  it('does not return solutions when course enrollment is missing', async () => {
+    db.quiz.findUnique.mockResolvedValue({
+      id: 'quiz',
+      courseId: 'course',
+      isPublished: true,
+      questions: [question()],
+    });
+    const result = await invoke(quizzes.submitQuiz, { quizId: 'quiz', answers: [] });
+    expect(result.next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 403 }));
+    expect(result.res.json).not.toHaveBeenCalled();
+    expect(db.quizAttempt.create).not.toHaveBeenCalled();
+  });
+  it('does not disclose solutions if saving the attempt fails', async () => {
+    db.quiz.findUnique.mockResolvedValue({
+      id: 'quiz',
+      isPublished: true,
+      questions: [{ ...question(), explanation: 'Solution' }],
+    });
+    const error = new Error('Attempt write failed');
+    db.quizAttempt.create.mockRejectedValue(error);
+    const result = await invoke(quizzes.submitQuiz, { quizId: 'quiz', answers: [] });
+    expect(result.next).toHaveBeenCalledWith(error);
+    expect(result.res.json).not.toHaveBeenCalled();
   });
   it('rejects duplicate answers instead of allowing scores above 100%', async () => {
     db.quiz.findUnique.mockResolvedValue({
@@ -303,6 +353,84 @@ describe('Test authoring', () => {
     expect(updated).toMatchObject({
       isPublished: true,
       settings: { teacherId: 'teacher', price: 200, maxAttempts: 3, randomizeQuestions: true },
+    });
+  });
+  it('preserves stored settings, passing marks and publication on a validated title-only update', async () => {
+    const repo = repository();
+    const stored = {
+      id: 'test',
+      title: 'Original title',
+      totalMarks: 10,
+      passingMarks: 5,
+      isPublished: true,
+      description: 'Original description',
+      settings: {
+        teacherId: 'teacher',
+        price: 500,
+        isFree: false,
+        maxAttempts: 3,
+        randomizeQuestions: true,
+        randomizeOptions: true,
+        difficulty: 'advanced',
+        instructions: 'Read carefully',
+      },
+    };
+    repo.findById.mockResolvedValue(stored);
+    const parsed = updateTestSchema.parse({ title: 'Renamed test' });
+    expect(parsed).toEqual({ title: 'Renamed test' });
+    const updated = await new TestService(repo as any).updateTest('test', parsed as any, 'teacher');
+    expect({ ...stored, ...updated }).toEqual({ ...stored, title: 'Renamed test' });
+  });
+  it('preserves explicit false, zero and empty fields in updates', async () => {
+    const input = {
+      isFree: false,
+      price: 0,
+      maxAttempts: 0,
+      randomizeQuestions: false,
+      randomizeOptions: false,
+      instructions: '',
+      description: '',
+      passingMarks: 0,
+      status: 'published' as const,
+    };
+    expect(updateTestSchema.parse(input)).toEqual(input);
+    expect(updateTestSchema.parse({})).toEqual({});
+  });
+  it('still applies defaults to newly created tests', () => {
+    expect(
+      createTestSchema.parse({
+        title: 'A new test',
+        questions: [question()],
+        duration: 10,
+        totalMarks: 2,
+      })
+    ).toMatchObject({
+      price: 0,
+      isFree: true,
+      maxAttempts: 0,
+      status: 'draft',
+      passingMarks: 0,
+      instructions: '',
+      description: '',
+      randomizeQuestions: false,
+      randomizeOptions: false,
+    });
+  });
+  it('preserves explicit question order zero when updating questions', async () => {
+    const repo = repository();
+    const input = updateTestSchema.parse({
+      questions: [
+        { ...question(), id: 'first', order: 1 },
+        { ...question(), id: 'second', order: 0 },
+      ],
+    });
+    const updated = await new TestService(repo as any).updateTest('test', input as any, 'teacher');
+    expect(updated).toMatchObject({
+      totalQuestions: 2,
+      questions: [
+        { id: 'first', order: 1 },
+        { id: 'second', order: 0 },
+      ],
     });
   });
   it('prevents another teacher from editing or deleting a test', async () => {

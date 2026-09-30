@@ -164,11 +164,14 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
 
   if (token) {
     try {
-      let decoded = null;
+      // Optional auth must never trust an unverified JWT payload. Invalid or
+      // expired bearer tokens are treated as anonymous requests; only a token
+      // verified with the platform secret can provide identity or roles.
+      let decoded;
       try {
         decoded = jwt.verify(token, config.jwt.secret);
       } catch {
-        decoded = jwt.decode(token);
+        decoded = null;
       }
 
       if (decoded && decoded.id) {
@@ -189,13 +192,10 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
           } catch {}
         }
 
-        const finalUser = user || {
-          id: decoded.id,
-          role: decoded.role || 'student',
-          _id: decoded.id,
-        };
-        req.user = finalUser;
-        req.userId = finalUser.id;
+        if (user?.isActive) {
+          req.user = user;
+          req.userId = user.id || user._id?.toString();
+        }
       }
     } catch {
       // Ignore invalid tokens for optional auth

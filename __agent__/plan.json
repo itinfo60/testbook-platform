@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "title": "Complete backend schema, category, auth, and test-update fixes",
+      "status": "done"
+    },
+    {
+      "title": "Complete quiz explanations and related client fixes",
+      "status": "done"
+    },
+    {
+      "title": "Run regression tests, type checks, and review the final diff",
+      "status": "done"
+    }
+  ],
+  "updated_at": "2026-09-30T16:26:32.299Z",
+  "session_id": "01a0f2f6-ba7f-7081-9b2d-b09e6acf4380"
+}

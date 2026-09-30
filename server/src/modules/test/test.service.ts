@@ -121,11 +121,11 @@ export class TestService extends BaseService<ITest, TestRepository> {
     if ((data as any).categoryId || (data as any).category) {
       updateData.categoryId = (data as any).categoryId || (data as any).category;
     }
-    if (data.questions) {
+    if (data.questions !== undefined) {
       updateData.questions = data.questions.map((q: any, idx: number) => ({
         ...q,
         id: q.id || uuidv4(),
-        order: q.order || idx,
+        order: q.order ?? idx,
       }));
       updateData.totalQuestions = updateData.questions.length;
     }
